@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#081018" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>METRO DASH</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas"></canvas>
+
+      <div id="hud" class="hidden">
+        <div class="hud-top">
+          <div class="coin-chip">
+            <span class="coin-orb"></span>
+            <span id="coin-count">0</span>
+          </div>
+          <div class="score-stack">
+            <div id="score">0</div>
+            <div id="combo" class="combo hidden">COMBO x2</div>
+          </div>
+          <button id="btn-pause" type="button" aria-label="일시정지">II</button>
+        </div>
+        <div id="magnet-bar" class="magnet-bar hidden">
+          <span>MAGNET</span>
+          <div class="magnet-fill"></div>
+        </div>
+        <div id="pace-chip">START</div>
+        <div id="speed-toast" class="hidden"></div>
+      </div>
+
+      <div id="touch-hint" class="hidden">스와이프 · 점프 · 슬라이드 · 버스 점프</div>
+
+      <div id="title-screen" class="overlay">
+        <div class="sky-wash"></div>
+        <div class="title-card">
+          <p class="eyebrow">ENDLESS 3-LANE RUNNER</p>
+          <h1>메트로 <span>대시</span></h1>
+          <p class="tagline">지하철 선로를 질주해 열차와 장애물을 피하세요</p>
+          <button id="btn-play" type="button">질주 시작</button>
+          <ul class="howto">
+            <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
+            <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
+            <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
+          </ul>
+          <p class="best-line">최고 기록 <strong id="best-score">0</strong></p>
+        </div>
+      </div>
+
+      <div id="pause-screen" class="overlay hidden">
+        <div class="dialog">
+          <h2>일시정지</h2>
+          <button id="btn-resume" type="button">계속하기</button>
+          <button id="btn-quit" type="button" class="ghost">타이틀로</button>
+        </div>
+      </div>
+
+      <div id="gameover-screen" class="overlay hidden">
+        <div class="dialog crash">
+          <p class="eyebrow">RUN OVER</p>
+          <h2>충돌!</h2>
+          <div class="stat-grid">
+            <div>
+              <span>점수</span>
+              <strong id="final-score">0</strong>
+            </div>
+            <div>
+              <span>코인</span>
+              <strong id="final-coins">0</strong>
+            </div>
+            <div>
+              <span>거리</span>
+              <strong id="final-dist">0m</strong>
+            </div>
+          </div>
+          <p id="new-best" class="new-best hidden">새 최고 기록!</p>
+          <button id="btn-retry" type="button">다시 달리기</button>
+          <button id="btn-home" type="button" class="ghost">타이틀로</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
