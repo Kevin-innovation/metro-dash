@@ -25,9 +25,14 @@ export class Game {
     this.state = "title";
     this.speed = TITLE_SPEED;
     this.score = 0;
+    this.scoreDist = 0;
+    this.scoreCoins = 0;
+    this.scoreBonus = 0;
     this.coins = 0;
     this.combo = 0;
+    this.comboMax = 0;
     this.comboT = 0;
+    this.gainTimer = 0;
     this.distance = 0;
     this.magnetT = 0;
     this.hintT = 0;
@@ -111,8 +116,12 @@ export class Game {
     this.state = "playing";
     this.speed = START_SPEED;
     this.score = 0;
+    this.scoreDist = 0;
+    this.scoreCoins = 0;
+    this.scoreBonus = 0;
     this.coins = 0;
     this.combo = 0;
+    this.comboMax = 0;
     this.comboT = 0;
     this.distance = 0;
     this.magnetT = 0;
@@ -130,6 +139,8 @@ export class Game {
     for (let i = 0; i < 5; i++) this.spawnPattern(40 + i * 30);
     $("pace-chip").textContent = "START";
     $("speed-toast").classList.add("hidden");
+    $("coin-gain").classList.add("hidden");
+    $("combo").classList.add("hidden");
     this.setOverlay("hud");
     $("touch-hint").classList.remove("hidden");
     this.syncHud();
@@ -195,7 +206,8 @@ export class Game {
         if (ph.toast) this.showToast(ph.toast);
       }
       this.distance += this.speed * sim;
-      this.score += this.speed * sim * 2.6 + this.combo * sim * 4;
+      this.scoreDist += this.speed * sim * 2.6;
+      this.score = this.scoreDist + this.scoreCoins + this.scoreBonus;
       this.magnetT = Math.max(0, this.magnetT - sim);
       this.comboT -= sim;
       if (this.comboT <= 0) this.combo = 0;
@@ -211,7 +223,8 @@ export class Game {
           if (this.state !== "playing") return;
           if (hop) this.audio.hop();
           else this.audio.mount();
-          this.score += hop ? 8 : 22;
+          this.scoreBonus += hop ? 8 : 22;
+          this.score = this.scoreDist + this.scoreCoins + this.scoreBonus;
           if (!hop) vibrate(12);
         },
       });
@@ -404,18 +417,24 @@ export class Game {
     for (const item of this.pool.live) {
       if (item.type === "coin") {
         item.mesh.rotation.y += dt * 5;
-        if (this.magnetT > 0 && this.state === "playing") {
-          const dx = this.player.x - item.mesh.position.x;
-          const dz = this.player.z - item.z;
-          const dy = this.player.y + 0.9 - item.mesh.position.y;
-          const d = Math.hypot(dx, dz);
+        if (this.magnetT > 0 && this.state === "playing" && !item.taken) {
+          const tx = this.player.x;
+          const ty = this.player.y + 1.05;
+          const tz = this.player.z + 0.7;
+          const dx = tx - item.mesh.position.x;
+          const dy = ty - item.mesh.position.y;
+          const dz = tz - item.z;
+          const d = Math.hypot(dx, dy, dz);
           if (d < MAGNET_RANGE) {
-            const k = Math.min(1, dt * 10);
-            item.mesh.position.x += dx * k;
-            item.z += dz * k;
-            item.mesh.position.z = item.z;
-            item.mesh.position.y += dy * k;
-            item.lane = this.player.lane;
+            const pull = Math.max(this.speed * 2.1, 32);
+            const step = Math.min(d, pull * dt);
+            if (d > 0.0001) {
+              const s = step / d;
+              item.mesh.position.x += dx * s;
+              item.mesh.position.y += dy * s;
+              item.z += dz * s;
+              item.mesh.position.z = item.z;
+            }
           }
         }
       } else if (item.type === "magnet") {
@@ -427,29 +446,72 @@ export class Game {
 
   updatePickups() {
     if (this.state !== "playing") return;
-    const py0 = this.player.y;
-    const py1 = this.player.y + this.player.height;
+    const p = this.player;
+    const py0 = p.y;
+    const py1 = p.y + p.height;
+    const magOn = this.magnetT > 0;
     for (const item of this.pool.live) {
       if (item.taken || item.lethal) continue;
-      if (!overlapLane(this.player, item)) continue;
-      if (Math.abs(this.player.z - item.z) > 0.7) continue;
-      if (py1 < item.minY || py0 > item.maxY) continue;
-      const midY = (py0 + py1) * 0.5;
-      if (Math.abs(midY - item.mesh.position.y) > 1.35) continue;
+      const dx = p.x - item.mesh.position.x;
+      const dy = p.y + 0.95 - item.mesh.position.y;
+      const dz = p.z - item.z;
+      const dist3 = Math.hypot(dx, dy, dz);
+      const sucked = magOn && item.type === "coin" && dist3 < 1.35;
+      if (!sucked) {
+        if (!overlapLane(p, item)) continue;
+        if (Math.abs(dz) > 0.7) continue;
+        if (py1 < item.minY || py0 > item.maxY) continue;
+        const midY = (py0 + py1) * 0.5;
+        if (Math.abs(midY - item.mesh.position.y) > 1.35) continue;
+      }
       item.taken = true;
       item.mesh.visible = false;
       if (item.type === "coin") {
         this.combo += 1;
         this.comboT = 1.4;
+        if (this.combo > this.comboMax) this.comboMax = this.combo;
         this.coins += 1;
-        this.score += 10 + Math.min(20, this.combo);
+        const gain = 10 + Math.min(20, this.combo);
+        this.scoreCoins += gain;
+        this.score = this.scoreDist + this.scoreCoins + this.scoreBonus;
         this.audio.coin();
         vibrate(8);
+        this.flashCoinGain(gain);
       } else if (item.type === "magnet") {
         this.magnetT = MAGNET_TIME;
         this.audio.magnet();
         vibrate(18);
       }
+    }
+  }
+
+  flashCoinGain(gain) {
+    const gainEl = $("coin-gain");
+    gainEl.textContent = `+${gain}`;
+    gainEl.classList.remove("hidden");
+    gainEl.classList.remove("pop");
+    void gainEl.offsetWidth;
+    gainEl.classList.add("pop");
+    clearTimeout(this.gainTimer);
+    this.gainTimer = setTimeout(() => gainEl.classList.add("hidden"), 520);
+
+    const scoreEl = $("score");
+    scoreEl.classList.remove("score-punch");
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add("score-punch");
+
+    const chip = $("coin-count").parentElement;
+    chip.classList.remove("coin-punch");
+    void chip.offsetWidth;
+    chip.classList.add("coin-punch");
+
+    const comboEl = $("combo");
+    if (this.combo >= 2) {
+      comboEl.classList.remove("hidden");
+      comboEl.textContent = `COMBO x${this.combo}`;
+      comboEl.classList.remove("combo-punch");
+      void comboEl.offsetWidth;
+      comboEl.classList.add("combo-punch");
     }
   }
 
@@ -492,8 +554,12 @@ export class Game {
     const isBest = rounded > best;
     if (isBest) localStorage.setItem(BEST_KEY, String(rounded));
     $("final-score").textContent = rounded.toLocaleString();
+    $("break-dist").textContent = Math.floor(this.scoreDist).toLocaleString();
+    $("break-coins").textContent = Math.floor(this.scoreCoins).toLocaleString();
+    $("break-bonus").textContent = Math.floor(this.scoreBonus).toLocaleString();
     $("final-coins").textContent = String(this.coins);
     $("final-dist").textContent = `${Math.floor(this.distance)}m`;
+    $("final-combo").textContent = String(this.comboMax);
     $("new-best").classList.toggle("hidden", !isBest);
     this.setOverlay("dead");
   }
@@ -502,7 +568,7 @@ export class Game {
     $("score").textContent = Math.floor(this.score).toLocaleString();
     $("coin-count").textContent = String(this.coins);
     const comboEl = $("combo");
-    if (this.combo >= 4) {
+    if (this.combo >= 2) {
       comboEl.classList.remove("hidden");
       comboEl.textContent = `COMBO x${this.combo}`;
     } else comboEl.classList.add("hidden");

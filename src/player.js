@@ -159,7 +159,11 @@ export function applyAction(p, action, audio) {
   } else if (action === "right" && p.lane > -1) {
     p.lane -= 1;
     audio?.switchLane();
-  } else if (action === "jump" && !p.jumping && !p.sliding && !p.mounting) {
+  } else if (action === "jump" && !p.jumping && !p.mounting) {
+    if (p.sliding) {
+      p.sliding = false;
+      p.slideT = 0;
+    }
     p.mounted = null;
     p.roofY = 0;
     p.jumping = true;

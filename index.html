@@ -31,6 +31,7 @@
           <div class="score-stack">
             <div id="score">0</div>
             <div id="combo" class="combo hidden">COMBO x2</div>
+            <div id="coin-gain" class="coin-gain hidden">+10</div>
           </div>
           <button id="btn-pause" type="button" aria-label="일시정지">II</button>
         </div>
@@ -55,6 +56,7 @@
             <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
             <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
             <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
+            <li>슬라이드 중 <kbd>↑</kbd> · 바로 일어나서 점프</li>
           </ul>
           <p class="best-line">최고 기록 <strong id="best-score">0</strong></p>
         </div>
@@ -72,11 +74,25 @@
         <div class="dialog crash">
           <p class="eyebrow">RUN OVER</p>
           <h2>충돌!</h2>
-          <div class="stat-grid">
+          <div class="breakdown">
             <div>
-              <span>점수</span>
+              <span>거리 점수</span>
+              <strong id="break-dist">0</strong>
+            </div>
+            <div>
+              <span>코인 점수</span>
+              <strong id="break-coins">0</strong>
+            </div>
+            <div>
+              <span>보너스</span>
+              <strong id="break-bonus">0</strong>
+            </div>
+            <div class="total">
+              <span>합계</span>
               <strong id="final-score">0</strong>
             </div>
+          </div>
+          <div class="stat-grid">
             <div>
               <span>코인</span>
               <strong id="final-coins">0</strong>
@@ -84,6 +100,10 @@
             <div>
               <span>거리</span>
               <strong id="final-dist">0m</strong>
+            </div>
+            <div>
+              <span>최고 콤보</span>
+              <strong id="final-combo">0</strong>
             </div>
           </div>
           <p id="new-best" class="new-best hidden">새 최고 기록!</p>

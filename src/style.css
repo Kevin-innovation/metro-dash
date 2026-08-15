@@ -96,10 +96,88 @@ body {
 }
 
 .combo {
-  margin-top: 4px;
+  margin-top: 6px;
   color: var(--gold);
-  font-size: 16px;
+  font-family: "Black Han Sans", sans-serif;
+  font-size: clamp(22px, 5vw, 34px);
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 3px 0 #041018,
+    0 0 16px rgba(255, 210, 74, 0.55);
+}
+
+.combo.combo-punch {
+  animation: comboPunch 0.28s ease-out;
+}
+
+.coin-gain {
+  margin-top: 2px;
+  color: #fff4b0;
+  font-size: 22px;
   text-shadow: 0 2px 0 #041018;
+}
+
+.coin-gain.pop {
+  animation: gainPop 0.55s ease-out;
+}
+
+#score.score-punch {
+  animation: scorePunch 0.22s ease-out;
+}
+
+.coin-chip.coin-punch {
+  animation: coinPunch 0.28s ease-out;
+}
+
+@keyframes comboPunch {
+  0% {
+    transform: scale(0.7);
+  }
+  55% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes gainPop {
+  0% {
+    opacity: 1;
+    transform: translateY(8px) scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(1);
+  }
+}
+
+@keyframes scorePunch {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes coinPunch {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 #btn-pause {
@@ -331,6 +409,47 @@ kbd {
 
 .best-line strong {
   color: var(--gold);
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 14px;
+  text-align: left;
+}
+
+.breakdown div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(7, 16, 24, 0.45);
+}
+
+.breakdown span {
+  color: #9ec2d8;
+  font-size: 15px;
+}
+
+.breakdown strong {
+  font-size: 22px;
+}
+
+.breakdown .total {
+  margin-top: 4px;
+  background: rgba(255, 210, 74, 0.12);
+  border: 1px solid rgba(255, 210, 74, 0.35);
+}
+
+.breakdown .total span,
+.breakdown .total strong {
+  color: var(--gold);
+}
+
+.breakdown .total strong {
+  font-size: 28px;
 }
 
 .stat-grid {
