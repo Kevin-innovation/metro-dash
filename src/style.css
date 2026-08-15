@@ -55,9 +55,29 @@ body {
   padding: calc(14px + env(safe-area-inset-top)) 16px 0;
 }
 
+.hud-left {
+  justify-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
 .coin-chip,
 #btn-pause {
   pointer-events: auto;
+}
+
+.best-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(7, 16, 24, 0.5);
+  color: #9ec2d8;
+  font-size: 13px;
+}
+
+.best-chip strong {
+  color: var(--gold);
 }
 
 .coin-chip {

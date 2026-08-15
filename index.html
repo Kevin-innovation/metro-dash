@@ -24,9 +24,12 @@
 
       <div id="hud" class="hidden">
         <div class="hud-top">
-          <div class="coin-chip">
-            <span class="coin-orb"></span>
-            <span id="coin-count">0</span>
+          <div class="hud-left">
+            <div class="coin-chip">
+              <span class="coin-orb"></span>
+              <span id="coin-count">0</span>
+            </div>
+            <div class="best-chip">최고 <strong id="hud-best">0</strong></div>
           </div>
           <div class="score-stack">
             <div id="score">0</div>
@@ -57,8 +60,9 @@
             <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
             <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
             <li>슬라이드 중 <kbd>↑</kbd> · 바로 일어나서 점프</li>
+            <li>헤드라이트 버스 · 마주 오면 레인 변경</li>
           </ul>
-          <p class="best-line">최고 기록 <strong id="best-score">0</strong></p>
+          <p class="best-line">내 최고 점수 <strong id="best-score">0</strong></p>
         </div>
       </div>
 
@@ -106,6 +110,7 @@
               <strong id="final-combo">0</strong>
             </div>
           </div>
+          <p class="best-line over-best">내 최고 점수 <strong id="over-best">0</strong></p>
           <p id="new-best" class="new-best hidden">새 최고 기록!</p>
           <button id="btn-retry" type="button">다시 달리기</button>
           <button id="btn-home" type="button" class="ghost">타이틀로</button>

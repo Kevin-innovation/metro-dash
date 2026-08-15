@@ -96,6 +96,11 @@ export class AudioBus {
     this.beep(500, 0.06, "triangle", 0.28);
   }
 
+  horn() {
+    this.beep(220, 0.16, "sawtooth", 0.28);
+    setTimeout(() => this.beep(180, 0.22, "square", 0.22), 90);
+  }
+
   speedup() {
     this.beep(660, 0.08, "square", 0.45);
     setTimeout(() => this.beep(880, 0.1, "square", 0.4), 70);

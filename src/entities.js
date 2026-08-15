@@ -80,6 +80,7 @@ export function makeBus(color = 0xffc107) {
       lambert(0xfff59d, { emissive: 0xffcc80, emissiveIntensity: 0.85 }),
     );
     light.position.set(x, 0.62, 4.48);
+    light.userData.headlight = true;
     g.add(light);
   });
   [
@@ -217,14 +218,22 @@ export class EntityPool {
       lethal: spec.lethal,
       rideable: !!spec.rideable,
       roofY: spec.roofY || 0,
+      moving: false,
+      vz: 0,
+      warned: false,
       mesh,
       taken: false,
     };
+    setBusFacing(item, false);
     this.live.push(item);
     return item;
   }
 
   release(item) {
+    item.moving = false;
+    item.vz = 0;
+    item.warned = false;
+    setBusFacing(item, false);
     item.mesh.visible = false;
     this.free[item.type].push(item.mesh);
   }
@@ -242,4 +251,22 @@ export class EntityPool {
     for (const item of this.live) this.release(item);
     this.live = [];
   }
+}
+
+export function setBusFacing(item, oncoming) {
+  if (!item?.mesh || item.type !== "bus") return;
+  item.mesh.rotation.y = oncoming ? Math.PI : 0;
+  item.mesh.traverse((child) => {
+    if (!child.userData?.headlight || !child.material) return;
+    child.material.emissiveIntensity = oncoming ? 1.8 : 0.85;
+    child.scale.setScalar(oncoming ? 1.35 : 1);
+  });
+}
+
+export function makeOncoming(item, speed) {
+  item.moving = true;
+  item.vz = -Math.abs(speed);
+  item.warned = false;
+  setBusFacing(item, true);
+  return item;
 }

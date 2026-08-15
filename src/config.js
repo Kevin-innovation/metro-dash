@@ -12,6 +12,7 @@ export const SLIDE_TIME = 0.7;
 export const MOUNT_TIME = 0.3;
 export const TRAIN_ROOF = 2.32;
 export const BUS_ROOF = 2.08;
+export const ONCOMING_SPEED = 12;
 export const LANE_LERP = 16;
 export const PLAYER_HEIGHT = 1.55;
 export const SLIDE_HEIGHT = 0.56;

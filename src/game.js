@@ -4,10 +4,11 @@ import {
   BEST_KEY,
   MAGNET_RANGE,
   MAGNET_TIME,
+  ONCOMING_SPEED,
   START_SPEED,
   TITLE_SPEED,
 } from "./config.js";
-import { EntityPool } from "./entities.js";
+import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { applyAction, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { createWorld, syncWorld } from "./world.js";
@@ -44,6 +45,7 @@ export class Game {
     this.runTime = 0;
     this.phaseId = 0;
     this.toastTimer = 0;
+    this.sawOncoming = false;
 
     this.audio = new AudioBus();
     this.input = new Input(root);
@@ -98,9 +100,39 @@ export class Game {
     this.renderer.setSize(w, h, false);
   }
 
+  readBest() {
+    try {
+      const n = Number(localStorage.getItem(BEST_KEY) || 0);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  writeBest(score) {
+    const next = Math.floor(Number(score) || 0);
+    if (next <= 0) return this.readBest();
+    const best = this.readBest();
+    if (next <= best) return best;
+    try {
+      localStorage.setItem(BEST_KEY, String(next));
+    } catch {
+      /* ignore quota / private mode */
+    }
+    this.refreshBest();
+    return next;
+  }
+
   refreshBest() {
-    const best = Number(localStorage.getItem(BEST_KEY) || 0);
-    $("best-score").textContent = best.toLocaleString();
+    const best = this.readBest();
+    const text = best.toLocaleString();
+    const title = $("best-score");
+    const hud = $("hud-best");
+    const over = $("over-best");
+    if (title) title.textContent = text;
+    if (hud) hud.textContent = text;
+    if (over) over.textContent = text;
+    return best;
   }
 
   seedPreview() {
@@ -133,6 +165,7 @@ export class Game {
     this.patternCount = 0;
     this.runTime = 0;
     this.phaseId = 0;
+    this.sawOncoming = false;
     resetPlayer(this.player, 0);
     this.cam = { x: 0, y: 3.05, z: -6.2 };
     this.pool.clear();
@@ -143,10 +176,14 @@ export class Game {
     $("combo").classList.add("hidden");
     this.setOverlay("hud");
     $("touch-hint").classList.remove("hidden");
+    this.refreshBest();
     this.syncHud();
   }
 
   toTitle() {
+    if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
+      this.writeBest(this.score);
+    }
     this.input.clear();
     this.state = "title";
     this.speed = TITLE_SPEED;
@@ -216,6 +253,7 @@ export class Game {
     }
 
     if (this.state !== "paused") {
+      this.updateMovers(sim);
       updatePlayer(this.player, sim, this.state === "dead" ? 0 : spd, {
         roofs: this.collectRoofs(),
         held: this.input.held,
@@ -277,10 +315,10 @@ export class Game {
 
   kindsFor(phaseId) {
     const kinds = ["coins", "train", "barrier", "bus", "crate"];
-    if (phaseId >= 1) kinds.push("two-trains", "sign", "bus-roof", "mixed");
-    if (phaseId >= 2) kinds.push("triple-barrier", "triple-sign", "bus-hop", "two-bus");
-    if (phaseId >= 3) kinds.push("zigzag", "jump-slide", "slide-jump", "train-hop");
-    if (phaseId >= 4) kinds.push("gauntlet", "roof-weave", "triple-bus");
+    if (phaseId >= 1) kinds.push("two-trains", "sign", "bus-roof", "mixed", "oncoming-bus");
+    if (phaseId >= 2) kinds.push("triple-barrier", "triple-sign", "bus-hop", "two-bus", "oncoming-bus", "oncoming-two");
+    if (phaseId >= 3) kinds.push("zigzag", "jump-slide", "slide-jump", "train-hop", "oncoming-mix");
+    if (phaseId >= 4) kinds.push("gauntlet", "roof-weave", "triple-bus", "oncoming-two");
     if (this.patternCount % 8 === 6) kinds.push("magnet");
     return kinds;
   }
@@ -371,6 +409,44 @@ export class Game {
     } else if (kind === "magnet") {
       this.pool.spawn("magnet", lane, z, 1.1);
       this.coinLine(lane, z + 3, 8);
+    } else if (kind === "oncoming-bus") {
+      this.spawnOncoming(lane, z + 16);
+      this.coinLine(pick([-1, 0, 1].filter((l) => l !== lane)), z - 2, 5);
+    } else if (kind === "oncoming-two") {
+      const lanes = shuffle([-1, 0, 1]);
+      this.spawnOncoming(lanes[0], z + 16);
+      this.spawnOncoming(lanes[1], z + 22);
+      this.coinLine(lanes[2], z - 1, 5);
+    } else if (kind === "oncoming-mix") {
+      const lanes = shuffle([-1, 0, 1]);
+      this.pool.spawn("bus", lanes[0], z);
+      this.spawnOncoming(lanes[1], z + 20);
+      this.coinLine(lanes[2], z - 2, 5);
+    }
+  }
+
+  spawnOncoming(lane, z) {
+    const item = this.pool.spawn("bus", lane, z);
+    const extra = 9 + this.phaseId * 1.4;
+    makeOncoming(item, ONCOMING_SPEED + extra * 0.2);
+    if (this.state === "playing" && !this.sawOncoming) {
+      this.sawOncoming = true;
+      this.showToast("버스가 온다!");
+    }
+    return item;
+  }
+
+  updateMovers(dt) {
+    if (dt <= 0) return;
+    for (const item of this.pool.live) {
+      if (!item.moving || item.taken) continue;
+      item.z += item.vz * dt;
+      item.mesh.position.z = item.z;
+      const gap = item.z - this.player.z;
+      if (!item.warned && gap < 22 && gap > 6 && this.state === "playing") {
+        item.warned = true;
+        this.audio.horn();
+      }
     }
   }
 
@@ -546,13 +622,14 @@ export class Game {
     this.audio.crash();
     vibrate(40);
     $("touch-hint").classList.add("hidden");
+    this.writeBest(this.score);
   }
 
   showGameOver() {
     const rounded = Math.floor(this.score);
-    const best = Number(localStorage.getItem(BEST_KEY) || 0);
-    const isBest = rounded > best;
-    if (isBest) localStorage.setItem(BEST_KEY, String(rounded));
+    const prevBest = this.readBest();
+    const isBest = rounded > prevBest;
+    const saved = this.writeBest(rounded);
     $("final-score").textContent = rounded.toLocaleString();
     $("break-dist").textContent = Math.floor(this.scoreDist).toLocaleString();
     $("break-coins").textContent = Math.floor(this.scoreCoins).toLocaleString();
@@ -560,6 +637,7 @@ export class Game {
     $("final-coins").textContent = String(this.coins);
     $("final-dist").textContent = `${Math.floor(this.distance)}m`;
     $("final-combo").textContent = String(this.comboMax);
+    $("over-best").textContent = saved.toLocaleString();
     $("new-best").classList.toggle("hidden", !isBest);
     this.setOverlay("dead");
   }
