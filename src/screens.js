@@ -1,7 +1,7 @@
 import { missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { runXp } from "./progression.js";
-import { purchase, reviveCost, shopView } from "./shop.js";
+import { purchase, shopView } from "./shop.js";
 import { renderHud, renderMissions, renderRank, renderSettings, renderShop } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
@@ -49,9 +49,6 @@ export class Screens {
 
     const boardBtn = $("btn-board");
     if (boardBtn) boardBtn.onclick = () => a.deployBoard();
-    const reviveBtn = $("btn-revive");
-    if (reviveBtn) reviveBtn.onclick = () => a.revive();
-
     const settingsBtn = $("btn-settings");
     if (settingsBtn) settingsBtn.onclick = () => a.openSettings();
     const settingsClose = $("btn-settings-close");
@@ -145,8 +142,8 @@ export class Screens {
       const el = $(id);
       if (el) el.textContent = best;
     }
-    // The game-over card needs the bank too, otherwise the revive price has
-    // nothing to be compared against.
+    // The game-over card shows the bank too, so a run's earnings can be read
+    // against what they add up to.
     for (const id of ["coin-bank", "shop-coins", "over-bank"]) {
       const el = $(id);
       if (el) el.textContent = save.coins.toLocaleString();
@@ -257,7 +254,6 @@ export class Screens {
     if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
 
     const cleared = this.renderMissionResults(result);
-    this.renderReviveButton(run.revives, save.coins);
     this.setOverlay("dead");
     return cleared;
   }
@@ -281,24 +277,4 @@ export class Screens {
     return true;
   }
 
-  renderReviveButton(revives, coins) {
-    const button = $("btn-revive");
-    if (!button) return;
-    const cost = reviveCost(revives);
-    const costEl = $("revive-cost");
-    if (costEl) costEl.textContent = cost.toLocaleString();
-
-    const affordable = coins >= cost;
-    const exhausted = revives >= 3;
-    button.disabled = !affordable;
-    button.classList.toggle("hidden", exhausted);
-
-    // Flag the bank when it cannot cover the price, so a disabled button has a
-    // visible reason next to it.
-    const bank = $("over-bank")?.closest(".bank-line");
-    if (bank) {
-      bank.classList.toggle("hidden", exhausted);
-      bank.classList.toggle("short", !affordable);
-    }
-  }
 }

@@ -6,9 +6,7 @@ import {
   CHARACTERS,
   HOVERBOARD_COST,
   HOVERBOARD_MAX,
-  REVIVE_BASE_COST,
   purchase,
-  reviveCost,
   shopView,
   upgradeCost,
 } from "../src/shop.js";
@@ -133,12 +131,6 @@ describe("shop pricing", () => {
       previous = cost;
     }
     expect(upgradeCost(POWERUP_MAX_LEVEL)).toBe(null);
-  });
-
-  it("doubles the revive price each time it is used in a run", () => {
-    expect(reviveCost(0)).toBe(REVIVE_BASE_COST);
-    expect(reviveCost(1)).toBe(REVIVE_BASE_COST * 2);
-    expect(reviveCost(2)).toBe(REVIVE_BASE_COST * 4);
   });
 
   it("marks items unaffordable when the bank is short", () => {

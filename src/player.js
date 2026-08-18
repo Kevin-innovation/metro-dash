@@ -186,6 +186,8 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     lean: 0,
     alive: true,
     tumble: 0,
+    /** Seconds since the crash, so the death beat can end instead of looping. */
+    deathT: 0,
     runT: 0,
     height: PLAYER_HEIGHT,
     mounted: null,
@@ -226,6 +228,7 @@ export function resetPlayer(p, z = 0) {
   p.lean = 0;
   p.alive = true;
   p.tumble = 0;
+  p.deathT = 0;
   p.runT = 0;
   p.height = PLAYER_HEIGHT;
   p.mounted = null;
@@ -239,6 +242,7 @@ export function resetPlayer(p, z = 0) {
   p.root.rotation.set(0, 0, 0);
   p.jets.visible = false;
   p.board.visible = false;
+  p.root.visible = true;
   p.shadow.visible = true;
   p.shadow.scale.setScalar(1);
   p.shadow.material.opacity = 0.3;
@@ -334,6 +338,7 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
   p.prevY = p.y;
   p.prevZ = p.z;
   p.prevHeight = p.height;
+  if (!p.alive) p.deathT += dt;
 
   p.laneChangeT += dt;
   const targetX = LANES[p.lane + 1];
@@ -448,12 +453,21 @@ function blobScale(y) {
   return 1 / (1 + Math.max(0, y) * 0.32);
 }
 
+/**
+ * A crash is a short, readable beat — a tumble that eases to a stop and then
+ * the runner is gone. Left spinning, the body reads as a stuck animation behind
+ * the game-over card rather than as an impact.
+ */
+const DEATH_TUMBLE_TIME = 0.4;
+
 function animatePlayer(p, speed) {
   if (!p.alive) {
-    p.tumble += 0.18;
+    const t = Math.min(1, p.deathT / DEATH_TUMBLE_TIME);
+    p.tumble += (1 - t) * 0.36;
     p.root.rotation.x = p.tumble;
     p.root.rotation.z = p.tumble * 0.4;
     p.hip.position.y = 0.7;
+    p.root.visible = t < 1;
     return;
   }
 

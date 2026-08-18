@@ -43,10 +43,9 @@ export class Run {
     this.comboMax = 0;
     this.comboT = 0;
     this.distance = 0;
-    this.revives = 0;
     this.metrics = { mounts: 0, nearMisses: 0, powerups: 0, jetpacks: 0 };
-    // A run can be banked more than once (death, then a revive, then death
-    // again), so progress is always committed as a delta against this.
+    // A run is banked when the player dies and again when they leave the card,
+    // so progress is always committed as a delta against this.
     this.banked = { coins: 0, distance: 0, xp: 0, ...this.metrics };
     this.runCounted = false;
     this.runClosed = false;
@@ -120,7 +119,7 @@ export class Run {
   /**
    * Commit run progress to the profile.
    *
-   * Called on every death and again when the run is finally abandoned, so
+   * Called on death and again when the run is finally closed out, so
    * everything is banked as a delta against what was already committed.
    * Missions with `scope: "run"` take the best single-run reading and are
    * idempotent; cumulative ones only ever see the new increment.
@@ -179,8 +178,8 @@ export class Run {
     }
 
     // Replacements are dealt only once the run is genuinely over. Handing them
-    // out mid-run (between a death and a revive) would let this run's totals
-    // retroactively complete a mission that was never played for.
+    // out any earlier would let this run's totals retroactively complete a
+    // mission that was never played for.
     if (final) this.dealReplacements();
 
     this.store.flush();

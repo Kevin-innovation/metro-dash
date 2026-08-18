@@ -9,17 +9,10 @@ export const UPGRADE_COSTS = [0, 0, 500, 1200, 2400, 4200];
 export const HOVERBOARD_COST = 350;
 export const HOVERBOARD_MAX = 9;
 
-/** Coin cost to continue a run, doubling each time it is used within that run. */
-export const REVIVE_BASE_COST = 400;
-
 export function upgradeCost(level) {
   const next = level + 1;
   if (next > POWERUP_MAX_LEVEL) return null;
   return UPGRADE_COSTS[next] ?? null;
-}
-
-export function reviveCost(usesThisRun) {
-  return REVIVE_BASE_COST * 2 ** Math.max(0, usesThisRun);
 }
 
 /**

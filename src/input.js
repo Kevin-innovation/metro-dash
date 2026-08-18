@@ -1,8 +1,12 @@
+/** Two jumps inside this window deploy the hoverboard instead of the second. */
+export const DOUBLE_TAP_MS = 280;
+
 export class Input {
   constructor(el) {
     this.queue = [];
     this.start = null;
     this.blocked = false;
+    this.lastJumpAt = -Infinity;
     this.held = { jump: false, slide: false, left: false, right: false };
 
     const map = {
@@ -18,9 +22,6 @@ export class Input {
       KeyP: "pause",
       Escape: "pause",
       Enter: "start",
-      KeyB: "board",
-      ShiftLeft: "board",
-      ShiftRight: "board",
     };
 
     window.addEventListener("keydown", (e) => {
@@ -85,6 +86,19 @@ export class Input {
 
   push(act) {
     if (this.blocked) return;
+
+    // A second jump in quick succession means "hoverboard". The first one still
+    // jumps — the same gesture on keyboard and on touch, with no extra key.
+    if (act === "jump") {
+      const now = performance.now();
+      if (now - this.lastJumpAt <= DOUBLE_TAP_MS) {
+        this.lastJumpAt = -Infinity; // consumed, so a third tap starts over
+        act = "board";
+      } else {
+        this.lastJumpAt = now;
+      }
+    }
+
     if (this.queue.length > 4) this.queue.shift();
     this.queue.push(act);
   }
@@ -95,5 +109,6 @@ export class Input {
 
   clear() {
     this.queue.length = 0;
+    this.lastJumpAt = -Infinity;
   }
 }

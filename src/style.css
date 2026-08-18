@@ -1099,8 +1099,6 @@ kbd {
   cursor: default;
 }
 
-/* --- revive -------------------------------------------------------------- */
-
 .bank-line {
   display: flex;
   align-items: center;
@@ -1114,49 +1112,6 @@ kbd {
 .bank-line strong {
   color: var(--gold);
   font-size: 19px;
-}
-
-.bank-line.short strong {
-  color: var(--orange);
-}
-
-.bank-line.short::after {
-  content: "· 부족";
-  color: var(--orange);
-  font-size: 14px;
-}
-
-.revive .coin-orb {
-  display: inline-block;
-  vertical-align: -3px;
-  margin-right: 4px;
-}
-
-.revive {
-  width: 100%;
-  margin-bottom: 10px;
-  border: 0;
-  padding: 14px 18px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #7dfcd4, #14d4b8);
-  color: #04302a;
-  font: 700 21px/1 "Jua", sans-serif;
-  box-shadow:
-    0 6px 0 #0b8577,
-    var(--shadow);
-  cursor: pointer;
-}
-
-.revive:active {
-  transform: translateY(3px);
-  box-shadow: 0 3px 0 #0b8577;
-}
-
-.revive:disabled {
-  background: rgba(255, 255, 255, 0.08);
-  color: #6f8b9c;
-  box-shadow: none;
-  cursor: default;
 }
 
 @media (min-width: 820px) {

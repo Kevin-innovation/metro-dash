@@ -26,7 +26,7 @@ import { SaveStore } from "./save.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
-import { characterById, reviveCost } from "./shop.js";
+import { characterById } from "./shop.js";
 import { applyWorldQuality, createWorld, syncWorld } from "./world.js";
 
 const $ = (id) => document.getElementById(id);
@@ -99,7 +99,6 @@ export class Game {
       toTitle: () => this.toTitle(),
       pause: () => this.pause(),
       resume: () => this.resume(),
-      revive: () => this.revive(),
       deployBoard: () => this.deployBoard(),
       openShop: () => this.openShop(),
       buy: (kind, id) => this.buy(kind, id),
@@ -656,7 +655,7 @@ export class Game {
       this.screens.flashNearMiss();
     }
 
-    // A hoverboard eats the first hit; grace covers the recovery and revives.
+    // A hoverboard eats the first hit; grace covers the recovery.
     if (this.boardGrace <= 0 && this.interactions.detectCrash(this.player)) {
       if (!this.absorbCrash()) this.die();
     }
@@ -696,35 +695,6 @@ export class Game {
     this.store.recordBest(this.run.score);
   }
 
-  /** Spend banked coins to carry on from where the run ended. */
-  revive() {
-    if (this.state !== "dead") return;
-    const cost = reviveCost(this.run.revives);
-    if (!this.store.spendCoins(cost)) {
-      this.audio.denied();
-      return;
-    }
-
-    this.run.revives += 1;
-    this.state = "playing";
-    this.player.alive = true;
-    this.player.tumble = 0;
-    this.player.root.rotation.set(0, 0, 0);
-    resetPlayerToLane(this.player);
-    // Clear the wreck out of the way and grant a breather before hazards count.
-    this.pool.prune(this.player.z + 34);
-    this.boardGrace = 2.6;
-    this.run.combo = 0;
-    this.deadAt = 0;
-    this.accumulator = 0;
-    this.lastFrame = 0;
-    this.screens.setOverlay("hud");
-    this.audio.board();
-    this.bgm.start(this.phaseId);
-    this.screens.refreshProfile(this.store.data);
-    this.screens.syncHud(this);
-  }
-
   // --- run completion -----------------------------------------------------
 
   /** Commit run progress to the profile. See Run#bank for the delta rules. */
@@ -761,22 +731,6 @@ export class Game {
     // Aim well down the track so obstacles enter frame with time to read them.
     this.camera.lookAt(p.x * 0.5, 1.35 + p.y * 0.28, p.z + 14);
   }
-}
-
-/** Drop the runner back onto the ground in the centre lane after a revive. */
-function resetPlayerToLane(p) {
-  p.lane = 0;
-  p.y = 0;
-  p.vy = 0;
-  p.jumping = false;
-  p.diving = false;
-  p.sliding = false;
-  p.slideT = 0;
-  p.mounted = null;
-  p.mounting = false;
-  p.roofY = 0;
-  p.flying = false;
-  p.jets.visible = false;
 }
 
 
