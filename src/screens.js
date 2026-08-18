@@ -145,7 +145,9 @@ export class Screens {
       const el = $(id);
       if (el) el.textContent = best;
     }
-    for (const id of ["coin-bank", "shop-coins"]) {
+    // The game-over card needs the bank too, otherwise the revive price has
+    // nothing to be compared against.
+    for (const id of ["coin-bank", "shop-coins", "over-bank"]) {
       const el = $(id);
       if (el) el.textContent = save.coins.toLocaleString();
     }
@@ -285,7 +287,18 @@ export class Screens {
     const cost = reviveCost(revives);
     const costEl = $("revive-cost");
     if (costEl) costEl.textContent = cost.toLocaleString();
-    button.disabled = coins < cost;
-    button.classList.toggle("hidden", revives >= 3);
+
+    const affordable = coins >= cost;
+    const exhausted = revives >= 3;
+    button.disabled = !affordable;
+    button.classList.toggle("hidden", exhausted);
+
+    // Flag the bank when it cannot cover the price, so a disabled button has a
+    // visible reason next to it.
+    const bank = $("over-bank")?.closest(".bank-line");
+    if (bank) {
+      bank.classList.toggle("hidden", exhausted);
+      bank.classList.toggle("short", !affordable);
+    }
   }
 }

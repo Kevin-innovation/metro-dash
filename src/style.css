@@ -378,10 +378,9 @@ body {
   transform-origin: left center;
 }
 
+/* Sits in the left chip stack rather than at a fixed offset, which used to
+   land it right on top of the best-score chip. */
 #pace-chip {
-  position: absolute;
-  left: 16px;
-  top: calc(64px + env(safe-area-inset-top));
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(7, 16, 24, 0.5);
@@ -1101,6 +1100,37 @@ kbd {
 }
 
 /* --- revive -------------------------------------------------------------- */
+
+.bank-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: #9ec2d8;
+  font-size: 15px;
+}
+
+.bank-line strong {
+  color: var(--gold);
+  font-size: 19px;
+}
+
+.bank-line.short strong {
+  color: var(--orange);
+}
+
+.bank-line.short::after {
+  content: "· 부족";
+  color: var(--orange);
+  font-size: 14px;
+}
+
+.revive .coin-orb {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 4px;
+}
 
 .revive {
   width: 100%;
