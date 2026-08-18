@@ -23,7 +23,7 @@ import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier } from "./progression.js";
 import { Run } from "./run.js";
-import { SaveStore, normalizeSave } from "./save.js";
+import { SaveStore, describeSave, hasProgress, normalizeSave } from "./save.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
@@ -114,6 +114,8 @@ export class Game {
       openAccount: () => this.openAccount(),
       submitAccount: (mode, handle, pin) => this.submitAccount(mode, handle, pin),
       openLeaderboard: () => this.openLeaderboard(),
+      reportHandle: (handle, button) => this.reportHandle(handle, button),
+      resolveMerge: (choice) => this.resolveMerge(choice),
     });
     this.resize();
     window.addEventListener("resize", () => this.resize());
@@ -152,10 +154,7 @@ export class Game {
         await this.cloud.register(handle, pin, this.store.data);
       } else {
         const result = await this.cloud.signIn(handle, pin);
-        // The cloud save wins on sign-in: it is the record that follows the
-        // player between devices, and the local one is whatever this browser
-        // happened to have.
-        if (result?.profile) this.adoptProfile(result.profile);
+        this.reconcileProfiles(result?.profile);
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
@@ -163,6 +162,64 @@ export class Game {
       this.screens.showAccountError(cloudMessage(error));
     } finally {
       this.screens.setAccountBusy(false);
+    }
+  }
+
+  /**
+   * Decide what happens to the guest save when someone signs in.
+   *
+   * Taking the cloud copy unconditionally used to throw away a session of guest
+   * play without a word. Now that only happens when there was nothing to lose;
+   * when both sides have been played, the choice belongs to the player.
+   */
+  reconcileProfiles(cloudProfile) {
+    const cloud = cloudProfile ? normalizeSave(cloudProfile) : null;
+    const local = this.store.data;
+
+    if (!cloud || !hasProgress(cloud)) {
+      // Nothing on the server worth keeping: push this browser's save up.
+      this.cloud.save(local);
+      return;
+    }
+    if (!hasProgress(local)) {
+      this.adoptProfile(cloud);
+      return;
+    }
+
+    this.pendingMerge = { local, cloud };
+    this.screens.openMerge(describeSave(local), describeSave(cloud));
+  }
+
+  resolveMerge(choice) {
+    const pending = this.pendingMerge;
+    this.pendingMerge = null;
+    this.screens.closeMerge();
+    if (!pending) return;
+
+    if (choice === "cloud") {
+      this.adoptProfile(pending.cloud);
+    } else {
+      // Keeping this browser's save means the server has to be told about it,
+      // or the next sign-in would offer the same choice again.
+      this.cloud.save(pending.local);
+    }
+    this.screens.refreshProfile(this.store.data);
+  }
+
+  /** Report a nickname from the leaderboard. */
+  async reportHandle(handle, button) {
+    if (button) button.disabled = true;
+    try {
+      const result = await this.cloud.report(handle);
+      this.screens.showReportNote(
+        result?.alreadyReported
+          ? "이미 신고한 닉네임이에요"
+          : "신고했어요. 선생님이 확인합니다",
+      );
+      this.audio.purchase();
+    } catch (error) {
+      if (button) button.disabled = false;
+      this.screens.showReportNote(cloudMessage(error));
     }
   }
 

@@ -1305,7 +1305,9 @@ kbd {
 
 .leaderboard-row {
   display: grid;
-  grid-template-columns: 42px 1fr auto;
+  /* Fourth column is the report button; it keeps its width even on rows that
+     have no button, so the scores stay in a straight line down the list. */
+  grid-template-columns: 42px 1fr auto 30px;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -1349,4 +1351,287 @@ kbd {
   padding: 22px 12px;
   color: #8fb0c4;
   font-size: 14px;
+}
+
+/* --- reporting & profile merge -------------------------------------------- */
+
+/* Also worn by an empty span on rows that cannot be reported, which is what
+   holds the column open. Only the button form is visible. */
+.report-flag {
+  width: 30px;
+  height: 30px;
+}
+
+button.report-flag {
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8fb0c4;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+button.report-flag:hover {
+  background: rgba(255, 122, 60, 0.18);
+}
+
+button.report-flag:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.report-hint {
+  margin: 0 0 12px;
+  color: #7fa3ba;
+  font-size: 12.5px;
+}
+
+.report-note {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(20, 212, 184, 0.14);
+  border: 1px solid rgba(20, 212, 184, 0.45);
+  color: #b7f3e7;
+  font-size: 13.5px;
+}
+
+.merge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.merge-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(7, 16, 24, 0.6);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.merge-card:hover {
+  border-color: rgba(20, 212, 184, 0.6);
+  background: rgba(20, 212, 184, 0.1);
+}
+
+.merge-title {
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.merge-body {
+  font-size: 13px;
+  color: #9ec2d8;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+/* --- teacher tools page --------------------------------------------------- */
+
+body.admin {
+  overflow: auto;
+  touch-action: auto;
+  background: #0b141c;
+}
+
+.admin-wrap {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 28px 16px 60px;
+}
+
+.admin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.admin-head h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 0.02em;
+}
+
+.admin-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: transparent;
+  color: #9ec2d8;
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-card {
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(7, 16, 24, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-note {
+  margin: 0 0 14px;
+  color: #9ec2d8;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.admin-note strong {
+  color: var(--gold);
+}
+
+#admin-form {
+  display: flex;
+  gap: 8px;
+}
+
+#admin-form input,
+#admin-search {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 16, 24, 0.7);
+  color: var(--paper);
+  font: inherit;
+}
+
+#admin-search {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+#admin-form button {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 20px;
+  background: linear-gradient(180deg, #ffe27a, #ffb300);
+  color: #3b2500;
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-error {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 122, 60, 0.16);
+  border: 1px solid rgba(255, 122, 60, 0.45);
+  color: #ffd2b8;
+  font-size: 14px;
+}
+
+#admin-panel h2 {
+  margin: 26px 0 12px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--gold);
+}
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(7, 16, 24, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-row.flagged {
+  border-color: rgba(255, 122, 60, 0.5);
+  background: rgba(255, 122, 60, 0.09);
+}
+
+.admin-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-handle {
+  font-size: 17px;
+  color: #eaf5fc;
+}
+
+.admin-handle .locked {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--orange);
+}
+
+.admin-meta {
+  font-size: 12.5px;
+  color: #8fb0c4;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9px;
+  padding: 7px 11px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cfe4f0;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-actions button:hover {
+  border-color: rgba(20, 212, 184, 0.6);
+}
+
+.admin-actions button.danger {
+  color: #ffb4a0;
+  border-color: rgba(255, 90, 60, 0.35);
+}
+
+.admin-empty {
+  padding: 18px;
+  color: #7fa3ba;
+  font-size: 14px;
+}
+
+.admin-toast {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(20, 212, 184, 0.16);
+  border: 1px solid rgba(20, 212, 184, 0.5);
+  color: #b7f3e7;
+  font-size: 14px;
+}
+
+.admin-toast.bad {
+  background: rgba(255, 122, 60, 0.16);
+  border-color: rgba(255, 122, 60, 0.5);
+  color: #ffd2b8;
 }

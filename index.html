@@ -161,7 +161,29 @@
           <h2>리더보드</h2>
           <p id="my-standing" class="my-standing hidden"></p>
           <ol id="leaderboard-list" class="leaderboard-list"></ol>
+          <p id="report-note" class="report-note hidden"></p>
+          <p class="report-hint">이상한 닉네임이 보이면 🚩 를 눌러 알려 주세요</p>
           <button id="btn-leaderboard-close" type="button" class="ghost">닫기</button>
+        </div>
+      </div>
+
+      <div id="merge-screen" class="overlay hidden">
+        <div class="dialog">
+          <h2>기록이 두 개예요</h2>
+          <p class="account-note">
+            이 기기에서 게스트로 플레이한 기록과, 계정에 저장된 기록이 서로 달라요.<br />
+            <strong>어느 쪽을 이어서 쓸지 골라 주세요. 고르지 않은 쪽은 사라집니다.</strong>
+          </p>
+          <div class="merge-grid">
+            <button id="btn-keep-local" type="button" class="merge-card">
+              <span class="merge-title">이 기기 기록</span>
+              <span id="merge-local" class="merge-body"></span>
+            </button>
+            <button id="btn-keep-cloud" type="button" class="merge-card">
+              <span class="merge-title">계정 기록</span>
+              <span id="merge-cloud" class="merge-body"></span>
+            </button>
+          </div>
         </div>
       </div>
 

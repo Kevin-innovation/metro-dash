@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>METRO DASH · 관리</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Jua&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="admin">
+    <main class="admin-wrap">
+      <header class="admin-head">
+        <h1>METRO DASH 관리</h1>
+        <button id="admin-signout" type="button" class="admin-ghost hidden">잠그기</button>
+      </header>
+
+      <section id="admin-gate" class="admin-card">
+        <p class="admin-note">
+          Convex 대시보드에 설정한 <strong>ADMIN_KEY</strong>를 입력하세요.<br />
+          키는 이 브라우저 탭에만 보관되고, 탭을 닫으면 지워집니다.
+        </p>
+        <form id="admin-form" autocomplete="off">
+          <input id="admin-key" type="password" placeholder="관리자 키" autocomplete="off" />
+          <button type="submit">열기</button>
+        </form>
+        <p id="admin-error" class="admin-error hidden"></p>
+      </section>
+
+      <section id="admin-panel" class="hidden">
+        <div id="admin-toast" class="admin-toast hidden"></div>
+
+        <h2>신고된 닉네임</h2>
+        <div id="admin-reports" class="admin-list"></div>
+
+        <h2>플레이어</h2>
+        <input id="admin-search" type="search" placeholder="닉네임 검색" autocomplete="off" />
+        <div id="admin-players" class="admin-list"></div>
+      </section>
+    </main>
+    <script type="module" src="/src/admin.js"></script>
+  </body>
+</html>

@@ -9,13 +9,16 @@
     "preview": "vite preview --host",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "build:vercel": "convex deploy --cmd 'vite build'"
   },
   "dependencies": {
     "convex": "^1.44.0",
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "convex-test": "^0.0.55",
     "vite": "^6.0.3",
     "vitest": "^2.1.8"
   }

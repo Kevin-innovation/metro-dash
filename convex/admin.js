@@ -55,6 +55,63 @@ export const list = query({
   },
 });
 
+/**
+ * Open reports, newest first, grouped by who was reported.
+ *
+ * Grouped rather than listed one per row: five reports about one nickname is
+ * one thing to look at, not five.
+ */
+export const reports = query({
+  args: { adminKey: v.string() },
+  handler: async (ctx, { adminKey }) => {
+    requireAdmin(adminKey);
+    const open = await ctx.db
+      .query("reports")
+      .withIndex("by_status", (q) => q.eq("status", "open"))
+      .order("desc")
+      .take(200);
+
+    const byTarget = new Map();
+    for (const row of open) {
+      const entry = byTarget.get(row.targetHandle) ?? {
+        handle: row.targetHandle,
+        count: 0,
+        reporters: [],
+        latest: 0,
+      };
+      entry.count += 1;
+      if (entry.reporters.length < 5) entry.reporters.push(row.reporterHandle);
+      entry.latest = Math.max(entry.latest, row.createdAt);
+      byTarget.set(row.targetHandle, entry);
+    }
+
+    return [...byTarget.values()].sort((a, b) => b.count - a.count || b.latest - a.latest);
+  },
+});
+
+/** Mark every open report about a nickname as dealt with. */
+export const resolveReports = mutation({
+  args: { adminKey: v.string(), handle: v.string() },
+  handler: async (ctx, { adminKey, handle }) => {
+    requireAdmin(adminKey);
+    const player = await byHandle(ctx, handle);
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
+
+    const open = await ctx.db
+      .query("reports")
+      .withIndex("by_target", (q) => q.eq("targetId", player._id))
+      .collect();
+    let resolved = 0;
+    for (const row of open) {
+      if (row.status === "open") {
+        await ctx.db.patch(row._id, { status: "resolved" });
+        resolved += 1;
+      }
+    }
+    return { ok: true, resolved };
+  },
+});
+
 export const resetPin = mutation({
   args: { adminKey: v.string(), handle: v.string(), newPin: v.string() },
   handler: async (ctx, { adminKey, handle, newPin }) => {
@@ -104,6 +161,15 @@ export const rename = mutation({
       .collect();
     for (const run of runs) await ctx.db.patch(run._id, { handle: check.handle });
 
+    // The reports that prompted this are answered by the rename itself.
+    const open = await ctx.db
+      .query("reports")
+      .withIndex("by_target", (q) => q.eq("targetId", player._id))
+      .collect();
+    for (const row of open) {
+      if (row.status === "open") await ctx.db.patch(row._id, { status: "resolved" });
+    }
+
     return { ok: true, from: player.handle, to: check.handle, runsUpdated: runs.length };
   },
 });
@@ -133,8 +199,14 @@ export const remove = mutation({
       .withIndex("by_player", (q) => q.eq("playerId", player._id))
       .collect();
     for (const run of runs) await ctx.db.delete(run._id);
-    await ctx.db.delete(player._id);
 
-    return { ok: true, runsRemoved: runs.length };
+    const filed = await ctx.db
+      .query("reports")
+      .withIndex("by_target", (q) => q.eq("targetId", player._id))
+      .collect();
+    for (const row of filed) await ctx.db.delete(row._id);
+
+    await ctx.db.delete(player._id);
+    return { ok: true, runsRemoved: runs.length, reportsRemoved: filed.length };
   },
 });

@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as players from "../players.js";
+import type * as reports from "../reports.js";
 import type * as scores from "../scores.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   players: typeof players;
+  reports: typeof reports;
   scores: typeof scores;
 }>;
 

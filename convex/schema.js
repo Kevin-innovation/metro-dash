@@ -37,6 +37,25 @@ export default defineSchema({
     .index("by_device", ["deviceId"])
     .index("by_best", ["best"]),
 
+  /**
+   * Nickname reports.
+   *
+   * The word list cannot catch a name with characters inserted mid-word, so the
+   * players who can see the board are the ones who will spot those. One report
+   * per reporter per target, so a group cannot pile onto someone.
+   */
+  reports: defineTable({
+    targetId: v.id("players"),
+    targetHandle: v.string(),
+    reporterId: v.id("players"),
+    reporterHandle: v.string(),
+    status: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_target", ["targetId"])
+    .index("by_reporter_target", ["reporterId", "targetId"])
+    .index("by_status", ["status", "createdAt"]),
+
   scores: defineTable({
     playerId: v.id("players"),
     /** Denormalised so the leaderboard is a single read. */

@@ -84,6 +84,19 @@ export class Screens {
     const boardClose = $("btn-leaderboard-close");
     if (boardClose) boardClose.onclick = () => this.closeLeaderboard();
 
+    const boardList = $("leaderboard-list");
+    if (boardList) {
+      boardList.addEventListener("click", (event) => {
+        const flag = event.target.closest("[data-report]");
+        if (flag && !flag.disabled) a.reportHandle(flag.dataset.report, flag);
+      });
+    }
+
+    const keepLocal = $("btn-keep-local");
+    if (keepLocal) keepLocal.onclick = () => a.resolveMerge("local");
+    const keepCloud = $("btn-keep-cloud");
+    if (keepCloud) keepCloud.onclick = () => a.resolveMerge("cloud");
+
     for (const [id, mode] of [["tab-signin", "signin"], ["tab-signup", "signup"]]) {
       const tab = $(id);
       if (tab) tab.onclick = () => this.setAccountMode(mode);
@@ -192,6 +205,35 @@ export class Screens {
     if (panel) panel.classList.add("hidden");
   }
 
+  showReportNote(message) {
+    const note = $("report-note");
+    if (!note) return;
+    note.textContent = message ?? "";
+    note.classList.toggle("hidden", !message);
+    clearTimeout(this.reportNoteTimer);
+    if (message) this.reportNoteTimer = setTimeout(() => note.classList.add("hidden"), 3000);
+  }
+
+  /**
+   * Ask which save to keep.
+   *
+   * Shown only when both sides have real progress — replacing an untouched
+   * profile needs no ceremony, but silently dropping a played one does.
+   */
+  openMerge(local, cloud) {
+    const format = (s) =>
+      `최고 ${s.best.toLocaleString()}점\n코인 ${s.coins.toLocaleString()}개\n` +
+      `${s.runs.toLocaleString()}판 · ${s.xp.toLocaleString()} XP`;
+    $("merge-local").textContent = format(local);
+    $("merge-cloud").textContent = format(cloud);
+    $("merge-screen").classList.remove("hidden");
+  }
+
+  closeMerge() {
+    const panel = $("merge-screen");
+    if (panel) panel.classList.add("hidden");
+  }
+
   renderLeaderboard(rows, standing, myHandle) {
     const list = $("leaderboard-list");
     if (!list) return;
@@ -201,12 +243,21 @@ export class Screens {
     } else {
       list.innerHTML = rows
         .map((row) => {
-          const me = row.handle === myHandle ? " me" : "";
+          const mine = row.handle === myHandle;
+          // No flag on your own row, and none at all for a signed-out viewer:
+          // a report has to be attributable to be worth acting on.
+          const flag =
+            myHandle && !mine
+              ? `<button type="button" class="report-flag" data-report="${escapeHtml(
+                  row.handle,
+                )}" title="닉네임 신고" aria-label="${escapeHtml(row.handle)} 신고">🚩</button>`
+              : `<span class="report-flag" aria-hidden="true"></span>`;
           return `
-            <li class="leaderboard-row${me}">
+            <li class="leaderboard-row${mine ? " me" : ""}">
               <span class="leaderboard-rank">${row.rank}</span>
               <span class="leaderboard-handle">${escapeHtml(row.handle)}</span>
               <span class="leaderboard-score">${row.best.toLocaleString()}</span>
+              ${flag}
             </li>`;
         })
         .join("");
@@ -232,6 +283,7 @@ export class Screens {
     this.closeSettings();
     this.closeAccount();
     this.closeLeaderboard();
+    this.closeMerge();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
     if (mode !== "hud") $("touch-hint").classList.add("hidden");

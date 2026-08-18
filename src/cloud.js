@@ -200,6 +200,11 @@ export class Cloud {
     }
   }
 
+  async report(handle) {
+    if (!this.signedIn) throw new Error("로그인해야 신고할 수 있어요");
+    return await this.mutation("reports:report", { token: this.session.token, handle });
+  }
+
   async leaderboard(limit = 20) {
     return await this.query("scores:top", { limit });
   }

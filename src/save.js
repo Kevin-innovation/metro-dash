@@ -217,6 +217,35 @@ function safeLocalStorage() {
   }
 }
 
+/**
+ * Does this profile represent play worth not throwing away?
+ *
+ * Used when a guest signs in: a fresh profile can be replaced silently, but one
+ * with real progress behind it must not disappear without the player choosing.
+ */
+export function hasProgress(save) {
+  if (!save) return false;
+  return (
+    (save.best ?? 0) > 0 ||
+    (save.coins ?? 0) > 0 ||
+    (save.runs ?? 0) > 0 ||
+    (save.xp ?? 0) > 0 ||
+    (save.hoverboards ?? 0) > 0 ||
+    (save.characters?.length ?? 0) > 1
+  );
+}
+
+/** One-line summary of a profile, so a player can tell two of them apart. */
+export function describeSave(save) {
+  const normalized = normalizeSave(save);
+  return {
+    best: normalized.best,
+    coins: normalized.coins,
+    runs: normalized.runs,
+    xp: normalized.xp,
+  };
+}
+
 /** In-memory storage with the localStorage surface, for tests. */
 export function createMemoryStorage(seed = {}) {
   const map = new Map(Object.entries(seed));
