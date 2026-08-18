@@ -150,7 +150,7 @@ export class Spawner {
     if (last) this.lastHazard = last;
   }
 
-  choose(z, { speed = 20, phaseId = 1, tutorial = false, pressure = 0 }) {
+  choose(z, { speed = 20, phaseId = 1, tutorial = false, pressure = 0, slideBias = 0 }) {
     const context = {
       z,
       lane: pick([-1, 0, 1]),
@@ -170,6 +170,6 @@ export class Spawner {
       return POWERUP_PATTERNS[POWERUP_DECK[index]](z, context.lane);
     }
 
-    return pick(candidatesFor(phaseId)).build(context);
+    return pick(candidatesFor(phaseId, slideBias)).build(context);
   }
 }

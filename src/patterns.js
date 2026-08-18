@@ -65,6 +65,8 @@ export const PATTERNS = [
   },
   {
     id: "sign",
+    /** Can only be cleared by sliding: the tunnel leans on these. */
+    slide: true,
     minPhase: 1,
     weight: 3,
     build: ({ z, lane }) => [
@@ -121,6 +123,8 @@ export const PATTERNS = [
   },
   {
     id: "triple-sign",
+    /** Can only be cleared by sliding: the tunnel leans on these. */
+    slide: true,
     minPhase: 2,
     weight: 2,
     build: ({ z }) => [
@@ -180,6 +184,8 @@ export const PATTERNS = [
   },
   {
     id: "jump-slide",
+    /** Can only be cleared by sliding: the tunnel leans on these. */
+    slide: true,
     minPhase: 3,
     weight: 2,
     // The gate wall has to sit beyond the runner's airtime, and super sneakers
@@ -196,6 +202,8 @@ export const PATTERNS = [
   },
   {
     id: "slide-jump",
+    /** Can only be cleared by sliding: the tunnel leans on these. */
+    slide: true,
     minPhase: 3,
     weight: 2,
     build: ({ z, gap }) => {
@@ -339,11 +347,25 @@ export function describePattern(z, placements) {
 }
 
 /** Patterns unlocked at a given difficulty phase, expanded by weight. */
-export function candidatesFor(phaseId) {
+/**
+ * The draw pile for a phase.
+ *
+ * `slideBias` (0..1) multiplies how many copies of the slide-under layouts go
+ * into the pile, which is how a tunnel's low roof turns into something the
+ * player has to do rather than just something they can see. At 1 they are four
+ * times as likely as usual — enough to define the section, not so much that it
+ * becomes the only obstacle in it.
+ */
+export const SLIDE_BIAS_MAX = 3;
+
+export function candidatesFor(phaseId, slideBias = 0) {
+  const bias = Math.min(1, Math.max(0, slideBias));
   const pool = [];
   for (const pattern of PATTERNS) {
     if (pattern.minPhase > phaseId) continue;
-    for (let i = 0; i < pattern.weight; i++) pool.push(pattern);
+    const extra = pattern.slide ? 1 + SLIDE_BIAS_MAX * bias : 1;
+    const copies = Math.round(pattern.weight * extra);
+    for (let i = 0; i < copies; i++) pool.push(pattern);
   }
   return pool;
 }

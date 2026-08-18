@@ -153,17 +153,32 @@ export function makeWall() {
  * a clear day with haze at the horizon, rather than a sunset behind noon
  * lighting.
  */
-export function makeSky() {
+const hex = (n) => `#${n.toString(16).padStart(6, "0")}`;
+
+/**
+ * Vertical gradient from `top` down to `bottom`.
+ *
+ * Taking the two ends as arguments is what lets a zone hand it a night sky or a
+ * tunnel ceiling without a second texture path.
+ */
+export function makeSky(top = 0x2f7fc4, bottom = 0xf0e3cf) {
   return canvasTexture(4, 256, (ctx, w, h) => {
     const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#2f7fc4");
-    g.addColorStop(0.36, "#67b3e2");
-    g.addColorStop(0.66, "#a9d6ee");
-    g.addColorStop(0.86, "#dfeaf0");
-    g.addColorStop(1, "#f0e3cf");
+    g.addColorStop(0, hex(top));
+    // Two thirds of the way down is where the horizon reads, so the mid stops
+    // are weighted towards the bottom colour rather than sitting halfway.
+    g.addColorStop(0.5, hex(mixHex(top, bottom, 0.45)));
+    g.addColorStop(0.82, hex(mixHex(top, bottom, 0.82)));
+    g.addColorStop(1, hex(bottom));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
   });
+}
+
+function mixHex(a, b, k) {
+  const ch = (c, shift) => (c >> shift) & 0xff;
+  const m = (shift) => Math.round(ch(a, shift) + (ch(b, shift) - ch(a, shift)) * k);
+  return (m(16) << 16) | (m(8) << 8) | m(0);
 }
 
 /** Soft round blob used for the drifting clouds. */

@@ -18,6 +18,7 @@ import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
 import { MISSION_TIERS, ensureMissions } from "./missions.js";
 import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
+import { lookAt } from "./zones.js";
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
@@ -28,7 +29,7 @@ import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
-import { applyWorldQuality, createWorld, syncWorld } from "./world.js";
+import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -311,8 +312,8 @@ export class Game {
     this.renderer.shadowMap.enabled = this.quality.shadows;
     this.camera.far = this.quality.drawDistance;
     this.camera.updateProjectionMatrix();
-    this.scene.fog.near = this.quality.fog[0];
-    this.scene.fog.far = this.quality.fog[1];
+    // Fog is not set here: applyLook owns it, because the distance depends on
+    // the zone as well as the tier and two writers would fight every frame.
     applyWorldQuality(this.world, this.quality);
     this.particles.setBudget(this.quality.particleBudget);
     this.resize();
@@ -551,6 +552,8 @@ export class Game {
     this.emitAmbientParticles(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
+    // The title screen holds the opening look; only a run travels through zones.
+    applyLook(this.world, lookAt(this.state === "playing" ? this.runTime : 0), this.quality);
     this.updateCamera(frameDt);
     if (this.state === "playing") this.screens.syncHud(this);
     this.renderer.render(this.scene, this.camera);
@@ -754,6 +757,9 @@ export class Game {
       // The title-screen preview stays at the gentlest pacing.
       reaction: playing ? reactionAt(this.runTime) : reactionAt(0),
       pressure: playing ? pressureAt(this.runTime) : 0,
+      // The tunnel's low roof has to mean something, so it leans the pattern
+      // pick towards the gates you can only get under by sliding.
+      slideBias: playing ? lookAt(this.runTime).slideBias : 0,
       tutorial: playing,
     });
   }
