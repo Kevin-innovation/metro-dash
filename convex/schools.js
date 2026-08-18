@@ -66,11 +66,24 @@ export async function joinSchool(ctx, player, school) {
   return row;
 }
 
-/** Detach a player, taking their best back out of the total. */
+/**
+ * Detach a player, taking their best back out of the total.
+ *
+ * The school row goes with the last member. Left behind it would sit in the
+ * staff list at 「0명 · 0점」 forever, and every deleted account would add
+ * another one.
+ */
 export async function leaveSchool(ctx, player) {
   if (!player.schoolKey) return;
-  await adjustSchool(ctx, player.schoolKey, { members: -1, total: -player.best });
+  const key = player.schoolKey;
+  await adjustSchool(ctx, key, { members: -1, total: -player.best });
   await ctx.db.patch(player._id, { school: undefined, schoolKey: undefined, updatedAt: Date.now() });
+
+  const row = await ctx.db
+    .query("schools")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+  if (row && row.members <= 0) await ctx.db.delete(row._id);
 }
 
 // --- reads ------------------------------------------------------------------

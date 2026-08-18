@@ -12,6 +12,11 @@ export default defineConfig({
     host: true,
     port: 4173,
   },
+  test: {
+    // Unit and backend tests are *.test.js; the browser suite is *.spec.js and
+    // belongs to Playwright, which needs a running server Vitest cannot give it.
+    include: ["tests/**/*.test.js"],
+  },
   build: {
     rollupOptions: {
       // The teacher tools are their own page, so nothing in them ships to a

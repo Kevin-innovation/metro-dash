@@ -1,4 +1,8 @@
 import { ConvexClient } from "convex/browser";
+// The stylesheet is pulled in per entry point. Without this line the admin page
+// ships with no CSS at all — including `.hidden`, so the key form and the panel
+// it guards are both on screen at once.
+import "./style.css";
 import { escapeHtml } from "./ui.js";
 import { LEVELS, REGIONS, previewLabel, validateSchool } from "./school.js";
 

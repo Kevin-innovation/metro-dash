@@ -560,6 +560,33 @@ describe("admin 학교 도구", () => {
     expect(row).toMatchObject({ total: 1000, members: 1 });
   });
 
+  it("마지막 한 명이 나가면 학교도 사라진다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "마지막사람");
+    await joinSchool(t, token);
+    await t.mutation(api.scores.submit, { token, ...plausibleRun({ score: 700 }) });
+
+    expect(await t.query(api.admin.schools, { adminKey: ADMIN_KEY })).toHaveLength(1);
+    await t.mutation(api.admin.remove, { adminKey: ADMIN_KEY, handle: "마지막사람" });
+
+    // Otherwise every deleted account leaves a 「0명 · 0점」 row behind for staff.
+    expect(await t.query(api.admin.schools, { adminKey: ADMIN_KEY })).toHaveLength(0);
+  });
+
+  it("여럿 중 하나가 나가면 학교는 남는다", async () => {
+    const t = backend();
+    const a = await signUp(t, "남는사람", "1234", "d1");
+    const b = await signUp(t, "가는사람", "1234", "d2");
+    await joinSchool(t, a.token);
+    await joinSchool(t, b.token);
+    await t.mutation(api.scores.submit, { token: a.token, ...plausibleRun({ score: 700 }) });
+    await t.mutation(api.scores.submit, { token: b.token, ...plausibleRun({ score: 300 }) });
+
+    await t.mutation(api.admin.remove, { adminKey: ADMIN_KEY, handle: "가는사람" });
+    const [row] = await t.query(api.admin.schools, { adminKey: ADMIN_KEY });
+    expect(row).toMatchObject({ members: 1, total: 700 });
+  });
+
   it("갈라진 학교를 하나로 합친다", async () => {
     const t = backend();
     const a = await signUp(t, "오타학교", "1234", "d1");
@@ -614,10 +641,21 @@ describe("admin 학교 도구", () => {
 
   it("recompute 가 아무도 없는 학교를 치운다", async () => {
     const t = backend();
-    const { token } = await signUp(t, "혼자였음");
-    await joinSchool(t, token);
-    await t.mutation(api.scores.submit, { token, ...plausibleRun({ score: 800 }) });
-    await t.mutation(api.admin.clearSchool, { adminKey: ADMIN_KEY, handle: "혼자였음" });
+    // Leaving a school now deletes an empty one on the spot, so the orphan is
+    // planted directly — this is the drift recompute exists to undo.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("schools", {
+        key: "대구|중|유령",
+        region: "대구",
+        level: "중",
+        name: "유령",
+        label: "대구 유령중학교",
+        members: 3,
+        total: 5000,
+        updatedAt: 0,
+      });
+    });
+    expect(await t.query(api.admin.schools, { adminKey: ADMIN_KEY })).toHaveLength(1);
 
     const result = await t.mutation(api.admin.recomputeSchools, { adminKey: ADMIN_KEY });
     expect(result).toMatchObject({ schools: 0, removed: 1 });
