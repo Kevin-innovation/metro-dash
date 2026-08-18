@@ -33,8 +33,26 @@ export const MAX_SIM_STEPS = Math.ceil(MAX_FRAME_DT / FIXED_DT);
 export const COLLIDE_PAD_Y = 0.06;
 // Half-depth of the Z window in which a pickup can be grabbed.
 export const PICKUP_DEPTH = 0.7;
-// Distance a pattern must clear before the next one may start.
-export const PATTERN_CLEARANCE = 10;
+// Absolute floor on the runway between two patterns, so they can never touch.
+export const PATTERN_CLEARANCE = 6;
+
+// --- Difficulty ------------------------------------------------------------
+//
+// Speed alone does not make a runner hard: if the gaps grow with the speed, the
+// player gets the same thinking time all the way through and the run becomes a
+// treadmill. These drive the part that actually tightens.
+
+/** Seconds before the run starts winding up, and when it is fully wound. */
+export const PRESSURE_STARTS_AT = 12;
+export const PRESSURE_FULL_AT = 240;
+
+/** Seconds between patterns at the start of a run, and once fully wound up. */
+export const REACTION_EASY = 1.15;
+export const REACTION_HARD = 0.45;
+
+/** Runway between patterns, as seconds of travel, at each end of the ramp. */
+export const CLEARANCE_SECONDS_EASY = 0.5;
+export const CLEARANCE_SECONDS_HARD = 0.06;
 
 /** Apex height of a normal jump, derived from launch velocity and gravity. */
 export const JUMP_APEX = (JUMP_V * JUMP_V) / (2 * -GRAVITY);

@@ -1,5 +1,9 @@
-import { PATTERN_CLEARANCE } from "./config.js";
-import { POWERUP_PATTERNS, candidatesFor, describePattern, fairnessClearance } from "./patterns.js";
+import {
+  CLEARANCE_SECONDS_EASY,
+  CLEARANCE_SECONDS_HARD,
+  PATTERN_CLEARANCE,
+} from "./config.js";
+import { POWERUP_PATTERNS, candidatesFor, describePattern, requiredLeadSeconds } from "./patterns.js";
 
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
 const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
@@ -40,13 +44,28 @@ export class Spawner {
 
   reset() {
     this.patternCount = 0;
-    this.lastPattern = null;
+    /**
+     * The last hazard actually placed, wherever it came from. Tracked across
+     * patterns rather than per pattern, because a layout with no obstacles at
+     * all — a coin run, a power-up drop — would otherwise erase the memory of
+     * the jump the runner is still in the air from.
+     */
+    this.lastHazard = null;
     this.nextSpawn = 0;
   }
 
-  /** Metres covered by `seconds` of running, floored so slow layouts stay readable. */
-  static gapFor(speed, seconds, minMetres) {
-    return Math.max(minMetres, speed * seconds);
+  /**
+   * Metres covered by `seconds` of running, floored so slow layouts stay
+   * readable.
+   *
+   * `floorSeconds` is the tightest the gap may become once the run is fully
+   * wound up. Each caller sets its own floor because the physical minimum
+   * differs — a jump has to finish before a slide wall arrives, a lane change
+   * does not.
+   */
+  static gapFor(speed, pressure, seconds, minMetres, floorSeconds = seconds) {
+    const eased = seconds + (floorSeconds - seconds) * pressure;
+    return Math.max(minMetres, speed * eased);
   }
 
   /** Fill the track ahead before a run or a title-screen preview starts. */
@@ -68,14 +87,18 @@ export class Spawner {
   update(playerZ, options) {
     if (playerZ <= this.nextSpawn) return null;
 
-    const { speed, reaction } = options;
+    const { speed, reaction, pressure = 0 } = options;
     const ahead = Math.max(46, speed * 2.35);
     const meta = this.place(playerZ + ahead, options);
 
     // The next pattern starts however far the runner travels before the timer
-    // fires, so it must not fire until this one is cleared plus a margin.
+    // fires, so it must not fire until this one is cleared plus a margin. Both
+    // terms tighten with pressure, which is what stops the run settling into a
+    // constant amount of thinking time no matter how fast the world moves.
     const reactionGap = speed * reaction;
-    const clearance = Math.max(PATTERN_CLEARANCE, speed * 0.5) + meta.fairness;
+    const clearSeconds =
+      CLEARANCE_SECONDS_EASY + (CLEARANCE_SECONDS_HARD - CLEARANCE_SECONDS_EASY) * pressure;
+    const clearance = Math.max(PATTERN_CLEARANCE, speed * clearSeconds);
     this.nextSpawn = playerZ + Math.max(reactionGap, meta.span + clearance);
     return meta;
   }
@@ -83,7 +106,20 @@ export class Spawner {
   /** Materialise one pattern at `z` and report what it occupies. */
   place(z, options = {}) {
     this.patternCount += 1;
-    const placements = this.choose(z, options);
+    const speed = options.speed ?? 20;
+    let placements = this.choose(z, options);
+    let described = describePattern(z, placements);
+
+    // How much room this layout needs from the one before it depends on what it
+    // opens with, which is only knowable once it has been built. So build it,
+    // measure the gap it actually landed with, and push it downtrack only by
+    // the shortfall — applying the margin to the *following* gap instead would
+    // protect the wrong pattern.
+    const shift = this.leadShortfall(described, speed);
+    if (shift > 0) {
+      placements = placements.map((placement) => ({ ...placement, z: placement.z + shift }));
+      described = describePattern(z + shift, placements);
+    }
 
     for (const placement of placements) {
       const item = this.pool.spawn(
@@ -95,21 +131,31 @@ export class Spawner {
       if (placement.oncoming) this.hooks.onOncoming?.(item);
     }
 
-    const described = describePattern(z, placements);
-    const meta = {
-      ...described,
-      fairness: fairnessClearance(this.lastPattern, described, options.speed ?? 20),
-    };
-    this.lastPattern = described;
-    return meta;
+    this.rememberHazard(described);
+    // Reported span covers the shift too, so the scheduler still knows how far
+    // down the track this pattern actually reaches.
+    return { ...described, span: described.span + shift, shift };
   }
 
-  choose(z, { speed = 20, phaseId = 1, tutorial = false }) {
+  /** Metres this pattern must move downtrack to give the runner a fair lead. */
+  leadShortfall(described, speed) {
+    const entry = described.entryRow;
+    if (!entry?.isWall || !this.lastHazard) return 0;
+    const needed = speed * requiredLeadSeconds(this.lastHazard, entry);
+    return Math.max(0, needed - (entry.z - this.lastHazard.z));
+  }
+
+  rememberHazard(described) {
+    const last = described.rows[described.rows.length - 1];
+    if (last) this.lastHazard = last;
+  }
+
+  choose(z, { speed = 20, phaseId = 1, tutorial = false, pressure = 0 }) {
     const context = {
       z,
       lane: pick([-1, 0, 1]),
       lanes: shuffle([-1, 0, 1]),
-      gap: (seconds, min) => Spawner.gapFor(speed, seconds, min),
+      gap: (seconds, min, floor) => Spawner.gapFor(speed, pressure, seconds, min, floor),
     };
     context.others = [-1, 0, 1].filter((l) => l !== context.lane);
 

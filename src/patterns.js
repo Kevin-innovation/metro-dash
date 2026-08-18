@@ -1,3 +1,4 @@
+import { GRAVITY, JUMP_V, SNEAKER_JUMP_MULT } from "./config.js";
 import { SPEC } from "./specs.js";
 
 export const ALL_LANES = [-1, 0, 1];
@@ -15,7 +16,10 @@ export const ALL_LANES = [-1, 0, 1];
  *   lane    a random lane
  *   lanes   the three lanes in random order
  *   others  lanes other than `lane`
- *   gap(seconds, minMetres)  metres covered in that much running time
+ *   gap(seconds, minMetres, floorSeconds)
+ *           metres covered in that much running time. `floorSeconds` is the
+ *           tightest this gap may become at full pressure; omit it and the
+ *           spacing never compresses.
  */
 export const PATTERNS = [
   {
@@ -139,7 +143,7 @@ export const PATTERNS = [
     minPhase: 2,
     weight: 2,
     build: ({ z, lanes, gap }) => {
-      const step = gap(0.6, 12);
+      const step = gap(0.6, 12, 0.42);
       return [
         { type: "bus", lane: lanes[0], z },
         { type: "bus", lane: lanes[1], z: z + step },
@@ -156,7 +160,7 @@ export const PATTERNS = [
       const lead = gap(0.6, 16);
       return [
         { type: "bus", lane: lanes[0], z: z + lead, oncoming: true },
-        { type: "bus", lane: lanes[1], z: z + lead + gap(0.5, 10), oncoming: true },
+        { type: "bus", lane: lanes[1], z: z + lead + gap(0.5, 10, 0.36), oncoming: true },
         ...coinLine(lanes[2], z - 1, 5),
       ];
     },
@@ -166,7 +170,7 @@ export const PATTERNS = [
     minPhase: 3,
     weight: 2,
     build: ({ z, gap }) => {
-      const step = gap(0.62, 14);
+      const step = gap(0.62, 14, 0.44);
       return [
         { type: "train", lane: -1, z },
         { type: "bus", lane: 0, z: z + step },
@@ -178,10 +182,12 @@ export const PATTERNS = [
     id: "jump-slide",
     minPhase: 3,
     weight: 2,
-    // Jump airtime is ~0.74s, so the gate wall has to sit at least that far
-    // downtrack or the pattern cannot be cleared at speed.
+    // The gate wall has to sit beyond the runner's airtime, and super sneakers
+    // stretch that to ~0.96s — so this gap is sized for the boosted jump and is
+    // deliberately left out of the pressure compression. Compressing it would
+    // make the pattern unclearable while the power-up happens to be running.
     build: ({ z, gap }) => {
-      const step = gap(0.95, 18);
+      const step = gap(1.06, 20);
       return [
         ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z })),
         ...ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + step })),
@@ -193,7 +199,7 @@ export const PATTERNS = [
     minPhase: 3,
     weight: 2,
     build: ({ z, gap }) => {
-      const step = gap(0.75, 14);
+      const step = gap(0.75, 14, 0.52);
       return [
         ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
         ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + step })),
@@ -206,7 +212,7 @@ export const PATTERNS = [
     weight: 2,
     build: ({ z, lanes, gap }) => [
       { type: "train", lane: lanes[0], z },
-      { type: "bus", lane: lanes[1], z: z + gap(0.7, 14) },
+      { type: "bus", lane: lanes[1], z: z + gap(0.7, 14, 0.5) },
       ...coinLine(lanes[0], z - 3, 5, 1.35, 2.8),
     ],
   },
@@ -216,7 +222,7 @@ export const PATTERNS = [
     weight: 2,
     build: ({ z, lanes, gap }) => [
       { type: "bus", lane: lanes[0], z },
-      { type: "bus", lane: lanes[1], z: z + gap(0.8, 20), oncoming: true },
+      { type: "bus", lane: lanes[1], z: z + gap(0.8, 20, 0.58), oncoming: true },
       ...coinLine(lanes[2], z - 2, 5),
     ],
   },
@@ -225,8 +231,8 @@ export const PATTERNS = [
     minPhase: 4,
     weight: 2,
     build: ({ z, lanes, gap }) => {
-      const first = gap(0.8, 16);
-      const second = first + gap(0.6, 12);
+      const first = gap(0.8, 16, 0.6);
+      const second = first + gap(0.6, 12, 0.45);
       return [
         { type: "train", lane: lanes[0], z },
         ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + first })),
@@ -239,7 +245,7 @@ export const PATTERNS = [
     minPhase: 4,
     weight: 2,
     build: ({ z, gap }) => {
-      const step = gap(0.6, 12);
+      const step = gap(0.6, 12, 0.45);
       return [
         { type: "bus", lane: -1, z },
         { type: "bus", lane: 0, z: z + step },
@@ -347,17 +353,37 @@ export function patternById(id) {
 }
 
 /**
- * Extra clearance a pattern needs beyond the usual reaction gap.
- *
- * The dangerous case is riding a roof into a full-lane wall: a mounted runner
- * cannot slide, so they need room to drop off first.
- *
- * @param {ReturnType<describePattern>|null} previous
- * @param {ReturnType<describePattern>} next
- * @param {number} speed
+ * Longest a runner can be committed to the air — the boosted jump, not the base
+ * one, since super sneakers can be running at any moment.
  */
-export function fairnessClearance(previous, next, speed) {
-  if (!previous?.exitVehicleZ || !next.entryRow?.isWall) return 0;
-  // Drop from a roof (~0.25s) plus a beat to read the wall and react.
-  return speed * 0.75;
+export const BOOSTED_AIRTIME = (2 * JUMP_V * SNEAKER_JUMP_MULT) / -GRAVITY;
+
+/** Bare reaction time, when the runner arrives at a wall uncommitted. */
+export const BASE_LEAD_SECONDS = 0.34;
+/** Dropping off a roof, which a mounted runner must do before a wall. */
+export const DISMOUNT_LEAD_SECONDS = 0.6;
+
+/**
+ * How long the runner needs between the last hazard and an oncoming wall.
+ *
+ * A wall has exactly one way through, so it is the one obstacle that cannot be
+ * answered while already committed to something else. Anything that leaves the
+ * runner in the air or on a roof therefore has to finish first.
+ *
+ * @param {{ requires: string|null, rideable: boolean }|null} previousRow
+ * @param {{ requires: string|null }} wallRow the wall being approached
+ */
+export function requiredLeadSeconds(previousRow, wallRow) {
+  if (!previousRow) return 0;
+
+  // A wall of vehicles is cleared by landing on a roof, so arriving mid-air is
+  // an advantage rather than a trap.
+  if (wallRow?.requires === "mount") return BASE_LEAD_SECONDS;
+
+  let seconds = BASE_LEAD_SECONDS;
+  if (previousRow.rideable) seconds = Math.max(seconds, DISMOUNT_LEAD_SECONDS);
+  // A jump commits the runner for its whole airtime; a slide can be cancelled
+  // into a jump instantly, so it costs nothing beyond reaction.
+  if (previousRow.requires === "jump") seconds = Math.max(seconds, BOOSTED_AIRTIME + 0.1);
+  return seconds;
 }

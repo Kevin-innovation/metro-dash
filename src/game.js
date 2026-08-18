@@ -16,7 +16,7 @@ import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
 import { ensureMissions } from "./missions.js";
-import { phaseAt, speedAt } from "./pace.js";
+import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
@@ -565,11 +565,14 @@ export class Game {
 
   spawnAhead() {
     const phase = phaseAt(this.runTime);
+    const playing = this.state === "playing";
     this.spawner.update(this.player.z, {
       speed: this.speed,
-      phaseId: this.state === "playing" ? phase.id : 1,
-      reaction: phase.reaction,
-      tutorial: this.state === "playing",
+      phaseId: playing ? phase.id : 1,
+      // The title-screen preview stays at the gentlest pacing.
+      reaction: playing ? reactionAt(this.runTime) : reactionAt(0),
+      pressure: playing ? pressureAt(this.runTime) : 0,
+      tutorial: playing,
     });
   }
 
