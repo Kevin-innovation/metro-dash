@@ -13,12 +13,14 @@ import {
   START_SPEED,
   TITLE_SPEED,
 } from "./config.js";
-import { EntityPool, makeOncoming } from "./entities.js";
+import { EntityPool, makeChaser, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
 import { MISSION_TIERS, ensureMissions } from "./missions.js";
 import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { lookAt } from "./zones.js";
+import { createChase, evade, isWarning, stepChase, stumble, threat } from "./chase.js";
+
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
@@ -30,6 +32,19 @@ import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
 import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
+
+/**
+ * Where the pursuer is drawn, in metres behind the runner.
+ *
+ * `FAR` is where it appears from — near the lens, large and at the edge of
+ * frame — and `NEAR` is right on the runner's heels. Both sit inside the
+ * camera's eight-metre setback, because nothing beyond it can be seen at all.
+ */
+const CHASE_FAR = 5.8;
+const CHASE_NEAR = 1.2;
+
+/** How far out on the ballast it rides, clear of all three lanes. */
+const CHASE_SIDE_X = 5.4;
 
 const $ = (id) => document.getElementById(id);
 
@@ -89,6 +104,12 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, this.quality.drawDistance);
 
     this.world = createWorld(this.scene, this.quality);
+
+    this.chase = createChase();
+    this.chaseSide = 1;
+    this.chaser = makeChaser();
+    this.chaser.visible = false;
+    this.scene.add(this.chaser);
     this.player = createPlayer(characterById(this.store.data.character).palette);
     this.scene.add(this.player.root);
     this.scene.add(this.player.shadow);
@@ -379,7 +400,12 @@ export class Game {
   showGameOver() {
     const result = this.bankProgress(false);
     this.syncRun();
-    const cleared = this.screens.showGameOver(this.run, this.store.data, result);
+    const cleared = this.screens.showGameOver(
+      this.run,
+      this.store.data,
+      result,
+      this.deathReason,
+    );
     if (cleared) this.audio.mission();
     this.screens.refreshProfile(this.store.data);
   }
@@ -440,6 +466,9 @@ export class Game {
     this.cam = { x: 0, y: 3.6, z: -7.4 };
     this.pool.clear();
     this.particles.clear();
+    this.chase = createChase();
+    this.chaseWarned = false;
+    this.deathReason = "crash";
     this.spawner.reset();
     this.spawner.seed(40, 5, 30, {
       speed: START_SPEED,
@@ -551,12 +580,87 @@ export class Game {
     this.shake = Math.max(0, this.shake - frameDt * 6);
     this.emitAmbientParticles(frameDt);
     this.particles.update(frameDt);
+    this.updateChase(frameDt);
     syncWorld(this.world, this.player.z);
     // The title screen holds the opening look; only a run travels through zones.
     applyLook(this.world, lookAt(this.state === "playing" ? this.runTime : 0), this.quality);
     this.updateCamera(frameDt);
     if (this.state === "playing") this.screens.syncHud(this);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * Move the pursuer and draw it.
+   *
+   * Driven from presentation time rather than the fixed step because it is not
+   * part of the simulation — nothing it does can change a collision, so it
+   * cannot desynchronise one.
+   */
+  updateChase(dt) {
+    const playing = this.state === "playing";
+    if (playing) {
+      stepChase(this.chase, dt, {
+        pressure: pressureAt(this.runTime),
+        // Mounted on a train or bus roof, which is its own risk and pays
+        // for itself in ground gained.
+        onRoof: Boolean(this.player.mounted),
+      });
+      if (this.chase.caught) {
+        this.die("caught");
+        return;
+      }
+    }
+
+    // Only once it is genuinely close. A pursuer permanently in shot stops
+    // meaning anything, and there is nowhere to draw a distant one anyway: the
+    // camera sits eight metres behind the runner, so everything further back
+    // than that is behind the lens.
+    const show = playing && isWarning(this.chase);
+    this.chaser.visible = show;
+    if (!show) return;
+
+    const p = this.player;
+    const heat = threat(this.chase);
+
+    // Off to the side, on the ballast rather than on the track.
+    //
+    // The camera sits behind the runner, so anything directly behind is either
+    // out of shot entirely or close enough to fill the lower half of the screen
+    // and hide the obstacles the player is being chased into. Alongside solves
+    // both: it is in frame the whole time and never covers a lane.
+    const side = p.x <= 0 ? 1 : -1;
+    this.chaseSide += (side - this.chaseSide) * approach(2.6, dt);
+
+    // Both the camera and the pursuer are behind the runner, so closing the gap
+    // moves it *away* from the lens and up the frame towards the runner. That
+    // is the reading that matters: it is visibly gaining on them, not on us.
+    const drawGap = CHASE_NEAR + (1 - heat) * (CHASE_FAR - CHASE_NEAR);
+    this.chaser.position.set(
+      this.chaseSide * CHASE_SIDE_X,
+      0.3 + Math.sin(this.player.runT * 7) * 0.06,
+      p.z - drawGap,
+    );
+    // Angled in at the runner so the searchlight lands on their back.
+    this.chaser.rotation.y = -this.chaseSide * (0.16 + heat * 0.12);
+
+    const { beam, lamp, beacons } = this.chaser.userData;
+    beam.material.opacity = 0.1 + heat * 0.22;
+    lamp.scale.setScalar(1 + heat * 0.5);
+    // The beacons only start flashing once it is genuinely close, so the alarm
+    // means something when it arrives.
+    const flash = Math.sin(this.player.runT * 14) > 0;
+    beacons[0].visible = heat > 0.05 && flash;
+    beacons[1].visible = heat > 0.05 && !flash;
+
+    if (isWarning(this.chase)) {
+      if (!this.chaseWarned) {
+        this.chaseWarned = true;
+        this.screens.showToast("따라잡힌다!");
+        this.audio.horn();
+      }
+    } else {
+      this.chaseWarned = false;
+    }
   }
 
   /** Let the auto quality governor react to the measured frame rate. */
@@ -844,10 +948,19 @@ export class Game {
       this.audio.nearMiss();
       this.screens.flashNearMiss();
     }
+    // Cutting it fine used to buy points only. Now it buys ground, which is
+    // what turns the risk/reward system into a survival mechanic.
+    if (cleared.nearMisses) evade(this.chase, cleared.nearMisses);
 
     // A hoverboard eats the first hit; grace covers the recovery.
     if (this.boardGrace <= 0 && this.interactions.detectCrash(this.player)) {
-      if (!this.absorbCrash()) this.die();
+      if (this.absorbCrash()) {
+        // Survived, but it cost distance — a board is no longer a free pass.
+        stumble(this.chase);
+        if (this.chase.caught) this.die("caught");
+      } else {
+        this.die();
+      }
     }
   }
 
@@ -860,8 +973,10 @@ export class Game {
     vibrate(18);
   }
 
-  die() {
+  /** @param {"crash"|"caught"} reason how the run ended, for the results card */
+  die(reason = "crash") {
     if (this.state !== "playing") return;
+    this.deathReason = reason;
     const p = this.player;
     this.state = "dead";
     p.alive = false;

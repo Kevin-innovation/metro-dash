@@ -1,5 +1,6 @@
 import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
+import { isWarning, threat } from "./chase.js";
 import { LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
 import { loadSchoolNames } from "./school-list.js";
 import { missionLabel } from "./missions.js";
@@ -606,6 +607,16 @@ export class Screens {
       phaseName: game.phaseName(),
       speed: game.speed,
     });
+    this.syncChase(game.chase);
+  }
+
+  /** The pursuer gauge. Absent until it is close enough to matter. */
+  syncChase(chase) {
+    const meter = $("chase-meter");
+    if (!meter) return;
+    const show = isWarning(chase) && !chase.caught;
+    meter.classList.toggle("hidden", !show);
+    if (show) $("chase-fill").style.transform = `scaleX(${threat(chase).toFixed(3)})`;
   }
 
   showToast(text) {
@@ -653,8 +664,13 @@ export class Screens {
 
   // --- game over -----------------------------------------------------------
 
-  showGameOver(run, save, result) {
+  showGameOver(run, save, result, reason = "crash") {
     const rounded = Math.floor(run.score);
+
+    // Being caught is a different ending from hitting something, and saying so
+    // is what teaches the player that the gauge was the thing to watch.
+    const title = $("gameover-title");
+    if (title) title.textContent = reason === "caught" ? "따라잡혔다!" : "충돌!";
 
     $("final-score").textContent = rounded.toLocaleString();
     $("break-dist").textContent = Math.floor(run.scoreDist).toLocaleString();

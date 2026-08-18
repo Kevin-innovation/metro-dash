@@ -61,6 +61,11 @@
           <button id="btn-pause" type="button" aria-label="일시정지">II</button>
         </div>
 
+        <div id="chase-meter" class="chase-meter hidden">
+          <span class="chase-icon">🚨</span>
+          <div class="chase-track"><div id="chase-fill" class="chase-fill"></div></div>
+        </div>
+
         <div id="powerup-stack" class="powerup-stack hidden"></div>
         <div id="near-miss" class="near-miss hidden">아슬아슬!</div>
         <div id="speed-toast" class="hidden"></div>
@@ -282,7 +287,7 @@
       <div id="gameover-screen" class="overlay hidden">
         <div class="dialog crash">
           <p class="eyebrow">RUN OVER</p>
-          <h2>충돌!</h2>
+          <h2 id="gameover-title">충돌!</h2>
           <div class="breakdown">
             <div>
               <span>거리 점수</span>

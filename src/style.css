@@ -260,6 +260,58 @@ h3,
   backdrop-filter: blur(8px);
 }
 
+/* --- pursuer ------------------------------------------------------------- */
+
+/* Only on screen once the chaser is genuinely close, so the alarm is not
+   wallpaper the player has learned to ignore by the time it matters. */
+.chase-meter {
+  position: absolute;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  background: rgba(28, 8, 8, 0.62);
+  border: 1px solid rgba(255, 61, 90, 0.5);
+  backdrop-filter: blur(8px);
+  animation: chasePulse 0.9s ease-in-out infinite;
+}
+
+.chase-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.chase-track {
+  width: 92px;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+/* Fills as the gap closes, so the bar reads as the thing getting nearer. */
+.chase-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #ff7a3c, #ff3d5a);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+@keyframes chasePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 61, 90, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 14px 2px rgba(255, 61, 90, 0.45);
+  }
+}
+
 /* --- power-up chips ------------------------------------------------------ */
 
 .powerup-stack {

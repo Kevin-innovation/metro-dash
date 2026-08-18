@@ -279,6 +279,83 @@ const FACTORIES = {
   sneakers: makeSneakers,
 };
 
+/**
+ * The pursuer.
+ *
+ * Deliberately not another train: it has to read as *someone chasing you* at a
+ * glance and from behind, so it is a figure on a vehicle with a light aimed at
+ * the runner's back.
+ */
+export function makeChaser() {
+  const g = new THREE.Group();
+
+  const cart = new THREE.Mesh(
+    new THREE.BoxGeometry(2.1, 0.7, 3.0),
+    new THREE.MeshLambertMaterial({ color: 0x46566b, emissive: 0x141b25 }),
+  );
+  cart.position.y = 0.55;
+  g.add(cart);
+
+  const cage = new THREE.Mesh(
+    new THREE.BoxGeometry(1.7, 1.5, 1.6),
+    new THREE.MeshLambertMaterial({ color: 0x33404f, emissive: 0x11161d }),
+  );
+  cage.position.set(0, 1.6, -0.5);
+  g.add(cage);
+
+  const rider = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 1.0, 0.6),
+    new THREE.MeshLambertMaterial({ color: 0x2c5a8c, emissive: 0x0d1a29 }),
+  );
+  rider.position.set(0, 1.75, 0.6);
+  g.add(rider);
+
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshLambertMaterial({ color: 0xf0c9a0 }),
+  );
+  head.position.set(0, 2.5, 0.6);
+  g.add(head);
+
+  // The searchlight is what makes it legible in a dark tunnel, where the body
+  // itself is barely visible.
+  const beam = new THREE.Mesh(
+    new THREE.ConeGeometry(0.9, 4.5, 12, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff0c0,
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      fog: false,
+    }),
+  );
+  beam.rotation.x = -Math.PI / 2;
+  beam.position.set(0, 1.9, 3.0);
+  g.add(beam);
+
+  const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.32, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0xfff4d0, fog: false }),
+  );
+  lamp.position.set(0, 1.9, 1.0);
+  g.add(lamp);
+
+  // Two spinning lights, the universal shorthand for "being chased".
+  const beacons = [-0.62, 0.62].map((x, i) => {
+    const beacon = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.34, 0.3),
+      new THREE.MeshBasicMaterial({ color: i ? 0x3d7dff : 0xff3d5a, fog: false }),
+    );
+    beacon.position.set(x, 2.5, -0.5);
+    g.add(beacon);
+    return beacon;
+  });
+
+  g.userData = { beam, lamp, beacons };
+  return g;
+}
+
 export { SPEC };
 
 export class EntityPool {
