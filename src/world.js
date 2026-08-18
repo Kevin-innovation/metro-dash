@@ -12,6 +12,27 @@ const SUN_DISTANCE = 150;
 
 const BUILDING_COUNT = 24;
 const POLE_COUNT = 16;
+const POLE_SPACING = 30;
+
+/**
+ * Scenery is recycled a full cycle at a time so a piece only ever jumps while
+ * it is behind the camera. Deriving its position from the current segment index
+ * instead made every building hop forward together each time the index ticked,
+ * which read as a stutter in the skyline.
+ */
+const BUILDING_CYCLE = (BUILDING_COUNT / 2) * SEGMENT_LEN;
+const POLE_CYCLE = POLE_COUNT * POLE_SPACING;
+/** How far behind the camera a piece must be before it may be moved. */
+const RECYCLE_BEHIND = 48;
+
+function recycle(item, cycle, playerZ) {
+  const floor = playerZ - RECYCLE_BEHIND;
+  // Loops rather than a single add so a reset back to the start of the track
+  // (returning to the title screen) re-seats everything in one pass.
+  while (item.z < floor) item.z += cycle;
+  while (item.z > floor + cycle) item.z -= cycle;
+  return item.z;
+}
 
 export function createWorld(scene, quality) {
   scene.background = new THREE.Color(0x8fc6e6);
@@ -135,7 +156,9 @@ export function createWorld(scene, quality) {
     mesh.position.set(side * (14 + w * 0.5 + ((i * 7) % 3) * 2.6), h / 2 - 0.2, 0);
     mesh.castShadow = false;
     scene.add(mesh);
-    buildings.push({ mesh, side, h, depth, offset: ((i * 11) % 5) * 4 });
+    // Each building owns a persistent Z and is recycled a whole cycle at a
+    // time, rather than being re-derived from the current segment index.
+    buildings.push({ mesh, side, h, depth, z: slot * SEGMENT_LEN + ((i * 11) % 5) * 4 });
   }
 
   const poles = [];
@@ -160,8 +183,9 @@ export function createWorld(scene, quality) {
     );
     arm.position.set(0.25, 5, 0);
     pole.add(arm);
+    pole.position.x = (i % 2 === 0 ? -1 : 1) * 4.7;
     scene.add(pole);
-    poles.push(pole);
+    poles.push({ group: pole, z: i * POLE_SPACING });
   }
 
   return { sky, sunBall, sun, clouds, segments, buildings, poles, quality };
@@ -220,16 +244,13 @@ export function syncWorld(world, playerZ) {
     seg.group.position.z = idx * SEGMENT_LEN + SEGMENT_LEN / 2;
   });
 
-  world.buildings.forEach((b, i) => {
-    const idx = start + Math.floor(i / 2);
-    b.mesh.position.z = idx * SEGMENT_LEN + SEGMENT_LEN / 2 + b.offset;
-  });
+  for (const building of world.buildings) {
+    building.mesh.position.z = recycle(building, BUILDING_CYCLE, playerZ);
+  }
 
-  world.poles.forEach((p, i) => {
-    const idx = start + i;
-    const side = i % 2 === 0 ? -1 : 1;
-    p.position.set(side * 4.7, 0, idx * SEGMENT_LEN + 8);
-  });
+  for (const pole of world.poles) {
+    pole.group.position.z = recycle(pole, POLE_CYCLE, playerZ);
+  }
 
   world.sky.position.z = playerZ;
   world.sunBall.position.copy(SUN_DIR).multiplyScalar(SUN_DISTANCE).setZ(playerZ + SUN_DISTANCE * 0.5);
