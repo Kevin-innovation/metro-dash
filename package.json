@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build:vercel": "convex deploy --cmd 'vite build'"
+    "build:vercel": "convex deploy --cmd 'vite build'",
+    "check:ui": "node scripts/ui-check.mjs"
   },
   "dependencies": {
     "convex": "^1.44.0",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
     "convex-test": "^0.0.55",
+    "playwright": "^1.62.1",
     "vite": "^6.0.3",
     "vitest": "^2.1.8"
   }

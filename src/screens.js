@@ -42,8 +42,10 @@ export class Screens {
    * so changing the gesture cannot leave stale instructions behind.
    */
   writeControlHints() {
+    // Short enough to hold one line on a 320px phone. The full control list
+    // lives on the title screen; this is only the reminder during a run.
     const hint = $("touch-hint");
-    if (hint) hint.textContent = `스와이프 · 점프 · 슬라이드 · 위로 두 번 = 호버보드`;
+    if (hint) hint.textContent = `스와이프로 피하기 · 위로 두 번은 호버보드`;
     const howto = $("howto-board");
     if (howto) howto.textContent = `${BOARD_HINT} · 호버보드 (충돌 1회 방어)`;
   }
@@ -569,11 +571,19 @@ export class Screens {
     $("speed-toast").classList.add("hidden");
     $("coin-gain").classList.add("hidden");
     $("combo").classList.add("hidden");
-    $("touch-hint").classList.remove("hidden");
+    // Nothing to say to a keyboard: the hint describes swipes.
+    const touch = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+    const hint = $("touch-hint");
+    hint.classList.toggle("hidden", !touch);
+    hint.classList.remove("fading");
   }
 
   hideHint() {
-    $("touch-hint").classList.add("hidden");
+    // Faded rather than cut, so it reads as finishing instead of glitching.
+    const hint = $("touch-hint");
+    if (hint.classList.contains("hidden") || hint.classList.contains("fading")) return;
+    hint.classList.add("fading");
+    setTimeout(() => hint.classList.add("hidden"), 400);
   }
 
   setPhaseLabel(text) {
