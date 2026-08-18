@@ -74,12 +74,29 @@ body {
   pointer-events: auto;
 }
 
-.best-chip {
-  padding: 3px 10px;
+/* Stacked so the two status chips share a width: the wider one sets it and the
+   other stretches, instead of each hugging its own text. */
+.hud-chips {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.best-chip,
+#pace-chip {
+  padding: 4px 11px;
   border-radius: 999px;
   background: rgba(7, 16, 24, 0.5);
-  color: #9ec2d8;
   font-size: 13px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.best-chip {
+  color: #9ec2d8;
 }
 
 .best-chip strong {
@@ -381,12 +398,7 @@ body {
 /* Sits in the left chip stack rather than at a fixed offset, which used to
    land it right on top of the best-score chip. */
 #pace-chip {
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(7, 16, 24, 0.5);
-  color: #ffd24a;
-  font-size: 14px;
-  letter-spacing: 0.08em;
+  color: var(--gold);
 }
 
 #speed-toast {
@@ -624,14 +636,20 @@ kbd {
   font-size: 28px;
 }
 
+/* Wrapping flex rather than a grid: a row that cannot be filled centres its
+   items instead of leaving holes on the right, so the layout survives the stat
+   list changing length. */
 .stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin: 8px 0 18px;
 }
 
 .stat-grid div {
+  flex: 1 1 118px;
+  max-width: 168px;
   background: rgba(7, 16, 24, 0.55);
   border-radius: 14px;
   padding: 10px 6px;

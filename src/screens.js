@@ -250,6 +250,8 @@ export class Screens {
 
     const nearEl = $("final-nearmiss");
     if (nearEl) nearEl.textContent = String(run.metrics.nearMisses);
+    const mountEl = $("final-mounts");
+    if (mountEl) mountEl.textContent = String(run.metrics.mounts);
     const xpEl = $("final-xp");
     if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
 
