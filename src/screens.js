@@ -1,3 +1,4 @@
+import { BOARD_HINT, BOARD_HINT_LONG } from "./input.js";
 import { missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { runXp } from "./progression.js";
@@ -23,6 +24,18 @@ export class Screens {
     this.nearMissTimer = 0;
     this.shopNoteTimer = 0;
     this.bind();
+    this.writeControlHints();
+  }
+
+  /**
+   * Fill the copy that describes a control from the module that implements it,
+   * so changing the gesture cannot leave stale instructions behind.
+   */
+  writeControlHints() {
+    const hint = $("touch-hint");
+    if (hint) hint.textContent = `스와이프 · 점프 · 슬라이드 · 위로 두 번 = 호버보드`;
+    const howto = $("howto-board");
+    if (howto) howto.textContent = `${BOARD_HINT} · 호버보드 (충돌 1회 방어)`;
   }
 
   bind() {

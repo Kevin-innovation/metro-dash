@@ -1,6 +1,15 @@
 /** Two jumps inside this window deploy the hoverboard instead of the second. */
 export const DOUBLE_TAP_MS = 280;
 
+/**
+ * How the hoverboard gesture is described to the player.
+ *
+ * Kept next to the rule that implements it: this copy previously lived in three
+ * places at once and went stale in two of them the moment the control changed.
+ */
+export const BOARD_HINT = "점프를 두 번 빠르게";
+export const BOARD_HINT_LONG = "달리는 중 점프를 두 번 빠르게 누르면 꺼내지고, 충돌 1회를 막아줍니다";
+
 export class Input {
   constructor(el) {
     this.queue = [];
