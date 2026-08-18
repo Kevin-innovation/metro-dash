@@ -79,8 +79,11 @@ export function createWorld(scene, quality) {
     return t;
   });
 
+  // Travels with the runner. It is a flat, untextured plane, so sliding it is
+  // invisible — whereas leaving it at the origin meant the world simply ran out
+  // of ground partway through a run and the skyline was left floating.
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(140, 900),
+    new THREE.PlaneGeometry(220, 620),
     new THREE.MeshLambertMaterial({ color: 0x63705a }),
   );
   ground.rotation.x = -Math.PI / 2;
@@ -188,7 +191,7 @@ export function createWorld(scene, quality) {
     poles.push({ group: pole, z: i * POLE_SPACING });
   }
 
-  return { sky, sunBall, sun, clouds, segments, buildings, poles, quality };
+  return { sky, sunBall, sun, ground, clouds, segments, buildings, poles, quality };
 }
 
 function configureShadow(sun, quality) {
@@ -253,6 +256,7 @@ export function syncWorld(world, playerZ) {
   }
 
   world.sky.position.z = playerZ;
+  world.ground.position.z = playerZ;
   world.sunBall.position.copy(SUN_DIR).multiplyScalar(SUN_DISTANCE).setZ(playerZ + SUN_DISTANCE * 0.5);
 
   for (const cloud of world.clouds) {
