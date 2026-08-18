@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
   FREE_ATTEMPTS,
@@ -48,7 +48,7 @@ export async function requirePlayer(ctx, token) {
     .query("players")
     .withIndex("by_token", (q) => q.eq("token", token))
     .unique();
-  if (!player) throw new Error("세션이 만료되었어요. 다시 로그인해 주세요");
+  if (!player) throw new ConvexError("세션이 만료되었어요. 다시 로그인해 주세요");
   return player;
 }
 
@@ -76,11 +76,11 @@ export const register = mutation({
     // Re-validated here even though the browser already checked: the client
     // copy is for feedback, this one is the rule.
     const check = validateHandle(handle);
-    if (!check.ok) throw new Error(check.message);
-    if (!PIN_PATTERN.test(pin)) throw new Error("비밀번호는 숫자 4자리로 정해 주세요");
+    if (!check.ok) throw new ConvexError(check.message);
+    if (!PIN_PATTERN.test(pin)) throw new ConvexError("비밀번호는 숫자 4자리로 정해 주세요");
 
     if (await byHandle(ctx, check.handle)) {
-      throw new Error("이미 쓰고 있는 닉네임이에요");
+      throw new ConvexError("이미 쓰고 있는 닉네임이에요");
     }
 
     const fromDevice = await ctx.db
@@ -88,7 +88,7 @@ export const register = mutation({
       .withIndex("by_device", (q) => q.eq("deviceId", deviceId))
       .collect();
     if (fromDevice.length >= MAX_ACCOUNTS_PER_DEVICE) {
-      throw new Error(`이 기기에서는 계정을 ${MAX_ACCOUNTS_PER_DEVICE}개까지 만들 수 있어요`);
+      throw new ConvexError(`이 기기에서는 계정을 ${MAX_ACCOUNTS_PER_DEVICE}개까지 만들 수 있어요`);
     }
 
     const now = Date.now();
@@ -111,18 +111,29 @@ export const register = mutation({
   },
 });
 
+/**
+ * Sign in.
+ *
+ * Failures are *returned*, never thrown. A mutation that throws is rolled back
+ * in full, which would undo the very counter that makes the lockout work — and
+ * with a four-digit PIN that counter is the only thing standing between a
+ * published nickname and someone else's account.
+ */
 export const signIn = mutation({
   args: { handle: v.string(), pin: v.string() },
   handler: async (ctx, { handle, pin }) => {
     const player = await byHandle(ctx, handle);
     // Same message either way, so the form cannot be used to enumerate names.
     const rejection = "닉네임이나 비밀번호가 맞지 않아요";
-    if (!player) throw new Error(rejection);
+    if (!player) return { ok: false, message: rejection };
 
     const now = Date.now();
     const lock = lockState(player, now);
     if (lock.locked) {
-      throw new Error(`너무 많이 틀렸어요. ${lock.retryInSeconds}초 뒤에 다시 시도해 주세요`);
+      return {
+        ok: false,
+        message: `너무 많이 틀렸어요. ${lock.retryInSeconds}초 뒤에 다시 시도해 주세요`,
+      };
     }
 
     if (player.pin !== pin) {
@@ -133,7 +144,10 @@ export const signIn = mutation({
         lockedUntil: wait > 0 ? now + wait * 1000 : 0,
       });
       const left = FREE_ATTEMPTS - failedAttempts;
-      throw new Error(left > 0 ? `${rejection} (${left}번 더 틀리면 잠깁니다)` : rejection);
+      return {
+        ok: false,
+        message: left > 0 ? `${rejection} (${left}번 더 틀리면 잠깁니다)` : rejection,
+      };
     }
 
     // A fresh token on every sign-in, so an old one stops working.
@@ -145,7 +159,7 @@ export const signIn = mutation({
       updatedAt: now,
     });
 
-    return { token, ...publicProfile({ ...player, token }) };
+    return { ok: true, token, ...publicProfile({ ...player, token }) };
   },
 });
 

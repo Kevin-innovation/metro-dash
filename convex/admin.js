@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { handleKey, validateHandle } from "../src/nickname.js";
 
@@ -16,14 +16,14 @@ import { handleKey, validateHandle } from "../src/nickname.js";
 
 function requireAdmin(adminKey) {
   const expected = process.env.ADMIN_KEY;
-  if (!expected) throw new Error("서버에 ADMIN_KEY가 설정되지 않았습니다");
+  if (!expected) throw new ConvexError("서버에 ADMIN_KEY가 설정되지 않았습니다");
   // Length check first so a wrong-length guess cannot be told apart by timing.
   if (typeof adminKey !== "string" || adminKey.length !== expected.length) {
-    throw new Error("관리자 키가 올바르지 않습니다");
+    throw new ConvexError("관리자 키가 올바르지 않습니다");
   }
   let same = 0;
   for (let i = 0; i < expected.length; i++) same |= adminKey.charCodeAt(i) ^ expected.charCodeAt(i);
-  if (same !== 0) throw new Error("관리자 키가 올바르지 않습니다");
+  if (same !== 0) throw new ConvexError("관리자 키가 올바르지 않습니다");
 }
 
 async function byHandle(ctx, handle) {
@@ -59,10 +59,10 @@ export const resetPin = mutation({
   args: { adminKey: v.string(), handle: v.string(), newPin: v.string() },
   handler: async (ctx, { adminKey, handle, newPin }) => {
     requireAdmin(adminKey);
-    if (!/^\d{4}$/.test(newPin)) throw new Error("새 비밀번호는 숫자 4자리여야 합니다");
+    if (!/^\d{4}$/.test(newPin)) throw new ConvexError("새 비밀번호는 숫자 4자리여야 합니다");
 
     const player = await byHandle(ctx, handle);
-    if (!player) throw new Error("그런 닉네임이 없습니다");
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
 
     // Clearing the lock too, since a forgotten PIN usually arrives with one.
     await ctx.db.patch(player._id, {
@@ -82,13 +82,13 @@ export const rename = mutation({
     requireAdmin(adminKey);
 
     const check = validateHandle(newHandle);
-    if (!check.ok) throw new Error(check.message);
+    if (!check.ok) throw new ConvexError(check.message);
 
     const player = await byHandle(ctx, handle);
-    if (!player) throw new Error("그런 닉네임이 없습니다");
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
 
     const clash = await byHandle(ctx, check.handle);
-    if (clash && clash._id !== player._id) throw new Error("이미 쓰고 있는 닉네임입니다");
+    if (clash && clash._id !== player._id) throw new ConvexError("이미 쓰고 있는 닉네임입니다");
 
     await ctx.db.patch(player._id, {
       handle: check.handle,
@@ -114,7 +114,7 @@ export const unlock = mutation({
   handler: async (ctx, { adminKey, handle }) => {
     requireAdmin(adminKey);
     const player = await byHandle(ctx, handle);
-    if (!player) throw new Error("그런 닉네임이 없습니다");
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
     await ctx.db.patch(player._id, { failedAttempts: 0, lockedUntil: 0 });
     return { ok: true };
   },
@@ -126,7 +126,7 @@ export const remove = mutation({
   handler: async (ctx, { adminKey, handle }) => {
     requireAdmin(adminKey);
     const player = await byHandle(ctx, handle);
-    if (!player) throw new Error("그런 닉네임이 없습니다");
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
 
     const runs = await ctx.db
       .query("scores")

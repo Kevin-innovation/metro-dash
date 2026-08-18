@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { AudioBus } from "./audio.js";
 import { Bgm } from "./bgm.js";
-import { Cloud } from "./cloud.js";
+import { Cloud, cloudMessage } from "./cloud.js";
 import { approach } from "./collision.js";
 import {
   FIXED_DT,
@@ -160,7 +160,7 @@ export class Game {
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
     } catch (error) {
-      this.screens.showAccountError(error?.message ?? "잠시 후 다시 시도해 주세요");
+      this.screens.showAccountError(cloudMessage(error));
     } finally {
       this.screens.setAccountBusy(false);
     }

@@ -42,6 +42,16 @@ export function deviceId() {
   return id;
 }
 
+/**
+ * Convex reports application errors in `error.data`; `error.message` carries a
+ * stack trace and a server file path that no player should ever be shown.
+ */
+export function cloudMessage(error) {
+  const data = error?.data;
+  if (typeof data === "string" && data) return data;
+  return "잠시 후 다시 시도해 주세요";
+}
+
 export class Cloud {
   constructor(url = import.meta.env?.VITE_CONVEX_URL) {
     this.url = url || null;
@@ -138,7 +148,14 @@ export class Cloud {
   }
 
   async signIn(handle, pin) {
+    // The server reports a bad PIN as a value rather than an error, so its
+    // attempt counter survives; turn it back into an error for the caller.
     const result = await this.mutation("players:signIn", { handle, pin });
+    if (!result?.ok) {
+      const error = new Error(result?.message ?? "로그인하지 못했어요");
+      error.data = result?.message ?? "로그인하지 못했어요";
+      throw error;
+    }
     return this.keepSession(result);
   }
 
