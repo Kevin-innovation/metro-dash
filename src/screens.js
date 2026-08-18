@@ -1,9 +1,17 @@
 import { BOARD_HINT, BOARD_HINT_LONG } from "./input.js";
+import { HANDLE_MAX } from "./nickname.js";
 import { missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { runXp } from "./progression.js";
 import { purchase, shopView } from "./shop.js";
-import { renderHud, renderMissions, renderRank, renderSettings, renderShop } from "./ui.js";
+import {
+  escapeHtml,
+  renderHud,
+  renderMissions,
+  renderRank,
+  renderSettings,
+  renderShop,
+} from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -67,6 +75,42 @@ export class Screens {
     const settingsClose = $("btn-settings-close");
     if (settingsClose) settingsClose.onclick = () => this.closeSettings();
 
+    const accountBtn = $("btn-account");
+    if (accountBtn) accountBtn.onclick = () => a.openAccount();
+    const accountClose = $("btn-account-close");
+    if (accountClose) accountClose.onclick = () => this.closeAccount();
+    const boardBtn2 = $("btn-leaderboard");
+    if (boardBtn2) boardBtn2.onclick = () => a.openLeaderboard();
+    const boardClose = $("btn-leaderboard-close");
+    if (boardClose) boardClose.onclick = () => this.closeLeaderboard();
+
+    for (const [id, mode] of [["tab-signin", "signin"], ["tab-signup", "signup"]]) {
+      const tab = $(id);
+      if (tab) tab.onclick = () => this.setAccountMode(mode);
+    }
+
+    const form = $("account-form");
+    if (form) {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        a.submitAccount(this.accountMode ?? "signin", $("field-handle").value, $("field-pin").value);
+      });
+    }
+    // The PIN field is digits only, enforced as it is typed so the rule is
+    // obvious rather than a rejection after the fact.
+    const pin = $("field-pin");
+    if (pin) {
+      pin.addEventListener("input", () => {
+        pin.value = pin.value.replace(/\D/g, "").slice(0, 4);
+      });
+    }
+    const handle = $("field-handle");
+    if (handle) {
+      handle.addEventListener("input", () => {
+        handle.value = handle.value.slice(0, HANDLE_MAX);
+      });
+    }
+
     const settingsList = $("settings-list");
     if (settingsList) {
       settingsList.addEventListener("click", (event) => {
@@ -78,6 +122,106 @@ export class Screens {
     }
   }
 
+  // --- account ------------------------------------------------------------
+
+  /** Show the account row only when there is a backend to talk to. */
+  showAccountBar(cloud) {
+    const bar = $("account-bar");
+    const boardBtn = $("btn-leaderboard");
+    if (bar) bar.classList.toggle("hidden", !cloud.enabled);
+    if (boardBtn) boardBtn.classList.toggle("hidden", !cloud.enabled || !cloud.signedIn);
+    if (!cloud.enabled) return;
+
+    const state = $("account-state");
+    const action = $("btn-account");
+    if (cloud.signedIn) {
+      if (state) state.innerHTML = `<strong>${escapeHtml(cloud.handle)}</strong> 님으로 기록 중`;
+      if (action) action.textContent = "로그아웃";
+    } else {
+      if (state) state.textContent = "게스트로 플레이 중 · 기록은 이 기기에만 남아요";
+      if (action) action.textContent = "로그인";
+    }
+  }
+
+  openAccount(mode = "signin") {
+    this.setAccountMode(mode);
+    $("field-handle").value = "";
+    $("field-pin").value = "";
+    this.showAccountError(null);
+    $("account-screen").classList.remove("hidden");
+    $("field-handle").focus();
+  }
+
+  closeAccount() {
+    const panel = $("account-screen");
+    if (panel) panel.classList.add("hidden");
+  }
+
+  setAccountMode(mode) {
+    this.accountMode = mode;
+    const signup = mode === "signup";
+    $("tab-signin")?.classList.toggle("on", !signup);
+    $("tab-signup")?.classList.toggle("on", signup);
+    const title = $("account-title");
+    if (title) title.textContent = signup ? "회원가입" : "로그인";
+    const submit = $("btn-account-submit");
+    if (submit) submit.textContent = signup ? "가입하고 시작" : "로그인";
+    this.showAccountError(null);
+  }
+
+  showAccountError(message) {
+    const el = $("account-error");
+    if (!el) return;
+    el.textContent = message ?? "";
+    el.classList.toggle("hidden", !message);
+  }
+
+  setAccountBusy(busy) {
+    const submit = $("btn-account-submit");
+    if (submit) submit.disabled = busy;
+  }
+
+  // --- leaderboard ---------------------------------------------------------
+
+  openLeaderboard() {
+    $("leaderboard-screen").classList.remove("hidden");
+  }
+
+  closeLeaderboard() {
+    const panel = $("leaderboard-screen");
+    if (panel) panel.classList.add("hidden");
+  }
+
+  renderLeaderboard(rows, standing, myHandle) {
+    const list = $("leaderboard-list");
+    if (!list) return;
+
+    if (!rows?.length) {
+      list.innerHTML = `<li class="leaderboard-empty">아직 기록이 없어요. 첫 번째가 되어 보세요!</li>`;
+    } else {
+      list.innerHTML = rows
+        .map((row) => {
+          const me = row.handle === myHandle ? " me" : "";
+          return `
+            <li class="leaderboard-row${me}">
+              <span class="leaderboard-rank">${row.rank}</span>
+              <span class="leaderboard-handle">${escapeHtml(row.handle)}</span>
+              <span class="leaderboard-score">${row.best.toLocaleString()}</span>
+            </li>`;
+        })
+        .join("");
+    }
+
+    const mine = $("my-standing");
+    if (mine) {
+      const show = standing?.rank != null;
+      mine.classList.toggle("hidden", !show);
+      if (show) {
+        mine.textContent = `내 순위 ${standing.rank}위 · ${standing.best.toLocaleString()}점`;
+      }
+    }
+  }
+
   // --- overlays -----------------------------------------------------------
 
   setOverlay(mode) {
@@ -86,6 +230,8 @@ export class Screens {
     $("pause-screen").classList.add("hidden");
     this.closeShop();
     this.closeSettings();
+    this.closeAccount();
+    this.closeLeaderboard();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
     if (mode !== "hud") $("touch-hint").classList.add("hidden");

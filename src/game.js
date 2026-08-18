@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { AudioBus } from "./audio.js";
 import { Bgm } from "./bgm.js";
+import { Cloud } from "./cloud.js";
 import { approach } from "./collision.js";
 import {
   FIXED_DT,
@@ -22,7 +23,7 @@ import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier } from "./progression.js";
 import { Run } from "./run.js";
-import { SaveStore } from "./save.js";
+import { SaveStore, normalizeSave } from "./save.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
@@ -50,6 +51,11 @@ export class Game {
     this.settings = this.store.data.settings;
     this.run = new Run(this.store);
     this.syncMissions();
+
+    // Online play is additive: with no backend configured the game is exactly
+    // what it was, and every cloud call below is a no-op.
+    this.cloud = new Cloud();
+    this.cloud.onChange(() => this.onCloudChange());
 
     this.audio = new AudioBus();
     this.audio.setEnabled(this.settings.sfx);
@@ -105,6 +111,9 @@ export class Game {
       openSettings: () => this.openSettings(),
       toggleSetting: (key) => this.toggleSetting(key),
       setQuality: (tier) => this.setQuality(tier),
+      openAccount: () => this.openAccount(),
+      submitAccount: (mode, handle, pin) => this.submitAccount(mode, handle, pin),
+      openLeaderboard: () => this.openLeaderboard(),
     });
     this.resize();
     window.addEventListener("resize", () => this.resize());
@@ -115,6 +124,81 @@ export class Game {
     resetPlayer(this.player, 0);
     this.seedPreview();
     this.screens.refreshProfile(this.store.data);
+    this.screens.showAccountBar(this.cloud);
+    // Reconnects an existing session in the background; guests never wait.
+    this.cloud.connect();
+  }
+
+  // --- online ---------------------------------------------------------------
+
+  onCloudChange() {
+    this.screens.showAccountBar(this.cloud);
+  }
+
+  openAccount() {
+    this.audio.resume();
+    if (this.cloud.signedIn) {
+      this.cloud.signOut();
+      return;
+    }
+    this.screens.openAccount("signin");
+  }
+
+  async submitAccount(mode, handle, pin) {
+    this.screens.showAccountError(null);
+    this.screens.setAccountBusy(true);
+    try {
+      if (mode === "signup") {
+        await this.cloud.register(handle, pin, this.store.data);
+      } else {
+        const result = await this.cloud.signIn(handle, pin);
+        // The cloud save wins on sign-in: it is the record that follows the
+        // player between devices, and the local one is whatever this browser
+        // happened to have.
+        if (result?.profile) this.adoptProfile(result.profile);
+      }
+      this.screens.closeAccount();
+      this.screens.refreshProfile(this.store.data);
+    } catch (error) {
+      this.screens.showAccountError(error?.message ?? "잠시 후 다시 시도해 주세요");
+    } finally {
+      this.screens.setAccountBusy(false);
+    }
+  }
+
+  /** Replace the local profile with one pulled from the server. */
+  adoptProfile(profile) {
+    this.store.data = normalizeSave(profile);
+    this.store.flush();
+    this.settings = this.store.data.settings;
+    this.syncMissions();
+    applySkin(this.player, characterById(this.store.data.character).palette);
+    this.applyQuality(this.activeTier());
+  }
+
+  async openLeaderboard() {
+    this.audio.resume();
+    this.screens.openLeaderboard();
+    this.screens.renderLeaderboard([], null, this.cloud.handle);
+    const [rows, standing] = await Promise.all([
+      this.cloud.leaderboard(20).catch(() => []),
+      this.cloud.standing(),
+    ]);
+    this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
+  }
+
+  /** Send the finished run up. Never blocks, never fails the local save. */
+  syncRun() {
+    if (!this.cloud.signedIn) return;
+    this.cloud.submitRun({
+      score: Math.floor(this.run.score),
+      distance: Math.floor(this.run.distance),
+      coins: this.run.coins,
+      comboMax: this.run.comboMax,
+      seconds: Math.floor(this.run.seconds),
+      character: this.store.data.character,
+    });
+    this.cloud.save(this.store.data, this.store.data.best);
   }
 
   // --- quality ------------------------------------------------------------
@@ -196,6 +280,7 @@ export class Game {
 
   showGameOver() {
     const result = this.bankProgress(false);
+    this.syncRun();
     const cleared = this.screens.showGameOver(this.run, this.store.data, result);
     if (cleared) this.audio.mission();
     this.screens.refreshProfile(this.store.data);

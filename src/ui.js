@@ -8,7 +8,7 @@ import { QUALITY_PROFILES, QUALITY_TIERS } from "./settings.js";
 
 const $ = (id) => document.getElementById(id);
 
-const escapeHtml = (value) =>
+export const escapeHtml = (value) =>
   String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const money = (n) => Math.floor(n).toLocaleString();

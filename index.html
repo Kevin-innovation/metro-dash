@@ -75,11 +75,17 @@
             </div>
           </div>
 
+          <div id="account-bar" class="account-bar hidden">
+            <span id="account-state" class="account-state">게스트로 플레이 중</span>
+            <button id="btn-account" type="button" class="account-action">로그인</button>
+          </div>
+
           <button id="btn-play" type="button">질주 시작</button>
           <div class="title-actions">
             <button id="btn-shop" type="button" class="ghost">상점 · 강화</button>
             <button id="btn-settings" type="button" class="ghost">설정</button>
           </div>
+          <button id="btn-leaderboard" type="button" class="ghost wide hidden">리더보드</button>
 
           <div class="mission-block">
             <p class="block-title">오늘의 미션</p>
@@ -115,6 +121,47 @@
           <div id="shop-note" class="shop-note hidden"></div>
           <div id="shop-list" class="shop-list"></div>
           <button id="btn-shop-close" type="button" class="ghost">닫기</button>
+        </div>
+      </div>
+
+      <div id="account-screen" class="overlay hidden">
+        <div class="dialog">
+          <h2 id="account-title">로그인</h2>
+          <p class="account-note">
+            닉네임과 숫자 4자리로 기록을 저장하고 리더보드에 오를 수 있어요.<br />
+            <strong>다른 곳에서 쓰는 비밀번호는 쓰지 마세요.</strong>
+          </p>
+
+          <div class="account-tabs">
+            <button id="tab-signin" type="button" class="account-tab on">로그인</button>
+            <button id="tab-signup" type="button" class="account-tab">회원가입</button>
+          </div>
+
+          <form id="account-form" class="account-form" autocomplete="off">
+            <label class="field">
+              <span>닉네임</span>
+              <input id="field-handle" type="text" maxlength="8" inputmode="text"
+                placeholder="8글자까지" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>비밀번호 (숫자 4자리)</span>
+              <input id="field-pin" type="password" maxlength="4" inputmode="numeric"
+                pattern="[0-9]*" placeholder="••••" autocomplete="off" />
+            </label>
+            <p id="account-error" class="account-error hidden"></p>
+            <button id="btn-account-submit" type="submit">로그인</button>
+          </form>
+
+          <button id="btn-account-close" type="button" class="ghost">닫기</button>
+        </div>
+      </div>
+
+      <div id="leaderboard-screen" class="overlay hidden">
+        <div class="dialog">
+          <h2>리더보드</h2>
+          <p id="my-standing" class="my-standing hidden"></p>
+          <ol id="leaderboard-list" class="leaderboard-list"></ol>
+          <button id="btn-leaderboard-close" type="button" class="ghost">닫기</button>
         </div>
       </div>
 

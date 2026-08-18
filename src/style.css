@@ -1140,3 +1140,213 @@ kbd {
     backdrop-filter: blur(10px);
   }
 }
+
+/* --- account & leaderboard ------------------------------------------------ */
+
+.account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: rgba(7, 16, 24, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.account-state {
+  font-size: 14px;
+  color: #9ec2d8;
+  text-align: left;
+}
+
+.account-state strong {
+  color: var(--teal);
+}
+
+.account-action {
+  flex: none;
+  border: 1px solid rgba(20, 212, 184, 0.45);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: rgba(20, 212, 184, 0.12);
+  color: var(--teal);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.account-note {
+  margin: 0 0 16px;
+  color: #9ec2d8;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.account-note strong {
+  color: var(--orange);
+}
+
+.account-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.account-tab {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 4px;
+  background: rgba(7, 16, 24, 0.55);
+  color: #9ec2d8;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.account-tab.on {
+  border-color: rgba(255, 210, 74, 0.6);
+  background: rgba(255, 210, 74, 0.14);
+  color: var(--gold);
+}
+
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+
+.field span {
+  font-size: 13px;
+  color: #9ec2d8;
+}
+
+.field input {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(7, 16, 24, 0.6);
+  color: var(--paper);
+  font: inherit;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: rgba(20, 212, 184, 0.7);
+}
+
+#field-pin {
+  letter-spacing: 0.5em;
+  text-align: center;
+}
+
+.account-error {
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 122, 60, 0.16);
+  border: 1px solid rgba(255, 122, 60, 0.45);
+  color: #ffd2b8;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+#btn-account-submit {
+  border: 0;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffe27a, #ffb300);
+  color: #3b2500;
+  font: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+#btn-account-submit:disabled {
+  background: rgba(255, 255, 255, 0.09);
+  color: #6f8b9c;
+  cursor: default;
+}
+
+.my-standing {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 210, 74, 0.12);
+  border: 1px solid rgba(255, 210, 74, 0.35);
+  color: var(--gold);
+  font-size: 15px;
+}
+
+.leaderboard-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  max-height: min(52vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(7, 16, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+
+.leaderboard-row.me {
+  border-color: rgba(20, 212, 184, 0.55);
+  background: rgba(20, 212, 184, 0.12);
+}
+
+.leaderboard-rank {
+  font-family: var(--font-numeric);
+  font-size: 19px;
+  color: #7fa3ba;
+  text-align: center;
+}
+
+.leaderboard-row:nth-child(1) .leaderboard-rank {
+  color: var(--gold);
+}
+
+.leaderboard-handle {
+  font-size: 16px;
+  color: #eaf5fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-score {
+  font-family: var(--font-numeric);
+  font-size: 19px;
+  color: var(--gold);
+}
+
+.leaderboard-empty {
+  padding: 22px 12px;
+  color: #8fb0c4;
+  font-size: 14px;
+}
