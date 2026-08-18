@@ -1,5 +1,13 @@
 import * as THREE from "three";
-import { BUS_ROOF, LANES, TRAIN_COLORS, TRAIN_ROOF } from "./config.js";
+import {
+  BUS_ROOF,
+  LANES,
+  SIGN_BOARD_BOTTOM,
+  SIGN_BOARD_TOP,
+  SIGN_TOP,
+  TRAIN_COLORS,
+} from "./config.js";
+import { SPEC } from "./specs.js";
 
 const BUS_COLORS = [0xffc107, 0x26c6da, 0xef5350, 0x66bb6a];
 
@@ -113,19 +121,53 @@ export function makeBarrier() {
   return g;
 }
 
+/**
+ * Low-clearance gate. The structure runs all the way up past every reachable
+ * jump apex (including super sneakers), so the only way through is the crawl
+ * gap at the bottom — and the silhouette has to say that at a glance.
+ */
 export function makeSign() {
   const g = new THREE.Group();
-  [-0.92, 0.92].forEach((x) => {
-    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.3, 0.12), lambert(0x455a64));
-    pole.position.set(x, 1.15, 0);
+
+  [-0.94, 0.94].forEach((x) => {
+    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.16, SIGN_TOP, 0.18), lambert(0x37474f));
+    pole.position.set(x, SIGN_TOP / 2, 0);
     g.add(pole);
   });
-  const top = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.12, 0.18), lambert(0x455a64));
-  top.position.y = 2.28;
-  g.add(top);
-  const board = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.95, 0.16), lambert(0xffeb3b));
-  board.position.y = 1.62;
+
+  // Concrete slab filling everything above the warning board. Light enough to
+  // stay a structure at distance rather than a black hole in the lane.
+  const slabHeight = SIGN_TOP - SIGN_BOARD_TOP;
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(1.86, slabHeight, 0.2), lambert(0x93a4ad));
+  slab.position.y = SIGN_BOARD_TOP + slabHeight / 2;
+  g.add(slab);
+
+  const rib = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.16, 0.24), lambert(0x5c7079));
+  rib.position.y = SIGN_BOARD_TOP + slabHeight * 0.55;
+  g.add(rib);
+
+  const capBeam = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.22, 0.26), lambert(0x263238));
+  capBeam.position.y = SIGN_TOP - 0.11;
+  g.add(capBeam);
+
+  // Yellow warning board sits right above the crawl gap.
+  const boardHeight = SIGN_BOARD_TOP - SIGN_BOARD_BOTTOM;
+  const board = new THREE.Mesh(new THREE.BoxGeometry(1.8, boardHeight, 0.22), lambert(0xffeb3b));
+  board.position.y = (SIGN_BOARD_TOP + SIGN_BOARD_BOTTOM) / 2;
   g.add(board);
+
+  [-0.5, 0, 0.5].forEach((x) => {
+    const chevron = new THREE.Mesh(new THREE.BoxGeometry(0.28, boardHeight * 0.7, 0.26), lambert(0x263238));
+    chevron.position.set(x, (SIGN_BOARD_TOP + SIGN_BOARD_BOTTOM) / 2, 0);
+    chevron.rotation.z = 0.5;
+    g.add(chevron);
+  });
+
+  // Hazard lip marking the bottom edge of the gap.
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(1.84, 0.14, 0.28), lambert(0xff6d00));
+  lip.position.y = SIGN_BOARD_BOTTOM + 0.07;
+  g.add(lip);
+
   return g;
 }
 
@@ -153,18 +195,74 @@ export function makeCoin() {
   return mesh;
 }
 
-export function makeMagnet() {
+/** Shared shell for every power-up pickup: a glowing gem on a tinted disc. */
+function powerupShell(color, emissive) {
   const g = new THREE.Group();
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(0.46, 0.05, 8, 20),
+    new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: 0.7 }),
+  );
+  halo.rotation.x = Math.PI / 2;
+  halo.position.y = 0.2;
+  g.add(halo);
+  return g;
+}
+
+export function makeMagnet() {
+  const g = powerupShell(0xb388ff, 0x7c4dff);
   const gem = new THREE.Mesh(
     new THREE.OctahedronGeometry(0.38),
-    new THREE.MeshLambertMaterial({
-      color: 0xb388ff,
-      emissive: 0x7c4dff,
-      emissiveIntensity: 0.45,
-    }),
+    new THREE.MeshLambertMaterial({ color: 0xb388ff, emissive: 0x7c4dff, emissiveIntensity: 0.45 }),
   );
   gem.position.y = 0.2;
   g.add(gem);
+  return g;
+}
+
+export function makeJetpack() {
+  const g = powerupShell(0xff7a3c, 0xff3d00);
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.16, 0.6, 10),
+    new THREE.MeshLambertMaterial({ color: 0xff7a3c, emissive: 0xbf360c, emissiveIntensity: 0.4 }),
+  );
+  body.position.y = 0.28;
+  g.add(body);
+  const nozzle = new THREE.Mesh(
+    new THREE.ConeGeometry(0.15, 0.24, 10),
+    new THREE.MeshLambertMaterial({ color: 0xffd54f, emissive: 0xff6d00, emissiveIntensity: 0.8 }),
+  );
+  nozzle.rotation.x = Math.PI;
+  nozzle.position.y = -0.1;
+  g.add(nozzle);
+  return g;
+}
+
+export function makeDouble() {
+  const g = powerupShell(0xffd24a, 0xffab00);
+  const star = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.34, 1),
+    new THREE.MeshLambertMaterial({ color: 0xffd24a, emissive: 0xffab00, emissiveIntensity: 0.65 }),
+  );
+  star.position.y = 0.22;
+  star.scale.set(1, 1.35, 1);
+  g.add(star);
+  return g;
+}
+
+export function makeSneakers() {
+  const g = powerupShell(0x14d4b8, 0x00897b);
+  const shoe = new THREE.Mesh(
+    new THREE.BoxGeometry(0.24, 0.16, 0.46),
+    new THREE.MeshLambertMaterial({ color: 0xf8fafc, emissive: 0x14d4b8, emissiveIntensity: 0.3 }),
+  );
+  shoe.position.y = 0.24;
+  g.add(shoe);
+  const wing = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.1, 0.12),
+    new THREE.MeshLambertMaterial({ color: 0x14d4b8, emissive: 0x00897b, emissiveIntensity: 0.7 }),
+  );
+  wing.position.set(0, 0.34, -0.1);
+  g.add(wing);
   return g;
 }
 
@@ -176,23 +274,19 @@ const FACTORIES = {
   crate: makeCrate,
   coin: makeCoin,
   magnet: makeMagnet,
+  jetpack: makeJetpack,
+  double: makeDouble,
+  sneakers: makeSneakers,
 };
 
-const SPEC = {
-  train: { length: 12, minY: 0, maxY: 2.4, lethal: true, rideable: true, roofY: TRAIN_ROOF },
-  bus: { length: 9.2, minY: 0, maxY: 2.15, lethal: true, rideable: true, roofY: BUS_ROOF },
-  barrier: { length: 0.5, minY: 0, maxY: 0.92, lethal: true },
-  sign: { length: 0.4, minY: 0.95, maxY: 2.4, lethal: true },
-  crate: { length: 1.4, minY: 0, maxY: 1.2, lethal: true },
-  coin: { length: 0.5, minY: 0, maxY: 3.6, lethal: false },
-  magnet: { length: 0.6, minY: 0, maxY: 3.2, lethal: false },
-};
+export { SPEC };
 
 export class EntityPool {
   constructor(scene) {
     this.scene = scene;
     this.live = [];
-    this.free = { train: [], bus: [], barrier: [], sign: [], crate: [], coin: [], magnet: [] };
+    this.free = {};
+    for (const type of Object.keys(FACTORIES)) this.free[type] = [];
   }
 
   spawn(type, lane, z, y = 0.55) {
@@ -201,18 +295,32 @@ export class EntityPool {
     let mesh = pile.pop();
     if (!mesh) {
       mesh = FACTORIES[type]();
+      // Only solid obstacles cast; coins and pickups would just add noise.
+      if (spec.lethal) {
+        mesh.traverse((child) => {
+          if (child.isMesh) child.castShadow = true;
+        });
+      }
       this.scene.add(mesh);
     }
     mesh.visible = true;
     const x = LANES[lane + 1];
-    const lift = type === "coin" || type === "magnet" ? y : 0;
+    // Pickups float at the requested height; obstacles always sit on the deck.
+    const lift = spec.lethal ? 0 : y;
     mesh.position.set(x, lift, z);
     const item = {
       type,
       lane,
       z,
+      powerup: spec.powerup ?? null,
+      /** Set once the runner has passed it, so near misses only score once. */
+      scored: false,
+      // Position at the start of the current simulation step, so the swept
+      // collision test can account for obstacles that move (oncoming buses).
+      prevZ: z,
       y: lift,
       length: spec.length,
+      depth: spec.depth,
       minY: spec.minY,
       maxY: spec.maxY,
       lethal: spec.lethal,
@@ -233,6 +341,7 @@ export class EntityPool {
     item.moving = false;
     item.vz = 0;
     item.warned = false;
+    item.scored = false;
     setBusFacing(item, false);
     item.mesh.visible = false;
     this.free[item.type].push(item.mesh);

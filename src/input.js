@@ -18,6 +18,9 @@ export class Input {
       KeyP: "pause",
       Escape: "pause",
       Enter: "start",
+      KeyB: "board",
+      ShiftLeft: "board",
+      ShiftRight: "board",
     };
 
     window.addEventListener("keydown", (e) => {

@@ -5,6 +5,11 @@ export class AudioBus {
     this.master = null;
   }
 
+  /** Sound-effect toggle from the settings menu. */
+  setEnabled(enabled) {
+    this.muted = !enabled;
+  }
+
   resume() {
     if (!this.ctx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -105,5 +110,58 @@ export class AudioBus {
     this.beep(660, 0.08, "square", 0.45);
     setTimeout(() => this.beep(880, 0.1, "square", 0.4), 70);
     setTimeout(() => this.beep(1100, 0.14, "square", 0.35), 150);
+  }
+
+  powerup() {
+    this.beep(620, 0.08, "square", 0.45);
+    setTimeout(() => this.beep(830, 0.09, "square", 0.4), 60);
+    setTimeout(() => this.beep(1240, 0.16, "triangle", 0.4), 130);
+  }
+
+  jetpack() {
+    if (this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(120, t);
+    o.frequency.exponentialRampToValueAtTime(760, t + 0.5);
+    g.gain.setValueAtTime(0.3, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    o.connect(g);
+    g.connect(this.master);
+    o.start(t);
+    o.stop(t + 0.6);
+  }
+
+  nearMiss() {
+    this.beep(1500, 0.05, "triangle", 0.22);
+  }
+
+  board() {
+    this.beep(300, 0.1, "triangle", 0.4);
+    setTimeout(() => this.beep(450, 0.12, "square", 0.35), 60);
+    setTimeout(() => this.beep(680, 0.18, "triangle", 0.3), 140);
+  }
+
+  boardBreak() {
+    this.beep(520, 0.08, "square", 0.5);
+    setTimeout(() => this.beep(300, 0.14, "sawtooth", 0.45), 60);
+    setTimeout(() => this.beep(180, 0.2, "square", 0.35), 150);
+  }
+
+  mission() {
+    this.beep(780, 0.09, "square", 0.4);
+    setTimeout(() => this.beep(1040, 0.1, "square", 0.36), 90);
+    setTimeout(() => this.beep(1560, 0.2, "triangle", 0.32), 190);
+  }
+
+  purchase() {
+    this.beep(880, 0.07, "square", 0.35);
+    setTimeout(() => this.beep(1320, 0.12, "triangle", 0.3), 70);
+  }
+
+  denied() {
+    this.beep(200, 0.12, "square", 0.35);
   }
 }

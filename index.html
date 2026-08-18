@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Jua&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -38,12 +38,19 @@
           </div>
           <button id="btn-pause" type="button" aria-label="일시정지">II</button>
         </div>
-        <div id="magnet-bar" class="magnet-bar hidden">
-          <span>MAGNET</span>
-          <div class="magnet-fill"></div>
-        </div>
+
+        <div id="powerup-stack" class="powerup-stack hidden"></div>
+        <div id="near-miss" class="near-miss hidden">아슬아슬!</div>
         <div id="pace-chip">START</div>
         <div id="speed-toast" class="hidden"></div>
+
+        <div id="board-wrap" class="board-wrap">
+          <button id="btn-board" type="button" aria-label="호버보드">
+            <span class="board-icon">🛹</span>
+            <span id="board-count">0</span>
+          </button>
+          <div class="board-track"><div class="board-fill"></div></div>
+        </div>
       </div>
 
       <div id="touch-hint" class="hidden">스와이프 · 점프 · 슬라이드 · 버스 점프</div>
@@ -53,16 +60,67 @@
         <div class="title-card">
           <p class="eyebrow">ENDLESS 3-LANE RUNNER</p>
           <h1>메트로 <span>대시</span></h1>
-          <p class="tagline">지하철 선로를 질주해 열차와 장애물을 피하세요</p>
+
+          <div class="profile-bar">
+            <div class="profile-rank">
+              <span id="rank-name">Lv.1 신입 러너</span>
+              <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
+              <span id="rank-xp" class="rank-xp">0 XP</span>
+            </div>
+            <div class="profile-coins">
+              <span class="coin-orb small"></span>
+              <strong id="coin-bank">0</strong>
+            </div>
+          </div>
+
           <button id="btn-play" type="button">질주 시작</button>
-          <ul class="howto">
-            <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
-            <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
-            <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
-            <li>슬라이드 중 <kbd>↑</kbd> · 바로 일어나서 점프</li>
-            <li>헤드라이트 버스 · 마주 오면 레인 변경</li>
-          </ul>
+          <div class="title-actions">
+            <button id="btn-shop" type="button" class="ghost">상점 · 강화</button>
+            <button id="btn-settings" type="button" class="ghost">설정</button>
+          </div>
+
+          <div class="mission-block">
+            <p class="block-title">오늘의 미션</p>
+            <ul id="mission-list" class="mission-list"></ul>
+          </div>
+
+          <details class="howto-wrap">
+            <summary>조작 방법</summary>
+            <ul class="howto">
+              <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
+              <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
+              <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
+              <li><kbd>B</kbd> · 호버보드 꺼내기 (충돌 1회 방어)</li>
+              <li>노란 게이트 · 점프로 못 넘습니다 · 슬라이드 필수</li>
+              <li>헤드라이트 버스 · 마주 오면 레인 변경</li>
+              <li>장애물을 아슬아슬하게 스치면 콤보와 보너스가 오릅니다</li>
+            </ul>
+          </details>
+
           <p class="best-line">내 최고 점수 <strong id="best-score">0</strong></p>
+        </div>
+      </div>
+
+      <div id="shop-screen" class="overlay hidden">
+        <div class="dialog shop">
+          <div class="shop-head">
+            <h2>상점</h2>
+            <div class="profile-coins">
+              <span class="coin-orb small"></span>
+              <strong id="shop-coins">0</strong>
+            </div>
+          </div>
+          <div id="shop-note" class="shop-note hidden"></div>
+          <div id="shop-list" class="shop-list"></div>
+          <button id="btn-shop-close" type="button" class="ghost">닫기</button>
+        </div>
+      </div>
+
+      <div id="settings-screen" class="overlay hidden">
+        <div class="dialog">
+          <h2>설정</h2>
+          <div id="settings-list" class="settings-list"></div>
+          <button id="btn-settings-close" type="button" class="ghost">닫기</button>
         </div>
       </div>
 
@@ -109,9 +167,24 @@
               <span>최고 콤보</span>
               <strong id="final-combo">0</strong>
             </div>
+            <div>
+              <span>아슬아슬</span>
+              <strong id="final-nearmiss">0</strong>
+            </div>
+            <div>
+              <span>획득 XP</span>
+              <strong id="final-xp">+0</strong>
+            </div>
           </div>
+
+          <div id="mission-cleared" class="mission-cleared hidden"></div>
+
           <p class="best-line over-best">내 최고 점수 <strong id="over-best">0</strong></p>
           <p id="new-best" class="new-best hidden">새 최고 기록!</p>
+
+          <button id="btn-revive" type="button" class="revive">
+            이어서 달리기 · 🪙 <span id="revive-cost">400</span>
+          </button>
           <button id="btn-retry" type="button">다시 달리기</button>
           <button id="btn-home" type="button" class="ghost">타이틀로</button>
         </div>
