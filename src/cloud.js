@@ -73,6 +73,11 @@ export class Cloud {
     return this.session?.handle ?? null;
   }
 
+  /** The school this account belongs to, or "" while none has been chosen. */
+  get schoolLabel() {
+    return this.session?.schoolLabel ?? "";
+  }
+
   onChange(fn) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
@@ -113,7 +118,11 @@ export class Cloud {
   }
 
   keepSession(result) {
-    this.session = { token: result.token, handle: result.handle };
+    this.session = {
+      token: result.token,
+      handle: result.handle,
+      schoolLabel: result.schoolLabel ?? "",
+    };
     writeLocal(SESSION_KEY, JSON.stringify(this.session));
     this.emit();
     return result;
@@ -169,7 +178,12 @@ export class Cloud {
   async refresh() {
     if (!this.signedIn) return null;
     const result = await this.query("players:load", { token: this.session.token });
-    this.session = { ...this.session, handle: result.handle };
+    this.session = {
+      ...this.session,
+      handle: result.handle,
+      schoolLabel: result.schoolLabel ?? "",
+    };
+    this.emit();
     return result;
   }
 
@@ -200,6 +214,24 @@ export class Cloud {
     }
   }
 
+  /**
+   * Claim a school. The server allows this exactly once per account, so the
+   * label it returns is final until staff change it.
+   */
+  async setSchool(region, level, name) {
+    if (!this.signedIn) throw new Error("로그인해야 학교를 정할 수 있어요");
+    const result = await this.mutation("players:setSchool", {
+      token: this.session.token,
+      region,
+      level,
+      name,
+    });
+    this.session = { ...this.session, schoolLabel: result.schoolLabel };
+    writeLocal(SESSION_KEY, JSON.stringify(this.session));
+    this.emit();
+    return result;
+  }
+
   async report(handle) {
     if (!this.signedIn) throw new Error("로그인해야 신고할 수 있어요");
     return await this.mutation("reports:report", { token: this.session.token, handle });
@@ -213,6 +245,19 @@ export class Cloud {
     if (!this.signedIn) return null;
     try {
       return await this.query("scores:standing", { token: this.session.token });
+    } catch {
+      return null;
+    }
+  }
+
+  async schoolLeaderboard(limit = 10) {
+    return await this.query("schools:top", { limit });
+  }
+
+  async schoolStanding() {
+    if (!this.signedIn) return null;
+    try {
+      return await this.query("schools:standing", { token: this.session.token });
     } catch {
       return null;
     }

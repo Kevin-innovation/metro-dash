@@ -115,6 +115,7 @@ export class Game {
       submitAccount: (mode, handle, pin) => this.submitAccount(mode, handle, pin),
       openLeaderboard: () => this.openLeaderboard(),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
+      submitSchool: (input) => this.submitSchool(input),
       resolveMerge: (choice) => this.resolveMerge(choice),
     });
     this.resize();
@@ -150,7 +151,8 @@ export class Game {
     this.screens.showAccountError(null);
     this.screens.setAccountBusy(true);
     try {
-      if (mode === "signup") {
+      const justSignedUp = mode === "signup";
+      if (justSignedUp) {
         await this.cloud.register(handle, pin, this.store.data);
       } else {
         const result = await this.cloud.signIn(handle, pin);
@@ -158,6 +160,9 @@ export class Game {
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
+      // Asked once, at the moment the account is created, and skippable — the
+      // school can still be set later from the title screen.
+      if (justSignedUp && !this.cloud.schoolLabel) this.screens.openSchool();
     } catch (error) {
       this.screens.showAccountError(cloudMessage(error));
     } finally {
@@ -223,6 +228,28 @@ export class Game {
     }
   }
 
+  /**
+   * Claim a school.
+   *
+   * The server allows this once per account, so the confirmation matters more
+   * than usual — a mistake here needs a teacher to undo.
+   */
+  async submitSchool({ region, level, name }) {
+    this.screens.showSchoolError(null);
+    this.screens.setSchoolBusy(true);
+    try {
+      const result = await this.cloud.setSchool(region, level, name);
+      this.screens.closeSchool();
+      this.screens.showAccountBar(this.cloud);
+      this.screens.showReportNote(`${result.schoolLabel} 로 등록했어요`);
+      this.audio.purchase();
+    } catch (error) {
+      this.screens.showSchoolError(cloudMessage(error));
+    } finally {
+      this.screens.setSchoolBusy(false);
+    }
+  }
+
   /** Replace the local profile with one pulled from the server. */
   adoptProfile(profile) {
     this.store.data = normalizeSave(profile);
@@ -237,11 +264,17 @@ export class Game {
     this.audio.resume();
     this.screens.openLeaderboard();
     this.screens.renderLeaderboard([], null, this.cloud.handle);
-    const [rows, standing] = await Promise.all([
-      this.cloud.leaderboard(20).catch(() => []),
+    this.screens.renderSchoolBoard([], null);
+    // Both columns are fetched together so the two halves of the screen fill in
+    // at the same time rather than one after the other.
+    const [rows, standing, schools, schoolStanding] = await Promise.all([
+      this.cloud.leaderboard(10).catch(() => []),
       this.cloud.standing(),
+      this.cloud.schoolLeaderboard(10).catch(() => []),
+      this.cloud.schoolStanding(),
     ]);
     this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
+    this.screens.renderSchoolBoard(schools, schoolStanding);
   }
 
   /** Send the finished run up. Never blocks, never fails the local save. */

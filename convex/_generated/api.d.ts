@@ -11,7 +11,9 @@
 import type * as admin from "../admin.js";
 import type * as players from "../players.js";
 import type * as reports from "../reports.js";
+import type * as schools from "../schools.js";
 import type * as scores from "../scores.js";
+import type * as session from "../session.js";
 
 import type {
   ApiFromModules,
@@ -23,7 +25,9 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   players: typeof players;
   reports: typeof reports;
+  schools: typeof schools;
   scores: typeof scores;
+  session: typeof session;
 }>;
 
 /**

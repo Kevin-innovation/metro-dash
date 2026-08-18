@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { handleKey } from "../src/nickname.js";
-import { requirePlayer } from "./players.js";
+import { requirePlayer } from "./session.js";
 
 /**
  * Reporting a nickname.

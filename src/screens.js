@@ -1,5 +1,7 @@
-import { BOARD_HINT, BOARD_HINT_LONG } from "./input.js";
+import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
+import { LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
+import { loadSchoolNames } from "./school-list.js";
 import { missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { runXp } from "./progression.js";
@@ -92,6 +94,25 @@ export class Screens {
       });
     }
 
+    const schoolBtn = $("btn-school");
+    if (schoolBtn) schoolBtn.onclick = () => this.openSchool();
+    const schoolClose = $("btn-school-close");
+    if (schoolClose) schoolClose.onclick = () => this.closeSchool();
+    const schoolForm = $("school-form");
+    if (schoolForm) {
+      // Submitting the form does not commit — it asks. The choice cannot be
+      // undone by the player afterwards, so it gets its own confirmation with
+      // the resolved school name spelled out.
+      schoolForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        this.askSchoolConfirm();
+      });
+    }
+    const schoolCancel = $("btn-school-cancel");
+    if (schoolCancel) schoolCancel.onclick = () => this.showSchoolConfirm(false);
+    const schoolConfirm = $("btn-school-confirm");
+    if (schoolConfirm) schoolConfirm.onclick = () => a.submitSchool(this.schoolInput());
+
     const keepLocal = $("btn-keep-local");
     if (keepLocal) keepLocal.onclick = () => a.resolveMerge("local");
     const keepCloud = $("btn-keep-cloud");
@@ -147,13 +168,18 @@ export class Screens {
 
     const state = $("account-state");
     const action = $("btn-account");
+    const school = $("btn-school");
     if (cloud.signedIn) {
-      if (state) state.innerHTML = `<strong>${escapeHtml(cloud.handle)}</strong> 님으로 기록 중`;
+      const where = cloud.schoolLabel ? ` · ${escapeHtml(cloud.schoolLabel)}` : "";
+      if (state) state.innerHTML = `<strong>${escapeHtml(cloud.handle)}</strong> 님으로 기록 중${where}`;
       if (action) action.textContent = "로그아웃";
     } else {
       if (state) state.textContent = "게스트로 플레이 중 · 기록은 이 기기에만 남아요";
       if (action) action.textContent = "로그인";
     }
+    // Offered only while there is still a choice to make: once a school is set
+    // the button would lead to a form that can only refuse.
+    if (school) school.classList.toggle("hidden", !cloud.signedIn || Boolean(cloud.schoolLabel));
   }
 
   openAccount(mode = "signin") {
@@ -203,6 +229,136 @@ export class Screens {
   closeLeaderboard() {
     const panel = $("leaderboard-screen");
     if (panel) panel.classList.add("hidden");
+  }
+
+  // --- school --------------------------------------------------------------
+
+  /**
+   * Fill the region and level menus from the shared rules module, so the only
+   * regions offered are the ones the server will accept.
+   */
+  buildSchoolForm() {
+    const region = $("field-region");
+    const level = $("field-level");
+    if (!region || !level || region.options.length) return;
+
+    region.innerHTML =
+      `<option value="">선택</option>` +
+      REGIONS.map((name) => `<option value="${name}">${name}</option>`).join("");
+    level.innerHTML =
+      `<option value="">선택</option>` +
+      LEVELS.map((entry) => `<option value="${entry.code}">${entry.label}</option>`).join("");
+
+    const onInput = () => this.updateSchoolPreview();
+    region.onchange = onInput;
+    level.onchange = onInput;
+    $("field-school").oninput = onInput;
+  }
+
+  schoolInput() {
+    return {
+      region: $("field-region")?.value ?? "",
+      level: $("field-level")?.value ?? "",
+      name: $("field-school")?.value ?? "",
+    };
+  }
+
+  /**
+   * Show the name that would actually be stored, live.
+   *
+   * This is what stops 「동중」 from being submitted in the belief that it will
+   * read 「동중중학교」 — the answer is on screen before anyone presses the button.
+   */
+  updateSchoolPreview() {
+    const preview = $("school-preview");
+    if (!preview) return;
+    const input = this.schoolInput();
+    const label = previewLabel(input);
+    preview.textContent = label
+      ? `이렇게 저장돼요 → ${label}`
+      : "지역과 학교급을 고르고 이름을 입력해 주세요";
+    preview.classList.toggle("on", Boolean(label));
+    this.suggestSchools(input);
+  }
+
+  /**
+   * Offer the real schools in that region, when the bundled list is present.
+   * Without it the field is simply a plain text box — the rules do not change.
+   */
+  async suggestSchools({ region, level }) {
+    const list = $("school-options");
+    if (!list) return;
+    if (!region || !level) {
+      list.innerHTML = "";
+      return;
+    }
+
+    const names = await loadSchoolNames(region, level);
+    const suffix = levelLabel(level);
+    list.innerHTML = names
+      .map((name) => {
+        // A leading "=" marks a name that does not follow the usual pattern and
+        // is therefore stored whole.
+        const full = name.startsWith("=") ? name.slice(1) : `${name}${suffix}`;
+        return `<option value="${escapeHtml(full)}"></option>`;
+      })
+      .join("");
+  }
+
+  openSchool() {
+    this.buildSchoolForm();
+    $("field-school").value = "";
+    this.showSchoolError(null);
+    this.showSchoolConfirm(false);
+    this.updateSchoolPreview();
+    $("school-screen").classList.remove("hidden");
+    $("field-region").focus();
+  }
+
+  /**
+   * Check the input here first, so the confirmation only ever appears for a
+   * school that will actually be accepted — being asked "are you sure?" and
+   * then told the input was wrong is the worst of both.
+   */
+  askSchoolConfirm() {
+    const check = validateSchool(this.schoolInput());
+    if (!check.ok) {
+      this.showSchoolError(check.message);
+      return;
+    }
+    this.showSchoolError(null);
+    $("school-confirm-label").textContent = check.label;
+    this.showSchoolConfirm(true);
+  }
+
+  showSchoolConfirm(on) {
+    $("school-confirm")?.classList.toggle("hidden", !on);
+    // The form stays visible but inert, so the choice being confirmed is still
+    // on screen above the warning.
+    $("btn-school-submit")?.classList.toggle("hidden", on);
+    for (const id of ["field-region", "field-level", "field-school"]) {
+      const field = $(id);
+      if (field) field.disabled = on;
+    }
+  }
+
+  closeSchool() {
+    const panel = $("school-screen");
+    if (panel) panel.classList.add("hidden");
+  }
+
+  showSchoolError(message) {
+    const el = $("school-error");
+    if (!el) return;
+    el.textContent = message ?? "";
+    el.classList.toggle("hidden", !message);
+    // A server refusal lands here; drop back to the form so it can be fixed.
+    if (message) this.showSchoolConfirm(false);
+  }
+
+  setSchoolBusy(busy) {
+    const confirm = $("btn-school-confirm");
+    if (confirm) confirm.disabled = busy;
   }
 
   showReportNote(message) {
@@ -273,6 +429,46 @@ export class Screens {
     }
   }
 
+  /**
+   * The school column.
+   *
+   * A school's figure is the sum of its members' best scores, so the member
+   * count is shown alongside it — without that, a big school's lead looks like
+   * skill rather than headcount.
+   */
+  renderSchoolBoard(rows, standing) {
+    const list = $("school-list");
+    if (!list) return;
+
+    if (!rows?.length) {
+      list.innerHTML = `<li class="leaderboard-empty">아직 학교 기록이 없어요.</li>`;
+    } else {
+      const mineKey = standing?.rank != null ? rows.find((row) => row.label === standing.label)?.key : null;
+      list.innerHTML = rows
+        .map(
+          (row) => `
+            <li class="leaderboard-row${row.key === mineKey ? " me" : ""}">
+              <span class="leaderboard-rank">${row.rank}</span>
+              <span class="leaderboard-handle">
+                ${escapeHtml(row.label)}
+                <em class="school-members">${row.members}명</em>
+              </span>
+              <span class="leaderboard-score">${row.total.toLocaleString()}</span>
+            </li>`,
+        )
+        .join("");
+    }
+
+    const mine = $("my-school-standing");
+    if (mine) {
+      const show = standing?.rank != null;
+      mine.classList.toggle("hidden", !show);
+      if (show) {
+        mine.textContent = `${standing.label} · ${standing.rank}위 · ${standing.total.toLocaleString()}점`;
+      }
+    }
+  }
+
   // --- overlays -----------------------------------------------------------
 
   setOverlay(mode) {
@@ -284,6 +480,7 @@ export class Screens {
     this.closeAccount();
     this.closeLeaderboard();
     this.closeMerge();
+    this.closeSchool();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
     if (mode !== "hud") $("touch-hint").classList.add("hidden");

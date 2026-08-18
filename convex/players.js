@@ -7,6 +7,9 @@ import {
   lockoutSeconds,
 } from "../src/leaderboard-rules.js";
 import { handleKey, validateHandle } from "../src/nickname.js";
+import { schoolLabel, validateSchool } from "../src/school.js";
+import { joinSchool } from "./schools.js";
+import { requirePlayer } from "./session.js";
 
 /**
  * Accounts.
@@ -47,6 +50,8 @@ function publicProfile(player) {
     handle: player.handle,
     profile: player.profile,
     best: player.best,
+    school: player.school ?? null,
+    schoolLabel: player.school ? schoolLabel(player.school) : "",
   };
 }
 
@@ -60,15 +65,6 @@ async function byHandle(ctx, handle) {
     .query("players")
     .withIndex("by_handleKey", (q) => q.eq("handleKey", handleKey(handle)))
     .unique();
-}
-
-export async function requirePlayer(ctx, token) {
-  const player = await ctx.db
-    .query("players")
-    .withIndex("by_token", (q) => q.eq("token", token))
-    .unique();
-  if (!player) throw new ConvexError("세션이 만료되었어요. 다시 로그인해 주세요");
-  return player;
 }
 
 /** Is this nickname free? Used to give feedback before the form is submitted. */
@@ -207,6 +203,30 @@ export const save = mutation({
       updatedAt: Date.now(),
     });
     return { ok: true };
+  },
+});
+
+/**
+ * Choose a school. Once only.
+ *
+ * A player who could switch schools freely could carry their score to whichever
+ * one is winning, and the ranking would mean nothing — so the second attempt is
+ * refused and staff have to make the change. It is stated plainly in the form
+ * before anyone submits it.
+ */
+export const setSchool = mutation({
+  args: { token: v.string(), region: v.string(), level: v.string(), name: v.string() },
+  handler: async (ctx, { token, region, level, name }) => {
+    const player = await requirePlayer(ctx, token);
+    if (player.schoolKey) {
+      throw new ConvexError("학교는 한 번만 정할 수 있어요. 바꾸려면 선생님께 말씀해 주세요");
+    }
+
+    const check = validateSchool({ region, level, name });
+    if (!check.ok) throw new ConvexError(check.message);
+
+    await joinSchool(ctx, player, check.school);
+    return { ok: true, school: check.school, schoolLabel: check.label };
   },
 });
 

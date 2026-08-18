@@ -77,6 +77,7 @@
 
           <div id="account-bar" class="account-bar hidden">
             <span id="account-state" class="account-state">게스트로 플레이 중</span>
+            <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
             <button id="btn-account" type="button" class="account-action">로그인</button>
           </div>
 
@@ -157,13 +158,68 @@
       </div>
 
       <div id="leaderboard-screen" class="overlay hidden">
-        <div class="dialog">
+        <div class="dialog board">
           <h2>리더보드</h2>
-          <p id="my-standing" class="my-standing hidden"></p>
-          <ol id="leaderboard-list" class="leaderboard-list"></ol>
+          <div class="board-split">
+            <section class="board-col">
+              <h3 class="board-title">개인</h3>
+              <p id="my-standing" class="my-standing hidden"></p>
+              <ol id="leaderboard-list" class="leaderboard-list"></ol>
+            </section>
+            <section class="board-col">
+              <h3 class="board-title">학교</h3>
+              <p id="my-school-standing" class="my-standing hidden"></p>
+              <ol id="school-list" class="leaderboard-list school"></ol>
+            </section>
+          </div>
           <p id="report-note" class="report-note hidden"></p>
           <p class="report-hint">이상한 닉네임이 보이면 🚩 를 눌러 알려 주세요</p>
           <button id="btn-leaderboard-close" type="button" class="ghost">닫기</button>
+        </div>
+      </div>
+
+      <div id="school-screen" class="overlay hidden">
+        <div class="dialog">
+          <h2>학교 정하기</h2>
+          <p class="account-note">
+            우리 학교 이름으로 학교 랭킹에 참여합니다. 같은 학교 친구들의 최고 점수가 모두 더해져요.<br />
+            <strong>한 번 정하면 바꿀 수 없으니 천천히 골라 주세요.</strong>
+          </p>
+
+          <form id="school-form" class="account-form" autocomplete="off">
+            <div class="school-row">
+              <label class="field">
+                <span>지역</span>
+                <select id="field-region"></select>
+              </label>
+              <label class="field">
+                <span>학교급</span>
+                <select id="field-level"></select>
+              </label>
+            </div>
+            <label class="field">
+              <span>학교 이름</span>
+              <input id="field-school" type="text" maxlength="14" list="school-options"
+                placeholder="예: 동" autocomplete="off" />
+              <datalist id="school-options"></datalist>
+            </label>
+            <p id="school-preview" class="school-preview">지역과 학교급을 고르고 이름을 입력해 주세요</p>
+            <p id="school-error" class="account-error hidden"></p>
+            <button id="btn-school-submit" type="submit">이 학교로 정하기</button>
+          </form>
+
+          <div id="school-confirm" class="school-confirm hidden">
+            <p class="school-confirm-label" id="school-confirm-label"></p>
+            <p class="school-confirm-warn">
+              학교 선정은 수정이 불가능합니다.<br />이대로 진행하시겠습니까?
+            </p>
+            <div class="school-confirm-actions">
+              <button id="btn-school-cancel" type="button" class="ghost">다시 고르기</button>
+              <button id="btn-school-confirm" type="button">네, 이대로 정할게요</button>
+            </div>
+          </div>
+
+          <button id="btn-school-close" type="button" class="ghost">나중에 하기</button>
         </div>
       </div>
 

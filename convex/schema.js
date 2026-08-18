@@ -22,6 +22,14 @@ export default defineSchema({
     profile: v.any(),
     best: v.number(),
 
+    /**
+     * School, chosen at most once by the player and thereafter only by staff.
+     * Absent on every account created before schools existed, and on anyone who
+     * has not picked one — those players simply sit outside the school ranking.
+     */
+    school: v.optional(v.object({ region: v.string(), level: v.string(), name: v.string() })),
+    schoolKey: v.optional(v.string()),
+
     /** Which browser created the account, used only to cap account farming. */
     deviceId: v.string(),
 
@@ -35,7 +43,32 @@ export default defineSchema({
     .index("by_handleKey", ["handleKey"])
     .index("by_token", ["token"])
     .index("by_device", ["deviceId"])
-    .index("by_best", ["best"]),
+    .index("by_best", ["best"])
+    .index("by_school", ["schoolKey"]),
+
+  /**
+   * School standings, kept as a running total rather than computed on read.
+   *
+   * The obvious version — add up every player's best when the board is opened —
+   * would have to read every player document, and a player document carries the
+   * whole save file. A few hundred accounts would blow the query's read limit.
+   * So the total moves by deltas, and `admin:recomputeSchools` exists to rebuild
+   * it from the players if the two ever disagree.
+   */
+  schools: defineTable({
+    key: v.string(),
+    region: v.string(),
+    level: v.string(),
+    name: v.string(),
+    /** Rendered once at write time so the board is a single read. */
+    label: v.string(),
+    members: v.number(),
+    /** Sum of every member's best score. */
+    total: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_total", ["total"]),
 
   /**
    * Nickname reports.

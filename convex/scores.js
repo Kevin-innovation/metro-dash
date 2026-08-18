@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { validateRun } from "../src/leaderboard-rules.js";
-import { requirePlayer } from "./players.js";
+import { adjustSchool } from "./schools.js";
+import { requirePlayer } from "./session.js";
 
 /**
  * The leaderboard.
@@ -50,6 +51,9 @@ export const submit = mutation({
 
     if (score > player.best) {
       await ctx.db.patch(player._id, { best: score, updatedAt: now });
+      // The school total is the sum of its members' bests, so it moves by the
+      // same amount this player's best just moved by.
+      await adjustSchool(ctx, player.schoolKey, { total: score - player.best });
     }
 
     return { ok: true, best: Math.max(score, player.best) };

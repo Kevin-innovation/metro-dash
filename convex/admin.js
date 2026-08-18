@@ -1,6 +1,8 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { handleKey, validateHandle } from "../src/nickname.js";
+import { schoolKey, schoolLabel, validateSchool } from "../src/school.js";
+import { ensureSchool, joinSchool, leaveSchool } from "./schools.js";
 
 /**
  * Teacher tools.
@@ -48,6 +50,7 @@ export const list = query({
     return players.map((player) => ({
       handle: player.handle,
       best: player.best,
+      school: player.school ? schoolLabel(player.school) : "",
       lockedUntil: player.lockedUntil,
       failedAttempts: player.failedAttempts,
       createdAt: player.createdAt,
@@ -174,6 +177,164 @@ export const rename = mutation({
   },
 });
 
+// --- schools ----------------------------------------------------------------
+
+/**
+ * Set or move a player's school.
+ *
+ * Students get one choice and cannot change it, so this is where a mistyped or
+ * wrongly-picked school gets fixed. Their best score moves with them, which is
+ * what keeps the two rankings agreeing.
+ */
+export const setSchool = mutation({
+  args: {
+    adminKey: v.string(),
+    handle: v.string(),
+    region: v.string(),
+    level: v.string(),
+    name: v.string(),
+  },
+  handler: async (ctx, { adminKey, handle, region, level, name }) => {
+    requireAdmin(adminKey);
+    const check = validateSchool({ region, level, name });
+    if (!check.ok) throw new ConvexError(check.message);
+
+    const player = await byHandle(ctx, handle);
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
+
+    // Out of the old school first, so a move between two schools cannot leave
+    // the player counted in both.
+    await leaveSchool(ctx, player);
+    await joinSchool(ctx, { ...player, school: undefined, schoolKey: undefined }, check.school);
+    return { ok: true, handle: player.handle, schoolLabel: check.label };
+  },
+});
+
+/** Unset a school so the player can choose again themselves. */
+export const clearSchool = mutation({
+  args: { adminKey: v.string(), handle: v.string() },
+  handler: async (ctx, { adminKey, handle }) => {
+    requireAdmin(adminKey);
+    const player = await byHandle(ctx, handle);
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
+    await leaveSchool(ctx, player);
+    return { ok: true };
+  },
+});
+
+export const schools = query({
+  args: { adminKey: v.string() },
+  handler: async (ctx, { adminKey }) => {
+    requireAdmin(adminKey);
+    const rows = await ctx.db.query("schools").withIndex("by_total").order("desc").take(300);
+    return rows.map((row) => ({
+      key: row.key,
+      label: row.label,
+      region: row.region,
+      level: row.level,
+      name: row.name,
+      members: row.members,
+      total: row.total,
+    }));
+  },
+});
+
+/**
+ * Fold one school into another.
+ *
+ * The form makes a split unlikely — region and level are picked from lists and
+ * the suffix is normalised — but a typo in the name still produces two rows,
+ * and this is the one action that puts them back together.
+ */
+export const mergeSchools = mutation({
+  args: { adminKey: v.string(), fromKey: v.string(), toKey: v.string() },
+  handler: async (ctx, { adminKey, fromKey, toKey }) => {
+    requireAdmin(adminKey);
+    if (fromKey === toKey) throw new ConvexError("같은 학교입니다");
+
+    const find = async (key) =>
+      await ctx.db
+        .query("schools")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .unique();
+
+    const from = await find(fromKey);
+    const to = await find(toKey);
+    if (!from) throw new ConvexError("합칠 학교를 찾을 수 없습니다");
+    if (!to) throw new ConvexError("합쳐질 학교를 찾을 수 없습니다");
+
+    const members = await ctx.db
+      .query("players")
+      .withIndex("by_school", (q) => q.eq("schoolKey", fromKey))
+      .collect();
+
+    const school = { region: to.region, level: to.level, name: to.name };
+    for (const player of members) {
+      await ctx.db.patch(player._id, { school, schoolKey: to.key, updatedAt: Date.now() });
+    }
+
+    await ctx.db.patch(to._id, {
+      members: to.members + members.length,
+      total: to.total + members.reduce((sum, player) => sum + player.best, 0),
+      updatedAt: Date.now(),
+    });
+    await ctx.db.delete(from._id);
+
+    return { ok: true, moved: members.length, from: from.label, to: to.label };
+  },
+});
+
+/**
+ * Rebuild every school total from the players.
+ *
+ * The totals are maintained by deltas, which is fast but can only ever be as
+ * right as the code that moves them. This is the way back to the truth if they
+ * ever drift, and it is safe to run at any time.
+ */
+export const recomputeSchools = mutation({
+  args: { adminKey: v.string() },
+  handler: async (ctx, { adminKey }) => {
+    requireAdmin(adminKey);
+
+    const tally = new Map();
+    for await (const player of ctx.db.query("players")) {
+      if (!player.school) continue;
+      // Recomputed from the stored school rather than the stored key, so a key
+      // written by an older version of the rules is corrected too.
+      const key = schoolKey(player.school);
+      const entry = tally.get(key) ?? { school: player.school, members: 0, total: 0, ids: [] };
+      entry.members += 1;
+      entry.total += player.best;
+      entry.ids.push(player._id);
+      tally.set(key, entry);
+    }
+
+    for (const [key, entry] of tally) {
+      const row = await ensureSchool(ctx, entry.school);
+      await ctx.db.patch(row._id, {
+        members: entry.members,
+        total: entry.total,
+        updatedAt: Date.now(),
+      });
+      for (const id of entry.ids) {
+        const player = await ctx.db.get(id);
+        if (player.schoolKey !== key) await ctx.db.patch(id, { schoolKey: key });
+      }
+    }
+
+    // Schools nobody is in any more go away rather than sitting at zero.
+    let removed = 0;
+    for await (const row of ctx.db.query("schools")) {
+      if (!tally.has(row.key)) {
+        await ctx.db.delete(row._id);
+        removed += 1;
+      }
+    }
+
+    return { ok: true, schools: tally.size, removed };
+  },
+});
+
 /** Lift a lockout without changing the PIN. */
 export const unlock = mutation({
   args: { adminKey: v.string(), handle: v.string() },
@@ -193,6 +354,10 @@ export const remove = mutation({
     requireAdmin(adminKey);
     const player = await byHandle(ctx, handle);
     if (!player) throw new ConvexError("그런 닉네임이 없습니다");
+
+    // Out of their school first, while their best score is still there to
+    // subtract — afterwards there would be nothing left to take out.
+    await leaveSchool(ctx, player);
 
     const runs = await ctx.db
       .query("scores")
