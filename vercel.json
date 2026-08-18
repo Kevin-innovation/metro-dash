@@ -4,15 +4,15 @@
   "outputDirectory": "dist",
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "has": [{ "type": "host", "value": "metro-dash-gold.vercel.app" }],
-      "destination": "https://metdash.online/:path*",
+      "destination": "https://metdash.online/$1",
       "permanent": true
     },
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "has": [{ "type": "host", "value": ".*\\.vercel\\.app" }],
-      "destination": "https://metdash.online/:path*",
+      "destination": "https://metdash.online/$1",
       "permanent": false
     }
   ]
