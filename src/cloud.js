@@ -179,10 +179,12 @@ export class Cloud {
    * Push the save up. Failures are swallowed on purpose: a run that finished
    * offline still counts locally, and the next sync carries it.
    */
-  async save(profile, best) {
+  async save(profile) {
     if (!this.signedIn) return false;
     try {
-      await this.mutation("players:save", { token: this.session.token, profile, best });
+      // No score here on purpose: the server owns `best`, and it only moves
+      // when a submitted run passes validation.
+      await this.mutation("players:save", { token: this.session.token, profile });
       return true;
     } catch {
       return false;

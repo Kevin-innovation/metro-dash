@@ -22,6 +22,25 @@ import { handleKey, validateHandle } from "../src/nickname.js";
 
 const PIN_PATTERN = /^\d{4}$/;
 
+/** Refuse to store a save blob big enough to be an attack rather than a game. */
+const MAX_PROFILE_BYTES = 24 * 1024;
+
+/**
+ * Keep a client save honest before it is stored.
+ *
+ * The profile is opaque game state and is trusted as such, with one exception:
+ * the `best` inside it is displayed as a personal record, so it is pinned to
+ * the server's own figure rather than whatever the client sent.
+ */
+function sanitizeProfile(profile, serverBest) {
+  if (profile === null || typeof profile !== "object") return null;
+  const encoded = JSON.stringify(profile);
+  if (encoded.length > MAX_PROFILE_BYTES) {
+    throw new ConvexError("저장 데이터가 너무 큽니다");
+  }
+  return { ...profile, best: serverBest };
+}
+
 /** Client-visible shape. Never includes the PIN or another player's token. */
 function publicProfile(player) {
   return {
@@ -98,8 +117,10 @@ export const register = mutation({
       handleKey: handleKey(check.handle),
       pin,
       token,
-      profile: profile ?? null,
-      best: Math.max(0, Math.floor(profile?.best ?? 0)),
+      profile: sanitizeProfile(profile, 0),
+      // A new account starts at zero however good the local save claims to be;
+      // the board is only ever climbed through a validated run.
+      best: 0,
       deviceId,
       failedAttempts: 0,
       lockedUntil: 0,
@@ -169,15 +190,20 @@ export const load = query({
   handler: async (ctx, { token }) => publicProfile(await requirePlayer(ctx, token)),
 });
 
-/** Push the whole save file up. Last write wins; one player, one device at a time. */
+/**
+ * Push the save file up.
+ *
+ * Deliberately cannot touch `best`. The leaderboard ranks on that field, and a
+ * save is unvalidated client state — accepting a score here would hand every
+ * player a way around the run checks in scores.js. `best` moves only when
+ * `scores:submit` has approved a run.
+ */
 export const save = mutation({
-  args: { token: v.string(), profile: v.any(), best: v.number() },
-  handler: async (ctx, { token, profile, best }) => {
+  args: { token: v.string(), profile: v.any() },
+  handler: async (ctx, { token, profile }) => {
     const player = await requirePlayer(ctx, token);
     await ctx.db.patch(player._id, {
-      profile,
-      // Never let a sync walk the best score backwards.
-      best: Math.max(player.best, Math.floor(best) || 0),
+      profile: sanitizeProfile(profile, player.best),
       updatedAt: Date.now(),
     });
     return { ok: true };

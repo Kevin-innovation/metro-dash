@@ -198,7 +198,7 @@ export class Game {
       seconds: Math.floor(this.run.seconds),
       character: this.store.data.character,
     });
-    this.cloud.save(this.store.data, this.store.data.best);
+    this.cloud.save(this.store.data);
   }
 
   // --- quality ------------------------------------------------------------
