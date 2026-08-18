@@ -22,11 +22,22 @@ export const FREE_ATTEMPTS = 5;
 export const LOCKOUT_BASE_SECONDS = 30;
 export const LOCKOUT_MAX_SECONDS = 60 * 60;
 
-export function lockoutSeconds(failedAttempts) {
-  // FREE_ATTEMPTS failures cost nothing; the one after that is the first lock.
-  const over = Math.floor(failedAttempts) - FREE_ATTEMPTS - 1;
+/**
+ * The staff account is the one place a four-digit PIN guards something worth
+ * taking, and its nickname is fixed and guessable. So it gets almost no free
+ * attempts and starts an order of magnitude higher — 10,000 possibilities is
+ * only a real defence if each guess is expensive.
+ */
+export const STAFF_FREE_ATTEMPTS = 1;
+export const STAFF_LOCKOUT_BASE_SECONDS = 300;
+
+export function lockoutSeconds(failedAttempts, staff = false) {
+  const free = staff ? STAFF_FREE_ATTEMPTS : FREE_ATTEMPTS;
+  const base = staff ? STAFF_LOCKOUT_BASE_SECONDS : LOCKOUT_BASE_SECONDS;
+  // `free` failures cost nothing; the one after that is the first lock.
+  const over = Math.floor(failedAttempts) - free - 1;
   if (over < 0) return 0;
-  return Math.min(LOCKOUT_MAX_SECONDS, LOCKOUT_BASE_SECONDS * 2 ** over);
+  return Math.min(LOCKOUT_MAX_SECONDS, base * 2 ** over);
 }
 
 /**

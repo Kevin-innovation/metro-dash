@@ -19,8 +19,9 @@ import {
 
 test.skip(!canRunOnline, "VITE_CONVEX_URL 과 ADMIN_KEY 가 있어야 실행됩니다");
 
-// Each test creates its own account, and the device cap is three per browser.
-test.describe.configure({ mode: "parallel" });
+// Serial: each test signs in and out against one shared deployment, and four
+// workers doing that at once just make each other slow enough to time out.
+test.describe.configure({ mode: "serial" });
 
 test("가입하면 학교 화면이 바로 뜨고, 건너뛸 수 있다", async ({ page }) => {
   const handle = freshHandle("가");

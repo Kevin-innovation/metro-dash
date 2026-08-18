@@ -177,6 +177,56 @@ export const rename = mutation({
   },
 });
 
+/**
+ * Create or update the staff account.
+ *
+ * Deliberately not reachable from the sign-up form: the nickname filter
+ * reserves 「admin」 and every other staff-sounding name, so this is the only
+ * way such an account can exist, and it needs the admin key to run.
+ *
+ * Signing in with it returns the admin key to that browser, which is what opens
+ * the tools page. That makes a four-digit PIN the thing standing in front of
+ * every teacher action — so this account gets one free wrong guess and then
+ * five-minute lockouts that double, and it is kept off the leaderboard.
+ */
+export const createStaff = mutation({
+  args: { adminKey: v.string(), handle: v.string(), pin: v.string() },
+  handler: async (ctx, { adminKey, handle, pin }) => {
+    requireAdmin(adminKey);
+    if (!/^\d{4}$/.test(pin)) throw new ConvexError("비밀번호는 숫자 4자리여야 합니다");
+
+    const now = Date.now();
+    const existing = await byHandle(ctx, handle);
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        pin,
+        role: "admin",
+        failedAttempts: 0,
+        lockedUntil: 0,
+        updatedAt: now,
+      });
+      return { ok: true, created: false, handle: existing.handle };
+    }
+
+    await ctx.db.insert("players", {
+      handle,
+      handleKey: handleKey(handle),
+      pin,
+      token: crypto.randomUUID(),
+      profile: null,
+      best: 0,
+      role: "admin",
+      // Not a real browser, so it does not consume anyone's device allowance.
+      deviceId: "staff",
+      failedAttempts: 0,
+      lockedUntil: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return { ok: true, created: true, handle };
+  },
+});
+
 // --- schools ----------------------------------------------------------------
 
 /**

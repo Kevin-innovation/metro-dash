@@ -156,6 +156,13 @@ export class Game {
         await this.cloud.register(handle, pin, this.store.data);
       } else {
         const result = await this.cloud.signIn(handle, pin);
+        // The staff account manages rather than plays: straight to the tools,
+        // before any of the profile reconciliation a player would go through.
+        if (result?.staff) {
+          this.screens.showAccountError("관리자 페이지로 이동합니다…");
+          window.location.href = "/admin.html";
+          return;
+        }
         this.reconcileProfiles(result?.profile);
       }
       this.screens.closeAccount();

@@ -77,7 +77,9 @@ export const top = query({
       .take(take);
 
     return players
-      .filter((player) => player.best > 0)
+      // Staff never play, so this is belt and braces — but a 0-point 「admin」
+      // row appearing on a class leaderboard would be its own problem.
+      .filter((player) => player.best > 0 && player.role !== "admin")
       .map((player, index) => ({
         rank: index + 1,
         handle: player.handle,

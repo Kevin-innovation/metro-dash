@@ -8,6 +8,8 @@
  */
 
 const SESSION_KEY = "metro-dash-session";
+/** Must match the key src/admin.js reads. */
+const ADMIN_KEY_STORE = "metro-dash-admin-key";
 const DEVICE_KEY = "metro-dash-device";
 
 function readLocal(key) {
@@ -78,6 +80,11 @@ export class Cloud {
     return this.session?.schoolLabel ?? "";
   }
 
+  /** True for the staff account, which manages rather than plays. */
+  get staff() {
+    return Boolean(this.session?.staff);
+  }
+
   onChange(fn) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
@@ -122,7 +129,17 @@ export class Cloud {
       token: result.token,
       handle: result.handle,
       schoolLabel: result.schoolLabel ?? "",
+      staff: Boolean(result.staff),
     };
+    // Handed over to the tools page through sessionStorage, which is per-tab
+    // and cleared when the tab closes — the key is never written to disk.
+    if (result.adminKey) {
+      try {
+        sessionStorage.setItem(ADMIN_KEY_STORE, result.adminKey);
+      } catch {
+        /* private mode — the tools page will ask for the key itself */
+      }
+    }
     writeLocal(SESSION_KEY, JSON.stringify(this.session));
     this.emit();
     return result;
@@ -182,6 +199,7 @@ export class Cloud {
       ...this.session,
       handle: result.handle,
       schoolLabel: result.schoolLabel ?? "",
+      staff: Boolean(result.staff),
     };
     this.emit();
     return result;

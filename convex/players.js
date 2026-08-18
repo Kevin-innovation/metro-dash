@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import {
   FREE_ATTEMPTS,
   MAX_ACCOUNTS_PER_DEVICE,
+  STAFF_FREE_ATTEMPTS,
   lockState,
   lockoutSeconds,
 } from "../src/leaderboard-rules.js";
@@ -52,6 +53,7 @@ function publicProfile(player) {
     best: player.best,
     school: player.school ?? null,
     schoolLabel: player.school ? schoolLabel(player.school) : "",
+    staff: player.role === "admin",
   };
 }
 
@@ -153,14 +155,16 @@ export const signIn = mutation({
       };
     }
 
+    const staff = player.role === "admin";
+
     if (player.pin !== pin) {
       const failedAttempts = player.failedAttempts + 1;
-      const wait = lockoutSeconds(failedAttempts);
+      const wait = lockoutSeconds(failedAttempts, staff);
       await ctx.db.patch(player._id, {
         failedAttempts,
         lockedUntil: wait > 0 ? now + wait * 1000 : 0,
       });
-      const left = FREE_ATTEMPTS - failedAttempts;
+      const left = (staff ? STAFF_FREE_ATTEMPTS : FREE_ATTEMPTS) - failedAttempts;
       return {
         ok: false,
         message: left > 0 ? `${rejection} (${left}번 더 틀리면 잠깁니다)` : rejection,
@@ -176,7 +180,11 @@ export const signIn = mutation({
       updatedAt: now,
     });
 
-    return { ok: true, token, ...publicProfile({ ...player, token }) };
+    // The staff account carries the admin key back so the browser can open the
+    // tools page. It is handed out only after the PIN has been accepted, and
+    // only to the one account that has this role.
+    const adminKey = staff ? (process.env.ADMIN_KEY ?? null) : undefined;
+    return { ok: true, token, ...publicProfile({ ...player, token }), adminKey, staff };
   },
 });
 

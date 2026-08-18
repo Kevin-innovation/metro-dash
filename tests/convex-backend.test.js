@@ -353,6 +353,87 @@ describe("scores:standing", () => {
   });
 });
 
+// --- the staff account ------------------------------------------------------
+
+describe("admin:createStaff", () => {
+  const staff = (t, pin = "4490") =>
+    t.mutation(api.admin.createStaff, { adminKey: ADMIN_KEY, handle: "admin", pin });
+
+  it("로그인하면 관리자 키를 함께 돌려준다", async () => {
+    const t = backend();
+    await staff(t);
+
+    const result = await t.mutation(api.players.signIn, { handle: "admin", pin: "4490" });
+    expect(result.ok).toBe(true);
+    expect(result.staff).toBe(true);
+    // This is what lets the browser open the tools page without typing a key.
+    expect(result.adminKey).toBe(ADMIN_KEY);
+  });
+
+  it("비밀번호가 틀리면 키를 주지 않는다", async () => {
+    const t = backend();
+    await staff(t);
+    const result = await t.mutation(api.players.signIn, { handle: "admin", pin: "0000" });
+    expect(result.ok).toBe(false);
+    expect(result.adminKey).toBeUndefined();
+  });
+
+  it("보통 계정에는 키가 붙지 않는다", async () => {
+    const t = backend();
+    await signUp(t, "그냥학생");
+    const result = await t.mutation(api.players.signIn, { handle: "그냥학생", pin: "1234" });
+    expect(result.ok).toBe(true);
+    expect(result.adminKey).toBeUndefined();
+    expect(result.staff).toBe(false);
+  });
+
+  it("한 번 틀리면 바로 잠긴다", async () => {
+    const t = backend();
+    await staff(t);
+
+    // A published nickname guarding every teacher action gets one free miss,
+    // not five, and the lockout starts at five minutes.
+    await t.mutation(api.players.signIn, { handle: "admin", pin: "0000" });
+    await t.mutation(api.players.signIn, { handle: "admin", pin: "0001" });
+
+    const blocked = await t.mutation(api.players.signIn, { handle: "admin", pin: "4490" });
+    expect(blocked.ok).toBe(false);
+    expect(blocked.message).toMatch(/초 뒤에/);
+  });
+
+  it("가입 폼으로는 만들 수 없다", async () => {
+    const t = backend();
+    // 「admin」 is on the reserved list, so the route the students use is closed.
+    await expect(signUp(t, "admin")).rejects.toThrow();
+  });
+
+  it("리더보드에 나타나지 않는다", async () => {
+    const t = backend();
+    await staff(t);
+    // Even if it somehow held a score, it is filtered out of the board.
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("players").first();
+      await ctx.db.patch(row._id, { best: 999999 });
+    });
+    expect(await t.query(api.scores.top, {})).toHaveLength(0);
+  });
+
+  it("이미 있으면 비밀번호만 바꾼다", async () => {
+    const t = backend();
+    expect(await staff(t, "4490")).toMatchObject({ created: true });
+    expect(await staff(t, "1111")).toMatchObject({ created: false });
+
+    expect((await t.mutation(api.players.signIn, { handle: "admin", pin: "1111" })).ok).toBe(true);
+  });
+
+  it("관리자 키 없이는 만들 수 없다", async () => {
+    const t = backend();
+    await expect(
+      t.mutation(api.admin.createStaff, { adminKey: "nope", handle: "admin", pin: "4490" }),
+    ).rejects.toThrow(/관리자 키/);
+  });
+});
+
 // --- schools ----------------------------------------------------------------
 
 const SCHOOL = { region: "대구", level: "중", name: "동" };

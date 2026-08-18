@@ -38,6 +38,14 @@ export default defineSchema({
     ),
     schoolKey: v.optional(v.string()),
 
+    /**
+     * "admin" on the staff account, absent on everyone else.
+     *
+     * Set only by `admin:createStaff`, never by registration — the nickname
+     * filter reserves the obvious staff names, so no player can reach this.
+     */
+    role: v.optional(v.string()),
+
     /** Which browser created the account, used only to cap account farming. */
     deviceId: v.string(),
 
