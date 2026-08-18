@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MISSION_DEFS,
   MISSION_SLOTS,
+  MISSION_TIERS,
   applyMetrics,
   ensureMissions,
   isComplete,
@@ -25,7 +26,7 @@ describe("mission definitions", () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const def of MISSION_DEFS) {
       for (let i = 1; i < def.targets.length; i++) {
-        expect(def.targets[i]).toBeGreaterThan(def.targets[i - 1]);
+        expect(def.targets[i], def.id).toBeGreaterThan(def.targets[i - 1]);
       }
       expect(def.coins).toBeGreaterThan(0);
       expect(def.xp).toBeGreaterThan(0);
@@ -33,8 +34,45 @@ describe("mission definitions", () => {
     }
   });
 
+  it("carry a target for every difficulty step", () => {
+    // A missing step would silently clamp to the hardest target the mission
+    // happens to have, so the ladder has to be complete.
+    for (const def of MISSION_DEFS) {
+      expect(def.targets.length, def.id).toBe(MISSION_TIERS);
+    }
+  });
+
+  it("only use metrics the run actually reports", () => {
+    // A typo here is invisible at runtime: applyMetrics just never advances the
+    // mission and it sits at zero forever.
+    const reported = new Set([
+      // run-scoped
+      "coins", "distance", "comboMax", "score", "seconds", "roofDistance",
+      "nearMissesRun", "mountsRun", "powerupsRun", "gatesRun",
+      // cumulative
+      "mounts", "nearMisses", "powerups", "jetpacks", "magnets", "doubles",
+      "sneakers", "boards", "gates", "barriers", "coinsTotal",
+    ]);
+    for (const def of MISSION_DEFS) {
+      expect(reported.has(def.metric), `${def.id} -> ${def.metric}`).toBe(true);
+    }
+  });
+
+  it("declare a valid scope", () => {
+    for (const def of MISSION_DEFS) {
+      expect(["run", "total"], def.id).toContain(def.scope);
+    }
+  });
+
+  it("mix single-run and career goals", () => {
+    const run = MISSION_DEFS.filter((d) => d.scope === "run").length;
+    const total = MISSION_DEFS.filter((d) => d.scope === "total").length;
+    expect(run).toBeGreaterThan(3);
+    expect(total).toBeGreaterThan(3);
+  });
+
   it("have enough variety to fill every slot without repeats", () => {
-    expect(MISSION_DEFS.length).toBeGreaterThan(MISSION_SLOTS);
+    expect(MISSION_DEFS.length).toBeGreaterThan(MISSION_SLOTS * 3);
   });
 });
 
@@ -53,9 +91,23 @@ describe("rollMissions", () => {
 
   it("uses harder targets at a higher tier", () => {
     const easy = rollMissions([], 1, 0, seeded(11))[0];
-    const hard = rollMissions([], 1, 2, seeded(11))[0];
+    const hard = rollMissions([], 1, MISSION_TIERS - 1, seeded(11))[0];
     expect(hard.id).toBe(easy.id);
     expect(hard.target).toBeGreaterThan(easy.target);
+  });
+
+  it("climbs at every step of the ladder", () => {
+    for (let tier = 1; tier < MISSION_TIERS; tier++) {
+      const lower = rollMissions([], 1, tier - 1, seeded(3))[0];
+      const upper = rollMissions([], 1, tier, seeded(3))[0];
+      expect(upper.id).toBe(lower.id);
+      expect(upper.target, `tier ${tier}`).toBeGreaterThan(lower.target);
+    }
+  });
+
+  it("clamps a tier beyond the ladder instead of dealing undefined", () => {
+    const mission = rollMissions([], 1, 999, seeded(5))[0];
+    expect(Number.isFinite(mission.target)).toBe(true);
   });
 
   it("starts every mission at zero progress", () => {

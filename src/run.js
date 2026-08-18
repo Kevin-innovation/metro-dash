@@ -1,4 +1,4 @@
-import { applyMetrics, missionReward, rollMissions } from "./missions.js";
+import { MISSION_TIERS, applyMetrics, missionReward, rollMissions } from "./missions.js";
 import {
   activatePowerup,
   clearPowerups,
@@ -7,7 +7,7 @@ import {
   powerupScoreMultiplier,
   tickPowerups,
 } from "./powerups.js";
-import { rankAt, runXp } from "./progression.js";
+import { missionTier, runXp } from "./progression.js";
 import {
   COMBO_WINDOW,
   NEAR_MISS_BONUS,
@@ -43,7 +43,21 @@ export class Run {
     this.comboMax = 0;
     this.comboT = 0;
     this.distance = 0;
-    this.metrics = { mounts: 0, nearMisses: 0, powerups: 0, jetpacks: 0 };
+    /** Seconds survived and metres ridden on roofs, both single-run goals. */
+    this.seconds = 0;
+    this.roofDistance = 0;
+    this.metrics = {
+      mounts: 0,
+      nearMisses: 0,
+      powerups: 0,
+      jetpacks: 0,
+      magnets: 0,
+      doubles: 0,
+      sneakers: 0,
+      boards: 0,
+      gates: 0,
+      barriers: 0,
+    };
     // A run is banked when the player dies and again when they leave the card,
     // so progress is always committed as a delta against this.
     this.banked = { coins: 0, distance: 0, xp: 0, ...this.metrics };
@@ -69,11 +83,15 @@ export class Run {
 
   /** @returns {string[]} power-ups that expired on this step */
   advance(dt, { travelled, mounted }) {
+    this.seconds += dt;
     this.distance += travelled;
     const multiplier = this.multiplier();
     this.scoreDist += distanceGain(travelled) * multiplier;
     // Riding a roof is the risky line, so it pays on top of plain distance.
-    if (mounted) this.scoreDist += roofRideGain(travelled) * multiplier;
+    if (mounted) {
+      this.scoreDist += roofRideGain(travelled) * multiplier;
+      this.roofDistance += travelled;
+    }
 
     this.comboT -= dt;
     if (this.comboT <= 0) this.combo = 0;
@@ -105,7 +123,19 @@ export class Run {
   addPowerup(id, level) {
     activatePowerup(this.powerups, id, level);
     this.metrics.powerups += 1;
-    if (id === "jetpack") this.metrics.jetpacks += 1;
+    // Per-power-up tallies as well as the total, so missions can single one out.
+    const counter = { jetpack: "jetpacks", magnet: "magnets", double: "doubles", sneakers: "sneakers" }[id];
+    if (counter) this.metrics[counter] += 1;
+  }
+
+  addBoard() {
+    this.metrics.boards += 1;
+  }
+
+  /** Obstacles the runner got past, counted by what it took to clear them. */
+  addCleared({ gates = 0, barriers = 0 }) {
+    this.metrics.gates += gates;
+    this.metrics.barriers += barriers;
   }
 
   powerupActive(id) {
@@ -137,12 +167,13 @@ export class Run {
     const coinsDelta = this.coins - this.banked.coins;
     const distanceDelta = this.distance - this.banked.distance;
     const xpDelta = runXp(score) - this.banked.xp;
-    const deltas = {
-      mounts: this.metrics.mounts - this.banked.mounts,
-      nearMisses: this.metrics.nearMisses - this.banked.nearMisses,
-      powerups: this.metrics.powerups - this.banked.powerups,
-      jetpacks: this.metrics.jetpacks - this.banked.jetpacks,
-    };
+    const deltas = {};
+    for (const key of Object.keys(this.metrics)) {
+      deltas[key] = this.metrics[key] - (this.banked[key] ?? 0);
+    }
+    // Career coin total is a cumulative goal of its own, separate from the
+    // run-scoped "coins this run" reading.
+    deltas.coinsTotal = coinsDelta;
 
     if (coinsDelta > 0) this.store.addCoins(coinsDelta);
     if (xpDelta > 0) this.store.addXp(xpDelta);
@@ -162,10 +193,17 @@ export class Run {
     };
 
     const { missions, completed } = applyMetrics(save.missions, {
+      // Run-scoped readings are absolute; the cumulative ones are deltas.
       coins: this.coins,
       distance: Math.floor(this.distance),
       comboMax: this.comboMax,
       score: Math.floor(score),
+      seconds: Math.floor(this.seconds),
+      roofDistance: Math.floor(this.roofDistance),
+      nearMissesRun: this.metrics.nearMisses,
+      mountsRun: this.metrics.mounts,
+      powerupsRun: this.metrics.powerups,
+      gatesRun: this.metrics.gates,
       ...deltas,
     });
 
@@ -191,7 +229,7 @@ export class Run {
     const cleared = save.missions.filter((m) => m.progress >= m.target);
     if (!cleared.length) return;
     const keep = save.missions.filter((m) => m.progress < m.target);
-    const tier = Math.min(2, Math.floor((rankAt(save.xp).level - 1) / 3));
+    const tier = missionTier(save.xp, MISSION_TIERS);
     save.missions = [...keep, ...rollMissions(keep.map((m) => m.id), cleared.length, tier)];
   }
 }

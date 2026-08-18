@@ -5,15 +5,63 @@
  *
  * `metric` names a counter the run reports (see Game#trackMission).
  */
+/** Difficulty steps every mission is written for. */
+export const MISSION_TIERS = 7;
+
+/**
+ * Mission table.
+ *
+ * `metric` names a counter the run reports. `scope: "run"` metrics are read as
+ * the best single run and are idempotent; `scope: "total"` metrics accumulate
+ * across runs and are reported as deltas.
+ *
+ * Every entry carries one target per difficulty step, so the same mission grows
+ * with the player instead of being retired.
+ */
 export const MISSION_DEFS = [
-  { id: "coins-run", metric: "coins", scope: "run", targets: [20, 35, 60], label: "한 판에 코인 {t}개 모으기", coins: 120, xp: 90 },
-  { id: "distance-run", metric: "distance", scope: "run", targets: [600, 1200, 2000], label: "한 판에 {t}m 달리기", coins: 150, xp: 120 },
-  { id: "combo-run", metric: "comboMax", scope: "run", targets: [10, 20, 35], label: "콤보 {t} 달성하기", coins: 140, xp: 110 },
-  { id: "mounts-total", metric: "mounts", scope: "total", targets: [10, 25, 50], label: "지붕에 {t}번 올라타기", coins: 130, xp: 100 },
-  { id: "nearmiss-total", metric: "nearMisses", scope: "total", targets: [15, 40, 80], label: "아슬아슬하게 {t}번 스치기", coins: 160, xp: 130 },
-  { id: "powerups-total", metric: "powerups", scope: "total", targets: [8, 20, 40], label: "파워업 {t}개 사용하기", coins: 120, xp: 95 },
-  { id: "jetpack-total", metric: "jetpacks", scope: "total", targets: [3, 8, 15], label: "제트팩 {t}번 타기", coins: 180, xp: 140 },
-  { id: "score-run", metric: "score", scope: "run", targets: [4000, 9000, 18000], label: "한 판에 {t}점 얻기", coins: 200, xp: 160 },
+  // --- single-run goals ---------------------------------------------------
+  { id: "coins-run", metric: "coins", scope: "run",
+    targets: [15, 25, 40, 60, 85, 115, 150], label: "한 판에 코인 {t}개 모으기", coins: 110, xp: 85 },
+  { id: "distance-run", metric: "distance", scope: "run",
+    targets: [500, 900, 1400, 2000, 2800, 3800, 5000], label: "한 판에 {t}m 달리기", coins: 140, xp: 110 },
+  { id: "combo-run", metric: "comboMax", scope: "run",
+    targets: [8, 14, 22, 32, 45, 60, 80], label: "콤보 {t} 달성하기", coins: 130, xp: 105 },
+  { id: "score-run", metric: "score", scope: "run",
+    targets: [3000, 6000, 10000, 16000, 24000, 35000, 50000], label: "한 판에 {t}점 얻기", coins: 190, xp: 150 },
+  { id: "nearmiss-run", metric: "nearMissesRun", scope: "run",
+    targets: [8, 15, 25, 38, 55, 75, 100], label: "한 판에 아슬아슬 {t}번 스치기", coins: 160, xp: 125 },
+  { id: "mounts-run", metric: "mountsRun", scope: "run",
+    targets: [3, 6, 10, 15, 21, 28, 36], label: "한 판에 지붕 {t}번 올라타기", coins: 140, xp: 110 },
+  { id: "powerups-run", metric: "powerupsRun", scope: "run",
+    targets: [2, 4, 6, 9, 12, 16, 20], label: "한 판에 파워업 {t}개 먹기", coins: 130, xp: 100 },
+  { id: "survive-run", metric: "seconds", scope: "run",
+    targets: [45, 75, 110, 150, 200, 260, 330], label: "한 판에 {t}초 버티기", coins: 170, xp: 135 },
+  { id: "roof-run", metric: "roofDistance", scope: "run",
+    targets: [40, 80, 140, 210, 300, 400, 520], label: "한 판에 지붕 위로 {t}m 달리기", coins: 165, xp: 130 },
+  { id: "gates-run", metric: "gatesRun", scope: "run",
+    targets: [4, 8, 14, 21, 30, 40, 52], label: "한 판에 게이트 {t}개 슬라이드로 통과", coins: 150, xp: 120 },
+
+  // --- career goals -------------------------------------------------------
+  { id: "mounts-total", metric: "mounts", scope: "total",
+    targets: [10, 25, 50, 90, 150, 230, 340], label: "지붕에 {t}번 올라타기", coins: 130, xp: 100 },
+  { id: "nearmiss-total", metric: "nearMisses", scope: "total",
+    targets: [15, 40, 80, 140, 230, 350, 500], label: "아슬아슬하게 {t}번 스치기", coins: 155, xp: 125 },
+  { id: "powerups-total", metric: "powerups", scope: "total",
+    targets: [8, 20, 40, 70, 110, 165, 240], label: "파워업 {t}개 사용하기", coins: 120, xp: 95 },
+  { id: "jetpack-total", metric: "jetpacks", scope: "total",
+    targets: [3, 8, 16, 28, 45, 68, 100], label: "제트팩 {t}번 타기", coins: 175, xp: 140 },
+  { id: "magnet-total", metric: "magnets", scope: "total",
+    targets: [4, 10, 20, 35, 55, 82, 120], label: "자석 {t}번 사용하기", coins: 115, xp: 90 },
+  { id: "double-total", metric: "doubles", scope: "total",
+    targets: [4, 10, 20, 35, 55, 82, 120], label: "점수 2배 {t}번 사용하기", coins: 125, xp: 100 },
+  { id: "sneakers-total", metric: "sneakers", scope: "total",
+    targets: [4, 10, 20, 35, 55, 82, 120], label: "슈퍼 스니커즈 {t}번 사용하기", coins: 120, xp: 95 },
+  { id: "board-total", metric: "boards", scope: "total",
+    targets: [2, 5, 10, 18, 28, 42, 60], label: "호버보드 {t}번 꺼내기", coins: 180, xp: 145 },
+  { id: "gates-total", metric: "gates", scope: "total",
+    targets: [15, 40, 80, 140, 230, 350, 500], label: "게이트 {t}개 슬라이드로 통과", coins: 145, xp: 115 },
+  { id: "coins-total", metric: "coinsTotal", scope: "total",
+    targets: [200, 500, 1000, 1800, 3000, 4800, 7500], label: "코인 {t}개 모으기", coins: 200, xp: 160 },
 ];
 
 export const MISSION_SLOTS = 3;

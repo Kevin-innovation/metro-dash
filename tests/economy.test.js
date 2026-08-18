@@ -10,7 +10,8 @@ import {
   shopView,
   upgradeCost,
 } from "../src/shop.js";
-import { RANKS, rankAt, rankProgress, runXp } from "../src/progression.js";
+import { MISSION_TIERS } from "../src/missions.js";
+import { RANKS, missionTier, rankAt, rankProgress, runXp } from "../src/progression.js";
 
 const storeWith = (patch = {}) => {
   const store = new SaveStore(createMemoryStorage());
@@ -239,5 +240,33 @@ describe("rank progression", () => {
   it("every power-up has a shop upgrade slot", () => {
     const save = defaultSave();
     for (const id of POWERUP_IDS) expect(save.upgrades[id]).toBe(1);
+  });
+});
+
+describe("mission difficulty ladder", () => {
+  it("starts at the easiest step and never leaves the ladder", () => {
+    expect(missionTier(0, MISSION_TIERS)).toBe(0);
+    for (let xp = 0; xp < 120000; xp += 250) {
+      const tier = missionTier(xp, MISSION_TIERS);
+      expect(tier).toBeGreaterThanOrEqual(0);
+      expect(tier).toBeLessThan(MISSION_TIERS);
+    }
+  });
+
+  it("only ever climbs", () => {
+    let previous = -1;
+    for (let xp = 0; xp < 120000; xp += 250) {
+      const tier = missionTier(xp, MISSION_TIERS);
+      expect(tier).toBeGreaterThanOrEqual(previous);
+      previous = tier;
+    }
+  });
+
+  it("steps up with each rank rather than every few", () => {
+    // The old mapping put the top band behind ~40 runs, so most of the mission
+    // content was never dealt. Each rank should now move the ladder.
+    const tiers = RANKS.map((rank) => missionTier(rank.xp, MISSION_TIERS));
+    expect(new Set(tiers).size).toBe(MISSION_TIERS);
+    expect(tiers[1]).toBeGreaterThan(tiers[0]);
   });
 });

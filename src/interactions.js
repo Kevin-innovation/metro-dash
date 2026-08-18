@@ -116,17 +116,22 @@ export class Interactions {
    * Award a bonus the moment the runner squeaks past an obstacle. Scored once
    * per obstacle, on the step where its Z is crossed.
    *
-   * @returns {number} how many near misses were scored this step
+   * Also tallies what the runner got past, by the move it took to clear it, so
+   * missions can ask for gates specifically rather than just "obstacles".
+   *
+   * @returns {{ nearMisses: number, gates: number, barriers: number }}
    */
   scoreNearMisses(player) {
-    if (player.flying) return 0;
-    let scored = 0;
+    const tally = { nearMisses: 0, gates: 0, barriers: 0 };
+    if (player.flying) return tally;
 
     for (const item of this.pool.live) {
       if (!item.lethal || item.scored || item.taken) continue;
       // Only when the runner crosses the obstacle this step.
       if (player.prevZ - item.prevZ >= 0 || player.z - item.z < 0) continue;
       item.scored = true;
+      if (item.type === "sign") tally.gates += 1;
+      else if (item.type === "barrier") tally.barriers += 1;
       if (player.mounted === item) continue;
 
       // Swerving out of this obstacle's lane at the last moment counts, even
@@ -147,10 +152,11 @@ export class Interactions {
       if (!kind) continue;
 
       this.run.addNearMiss();
-      scored += 1;
+      tally.nearMisses += 1;
     }
 
-    return scored;
+    this.run.addCleared(tally);
+    return tally;
   }
 
   /** @returns {boolean} whether the runner hit something lethal this step. */

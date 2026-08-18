@@ -15,12 +15,12 @@ import {
 import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
-import { ensureMissions } from "./missions.js";
+import { MISSION_TIERS, ensureMissions } from "./missions.js";
 import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
-import { rankAt } from "./progression.js";
+import { missionTier } from "./progression.js";
 import { Run } from "./run.js";
 import { SaveStore } from "./save.js";
 import { Screens } from "./screens.js";
@@ -201,9 +201,9 @@ export class Game {
     this.screens.refreshProfile(this.store.data);
   }
 
-  /** Keep three missions dealt, scaled to the player's rank. */
+  /** Keep a full hand of missions dealt, scaled to the player's rank. */
   syncMissions() {
-    const tier = Math.min(2, Math.floor((rankAt(this.store.data.xp).level - 1) / 3));
+    const tier = missionTier(this.store.data.xp, MISSION_TIERS);
     this.store.data.missions = ensureMissions(this.store.data.missions, tier);
     this.store.flush();
   }
@@ -527,6 +527,7 @@ export class Game {
       return;
     }
     this.store.set("hoverboards", this.store.data.hoverboards - 1);
+    this.run.addBoard();
     this.player.boarding = true;
     this.boardT = HOVERBOARD_TIME;
     this.audio.board();
@@ -650,7 +651,8 @@ export class Game {
       }
     }
 
-    for (let i = this.interactions.scoreNearMisses(this.player); i > 0; i--) {
+    const cleared = this.interactions.scoreNearMisses(this.player);
+    for (let i = cleared.nearMisses; i > 0; i--) {
       this.audio.nearMiss();
       this.screens.flashNearMiss();
     }

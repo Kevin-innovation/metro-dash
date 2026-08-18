@@ -29,6 +29,17 @@ export function nextRankAt(xp) {
   return RANKS.find((rank) => rank.xp > xp) ?? null;
 }
 
+/**
+ * Difficulty step the next mission is dealt at.
+ *
+ * One step per rank rather than one per three, so the harder targets are
+ * actually reached during normal play — with the old mapping the top band sat
+ * behind roughly forty runs and most of the mission content never appeared.
+ */
+export function missionTier(xp, tiers) {
+  return Math.min(tiers - 1, Math.max(0, rankAt(xp).level - 1));
+}
+
 /** Progress towards the next rank, 0..1. Maxed ranks report 1. */
 export function rankProgress(xp) {
   const current = rankAt(xp);
