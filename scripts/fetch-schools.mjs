@@ -16,8 +16,8 @@
  * src/school.js normalises either way.
  */
 
-import { writeFile, mkdir } from "node:fs/promises";
-import { LEVELS, REGIONS, baseName, levelLabel } from "../src/school.js";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { LEVELS, REGIONS, baseName, levelLabel, validateSchool } from "../src/school.js";
 
 const ENDPOINT = "https://open.neis.go.kr/hub/schoolInfo";
 const PAGE_SIZE = 1000;
@@ -30,13 +30,20 @@ if (!KEY) {
   process.exit(1);
 }
 
-/** NEIS spells regions out in full; the game uses the short forms. */
+/**
+ * NEIS spells regions out in full; the game uses the short forms.
+ *
+ * 광주 and 전남 are not 「광주광역시」/「전라남도」 in this dataset — their offices
+ * merged into 전남광주통합특별시 and the rows are tagged with the combined name.
+ * Querying the old names returns INFO-200, which reads exactly like a region
+ * with no schools, so both quietly went missing from an earlier run.
+ */
 const NEIS_REGION = {
   서울: "서울특별시", 부산: "부산광역시", 대구: "대구광역시", 인천: "인천광역시",
-  광주: "광주광역시", 대전: "대전광역시", 울산: "울산광역시", 세종: "세종특별자치시",
-  경기: "경기도", 강원: "강원특별자치도", 충북: "충청북도", 충남: "충청남도",
-  전북: "전북특별자치도", 전남: "전라남도", 경북: "경상북도", 경남: "경상남도",
-  제주: "제주특별자치도",
+  광주: "전남광주통합특별시(광주)", 대전: "대전광역시", 울산: "울산광역시",
+  세종: "세종특별자치시", 경기: "경기도", 강원: "강원특별자치도", 충북: "충청북도",
+  충남: "충청남도", 전북: "전북특별자치도", 전남: "전남광주통합특별시(전남)",
+  경북: "경상북도", 경남: "경상남도", 제주: "제주특별자치도",
 };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -51,22 +58,31 @@ async function fetchPage(region, level, page) {
     SCHUL_KND_SC_NM: levelLabel(level),
   });
 
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= 6; attempt++) {
     try {
       const response = await fetch(`${ENDPOINT}?${params}`);
       const body = await response.json();
-      if (body.RESULT?.CODE === "INFO-200") return { rows: [], total: 0 }; // no data
+
+      // "No rows" is a real answer; anything else that is not a result set is
+      // a failure and must not be mistaken for an empty region. Reading an
+      // auth error as "this region has no schools" is exactly how 광주 and
+      // 전남 silently vanished from an earlier run.
+      const code = body.RESULT?.CODE ?? body.schoolInfo?.[0]?.head?.[1]?.RESULT?.CODE;
+      if (code === "INFO-200") return { rows: [], total: 0 };
+
       const head = body.schoolInfo?.[0]?.head;
-      return {
-        rows: body.schoolInfo?.[1]?.row ?? [],
-        total: head?.[0]?.list_total_count ?? 0,
-      };
+      if (!head) throw new Error(`${code ?? "unknown"}: ${body.RESULT?.MESSAGE ?? ""}`);
+
+      return { rows: body.schoolInfo?.[1]?.row ?? [], total: head[0].list_total_count ?? 0 };
     } catch (error) {
-      if (attempt === 4) throw error;
-      await sleep(400 * attempt);
+      lastError = error;
+      // The rate limit clears on its own, so back off generously rather than
+      // giving up and writing a file with a hole in it.
+      await sleep(1500 * attempt);
     }
   }
-  return { rows: [], total: 0 };
+  throw new Error(`${region} ${levelLabel(level)} p${page}: ${lastError?.message ?? "실패"}`);
 }
 
 async function collect(region, level) {
@@ -101,24 +117,65 @@ function compact(fullName, level) {
   return base && `${base}${levelLabel(level)}` === fullName ? base : `=${fullName}`;
 }
 
-const out = {};
-let count = 0;
-let literal = 0;
+const path = new URL("../src/data/schools.json", import.meta.url);
 
+/** Keep whatever a previous run managed, so a rate limit costs one region. */
+let out = {};
+try {
+  out = JSON.parse(await readFile(path, "utf8"));
+} catch {
+  out = {};
+}
+
+// Only the levels that are actually missing, so a re-run after a rate limit is
+// short. Delete the file to force a full refresh.
+const todo = [];
 for (const region of REGIONS) {
-  out[region] = {};
   for (const level of LEVELS) {
-    const names = await collect(region, level.code);
-    const compacted = names.map((name) => compact(name, level.code)).sort();
-    literal += compacted.filter((name) => name.startsWith("=")).length;
-    count += compacted.length;
-    out[region][level.code] = compacted;
+    if (!out[region]?.[level.code]?.length) todo.push([region, level.code]);
   }
 }
 
-await mkdir(new URL("../src/data/", import.meta.url), { recursive: true });
-const path = new URL("../src/data/schools.json", import.meta.url);
+if (!todo.length) {
+  console.log("이미 모두 채워져 있습니다. 새로 받으려면 src/data/schools.json 을 지우세요.");
+} else {
+  console.log(`받을 항목: ${todo.length}개\n`);
+  for (const [region, level] of todo) {
+    const names = await collect(region, level);
+    out[region] ??= {};
+    out[region][level] = names.map((name) => compact(name, level)).sort();
+    // Written after each region so an interruption never loses what was got.
+    await mkdir(new URL("../src/data/", import.meta.url), { recursive: true });
+    await writeFile(path, JSON.stringify(out));
+  }
+}
+
+// Drop anything the rules will not accept, so the autocomplete never offers a
+// school that cannot be chosen. In practice this is 「(가칭)」, 「(개교예정)」 and
+// 「(폐교)」 entries — places nobody actually attends.
+let count = 0;
+let literal = 0;
+let dropped = 0;
+const holes = [];
+for (const region of REGIONS) {
+  for (const level of LEVELS) {
+    const names = out[region]?.[level.code] ?? [];
+    const usable = names.filter((entry) => {
+      const name = entry.startsWith("=") ? entry.slice(1) : `${entry}${level.label}`;
+      if (validateSchool({ region, level: level.code, name }).ok) return true;
+      dropped += 1;
+      return false;
+    });
+    if (out[region]) out[region][level.code] = usable;
+    if (!usable.length) holes.push(`${region} ${level.label}`);
+    count += usable.length;
+    literal += usable.filter((name) => name.startsWith("=")).length;
+  }
+}
 await writeFile(path, JSON.stringify(out));
+if (dropped) console.log(`선택 불가로 제외: ${dropped}개`);
 
 console.log(`\n${count} schools, ${literal} kept verbatim`);
-console.log(`written to src/data/schools.json`);
+if (holes.length) console.log(`빠진 항목 (다시 실행하세요): ${holes.join(", ")}`);
+else console.log("전 지역 · 전 학교급 채워졌습니다.");
+console.log("written to src/data/schools.json");

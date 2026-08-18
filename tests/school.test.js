@@ -12,6 +12,13 @@ import {
   validateSchool,
 } from "../src/school.js";
 
+/** The key a raw input ends up under, via the same path the app takes. */
+const keyOf = (region, level, name) => {
+  const result = validateSchool({ region, level, name });
+  expect(result.ok, `${name}: ${result.message}`).toBe(true);
+  return schoolKey(result.school);
+};
+
 const ok = (region, level, name) => {
   const result = validateSchool({ region, level, name });
   expect(result.ok, `expected ${region}/${level}/${name} to pass: ${result.message}`).toBe(true);
@@ -23,7 +30,7 @@ describe("한 학교가 한 줄로 모이는지", () => {
   // school has to end up on the same row of the ranking.
   it("동 · 동중 · 동중학교 를 모두 같은 학교로 본다", () => {
     const forms = ["동", "동중", "동중학교", "동 중학교", " 동중학교 "];
-    const keys = new Set(forms.map((name) => schoolKey({ region: "대구", level: "중", name })));
+    const keys = new Set(forms.map((name) => keyOf("대구", "중", name)));
     expect(keys.size).toBe(1);
 
     for (const name of forms) {
@@ -50,29 +57,25 @@ describe("한 학교가 한 줄로 모이는지", () => {
   });
 
   it("여중 · 여자중학교 를 한 학교로 합친다", () => {
-    const a = schoolKey({ region: "대구", level: "중", name: "성화여중" });
-    const b = schoolKey({ region: "대구", level: "중", name: "성화여자중학교" });
+    const a = keyOf("대구", "중", "성화여중");
+    const b = keyOf("대구", "중", "성화여자중학교");
     expect(a).toBe(b);
     expect(ok("대구", "중", "성화여중").label).toBe("대구 성화여자중학교");
   });
 
   it("남고도 같은 방식으로 합친다", () => {
-    expect(schoolKey({ region: "부산", level: "고", name: "대동남고" })).toBe(
-      schoolKey({ region: "부산", level: "고", name: "대동남자고등학교" }),
-    );
+    expect(keyOf("부산", "고", "대동남고")).toBe(keyOf("부산", "고", "대동남자고등학교"));
     expect(ok("부산", "고", "대동남고").label).toBe("부산 대동남자고등학교");
   });
 
   it("대소문자와 공백으로는 학교가 갈라지지 않는다", () => {
-    expect(schoolKey({ region: "경기", level: "중", name: "ABC중" })).toBe(
-      schoolKey({ region: "경기", level: "중", name: " abc 중학교 " }),
-    );
+    expect(keyOf("경기", "중", "ABC중")).toBe(keyOf("경기", "중", " abc 중학교 "));
   });
 
   it("지역이나 학교급이 다르면 다른 학교다", () => {
-    const seoul = schoolKey({ region: "서울", level: "중", name: "동" });
-    const daegu = schoolKey({ region: "대구", level: "중", name: "동" });
-    const daeguHigh = schoolKey({ region: "대구", level: "고", name: "동" });
+    const seoul = keyOf("서울", "중", "동");
+    const daegu = keyOf("대구", "중", "동");
+    const daeguHigh = keyOf("대구", "고", "동");
     expect(new Set([seoul, daegu, daeguHigh]).size).toBe(3);
   });
 });
@@ -135,19 +138,62 @@ describe("이름 자체가 학교급으로 끝나는 학교", () => {
   });
 });
 
+describe("실제 학교 목록에서 나온 까다로운 이름들", () => {
+  // Every case here is a real school that broke an earlier version of these
+  // rules when the national list was checked against them.
+  it("서울당중초등학교 의 이름은 '서울당중' 이고 한 번만 깎인다", () => {
+    const school = ok("서울", "초", "서울당중초등학교");
+    expect(school.school.name).toBe("서울당중");
+    expect(school.label).toBe("서울 서울당중초등학교");
+
+    // Stripping again would file it as 「서울당」 and collide with a different
+    // school, so the key has to keep the whole name.
+    expect(schoolKey(school.school)).toContain("서울당중");
+    const other = ok("서울", "초", "서울당초등학교");
+    expect(schoolKey(school.school)).not.toBe(schoolKey(other.school));
+  });
+
+  it("이름에 이미 '학교'가 든 학교는 접미사를 붙이지 않는다", () => {
+    expect(ok("광주", "중", "용연학교").label).toBe("광주 용연학교");
+    expect(ok("대구", "중", "군위중학교우보캠퍼스").label).toBe("대구 군위중학교우보캠퍼스");
+    for (const name of ["용연학교", "군위중학교우보캠퍼스"]) {
+      expect(ok("대구", "중", name).label).not.toMatch(/학교중학교$/);
+    }
+  });
+
+  it("긴 정식 명칭도 받는다", () => {
+    expect(ok("서울", "초", "서울대학교사범대학부설초등학교").label).toBe(
+      "서울 서울대학교사범대학부설초등학교",
+    );
+    expect(ok("서울", "초", "상명대학교사범대학부속초등학교").school.name).toBe(
+      "상명대학교사범대학부속",
+    );
+  });
+
+  it("이름이 학교급 글자로 끝나는 학교들이 모두 통과한다", () => {
+    // 서울면중·서울송중·서울신중·서울영중 are primary schools whose names end in
+    // 「중」; 서울서빙고 ends in 「고」.
+    for (const name of ["서울면중", "서울송중", "서울신중", "서울영중", "서울서빙고"]) {
+      const result = ok("서울", "초", `${name}초등학교`);
+      expect(result.school.name).toBe(name);
+      expect(result.label).toBe(`서울 ${name}초등학교`);
+    }
+  });
+});
+
 describe("고른 학교급과 이름이 어긋날 때", () => {
   it("중학교를 고르고 초등학교 이름을 쓰면 거절한다", () => {
     const result = validateSchool({ region: "대구", level: "중", name: "계성초등학교" });
     expect(result).toMatchObject({ ok: false, reason: REJECT_SCHOOL.MISMATCH });
   });
 
-  it("초등학교를 고르고 '동중'을 쓰면 거절한다", () => {
-    // Silently stripping here would file a middle school under 「대구 동초등학교」,
-    // a school that does not exist and that nobody typed.
-    expect(validateSchool({ region: "대구", level: "초", name: "동중" })).toMatchObject({
-      ok: false,
-      reason: REJECT_SCHOOL.MISMATCH,
-    });
+  it("한 글자 접미사가 어긋나면 이름의 일부로 본다", () => {
+    // 초등학교 + 「동중」 could be a middle-school name typed under the wrong
+    // level, but it is indistinguishable from 서울당중초등학교 — a real primary
+    // school whose name ends in 「중」. Refusing it would refuse that school too,
+    // so the syllable stays in the name and the preview shows the result.
+    expect(ok("대구", "초", "동중").label).toBe("대구 동중초등학교");
+    expect(ok("서울", "중", "서초").label).toBe("서울 서초중학교");
   });
 
   it("고등학교를 고르고 여중 이름을 쓰면 거절한다", () => {
@@ -226,8 +272,8 @@ describe("미리보기", () => {
 
 describe("보조 함수", () => {
   it("splitName 이 이름과 유추된 학교급을 함께 준다", () => {
-    expect(splitName("동중")).toEqual({ base: "동", impliedLevel: "중" });
-    expect(splitName("동")).toEqual({ base: "동", impliedLevel: null });
+    expect(splitName("동중")).toMatchObject({ base: "동", impliedLevel: "중" });
+    expect(splitName("동")).toMatchObject({ base: "동", impliedLevel: null });
     expect(baseName("계성초등학교")).toBe("계성");
   });
 

@@ -268,7 +268,8 @@ export const mergeSchools = mutation({
       .withIndex("by_school", (q) => q.eq("schoolKey", fromKey))
       .collect();
 
-    const school = { region: to.region, level: to.level, name: to.name };
+    // Carrying the label too, since it cannot be rebuilt from the parts alone.
+    const school = { region: to.region, level: to.level, name: to.name, label: to.label };
     for (const player of members) {
       await ctx.db.patch(player._id, { school, schoolKey: to.key, updatedAt: Date.now() });
     }

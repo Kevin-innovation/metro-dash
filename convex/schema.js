@@ -27,7 +27,15 @@ export default defineSchema({
      * Absent on every account created before schools existed, and on anyone who
      * has not picked one — those players simply sit outside the school ranking.
      */
-    school: v.optional(v.object({ region: v.string(), level: v.string(), name: v.string() })),
+    school: v.optional(
+      v.object({
+        region: v.string(),
+        level: v.string(),
+        name: v.string(),
+        /** Display form, decided at validation time. Optional for older rows. */
+        label: v.optional(v.string()),
+      }),
+    ),
     schoolKey: v.optional(v.string()),
 
     /** Which browser created the account, used only to cap account farming. */
