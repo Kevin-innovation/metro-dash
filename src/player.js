@@ -332,12 +332,13 @@ export function bestRoof(p, roofs, x = p.x) {
 /**
  * Headroom kept between the runner's feet and a ceiling overhead.
  *
- * `p.y` is the position of the *feet*, so this has to cover the whole runner.
- * Clamping the feet alone left the head a metre inside the roof — the runner
- * looked like they had been swallowed by the ceiling, which is exactly what it
- * was.
+ * `p.y` is the position of the *feet*, so this has to cover the whole runner —
+ * and then some. Under a roof, everything above the camera's eye line is roof:
+ * a head higher than the lens is not clipped, it is simply *behind the
+ * ceiling*, which on screen is indistinguishable from vanishing through it.
+ * So the gap has to leave room for the camera to ride above the head too.
  */
-export const CEILING_CLEARANCE = PLAYER_HEIGHT + 0.25;
+export const CEILING_CLEARANCE = PLAYER_HEIGHT + 0.65;
 
 export function updatePlayer(p, dt, speed, ctx = {}) {
   const roofs = ctx.roofs || [];

@@ -10,6 +10,7 @@ import {
   MAX_FRAME_DT,
   MAX_SIM_STEPS,
   ONCOMING_SPEED,
+  PLAYER_HEIGHT,
   START_SPEED,
   TITLE_SPEED,
 } from "./config.js";
@@ -47,7 +48,7 @@ const CHASE_NEAR = 1.2;
 const CHASE_SIDE_X = 5.4;
 
 /** Gap kept between the camera and a roof overhead. */
-const CAMERA_HEADROOM = 0.5;
+const CAMERA_HEADROOM = 0.3;
 
 /**
  * Seconds before the pursuer joins the run.
@@ -1085,7 +1086,11 @@ export class Game {
     }
 
     const tx = p.x * 0.34;
-    const wantY = 3.6 + p.y * 0.5 + spdK * 0.25;
+    let wantY = 3.6 + p.y * 0.5 + spdK * 0.25;
+    // Indoors the lens has to stay above the runner's head. Below it, the roof
+    // covers everything above the horizon — including the runner — and they
+    // appear to have gone through the ceiling.
+    if (this.state === "playing") wantY = Math.max(wantY, p.y + PLAYER_HEIGHT + 0.35);
     // Stopping the runner at the roof is only half of it: the camera rides
     // above them, so without this it climbs out through the tunnel and looks
     // back down at the roof from the outside.

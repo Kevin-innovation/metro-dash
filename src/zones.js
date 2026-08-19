@@ -78,7 +78,7 @@ export const ZONES = [
     // 5.04m of super-sneaker apex plus 1.55m of runner. Only the jetpack is
     // meant to be pushed down in here, and it still flies far above every
     // obstacle.
-    ceiling: 7,
+    ceiling: 7.6,
     wall: 1,
     // The ceiling has to mean something, so the tunnel leans on slide gates.
     slideBias: 0.5,

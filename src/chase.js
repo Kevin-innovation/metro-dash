@@ -31,13 +31,17 @@ export const GAP_WARN = 14;
 export const RECOVER_RATE = 0.5;
 
 /**
- * Metres per second the gap closes at full pressure.
+ * Metres per second the gap closes even at zero pressure.
  *
- * Above the passive recovery rate on purpose: a run that never takes a risk
- * does eventually get caught. Near misses and roof rides are what beat it, so
- * the pursuer rewards the play the rest of the game already asks for.
+ * Without this the pursuer only began to move once pressure passed a quarter,
+ * about seventy seconds in — so for most of a run it sat pinned at its maximum
+ * distance doing nothing at all, which is exactly how it looked to play. It has
+ * to be closing from the moment it appears, or there is nothing to react to.
  */
-export const DRIFT_RATE = 2.0;
+export const BASE_CLOSE = 0.55;
+
+/** Extra metres per second at full pressure, on top of the baseline. */
+export const DRIFT_RATE = 1.5;
 
 /**
  * Ground lost to a hit the hoverboard absorbed.
@@ -46,10 +50,10 @@ export const DRIFT_RATE = 2.0;
  * the point of the pursuer is that a mistake is *felt*, and a cost the player
  * has to infer from a slow-moving bar is not felt at all.
  */
-export const STUMBLE_COST = 14;
+export const STUMBLE_COST = 12;
 
 /** Ground regained by a single near miss. */
-export const NEAR_MISS_GAIN = 2.4;
+export const NEAR_MISS_GAIN = 3.6;
 
 /** Metres per second regained while riding a roof, which is its own risk. */
 export const ROOF_RATE = 2.0;
@@ -76,10 +80,10 @@ export function createChase() {
 export function stepChase(chase, dt, { pressure = 0, onRoof = false } = {}) {
   if (chase.caught || !(dt > 0)) return chase;
 
-  // Pressure is what makes a long run dangerous rather than merely fast: early
-  // on the chaser cannot gain at all, and it only ever gains on a player who is
-  // not earning ground back.
-  const closing = DRIFT_RATE * clamp01(pressure);
+  // Always gaining a little, faster as the run winds up. Ground is given back
+  // by near misses and roof rides, so a player who keeps taking risks keeps it
+  // at arm's length and one who plays it safe watches it arrive.
+  const closing = BASE_CLOSE + DRIFT_RATE * clamp01(pressure);
   const opening = RECOVER_RATE + (onRoof ? ROOF_RATE : 0);
 
   chase.gap = Math.min(GAP_MAX, chase.gap + (opening - closing) * dt);

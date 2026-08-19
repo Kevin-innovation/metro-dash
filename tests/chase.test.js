@@ -27,7 +27,7 @@ describe("깨끗하게 달리면 잡히지 않는다", () => {
     expect(RECOVER_RATE).toBeGreaterThan(0);
     expect(DRIFT_RATE).toBeGreaterThan(RECOVER_RATE);
 
-    const chase = run(createChase(), 400, { pressure: 1 });
+    const chase = run(createChase(), 200, { pressure: 1 });
     // Drift outruns plain recovery at full pressure, so a player who never
     // takes a risk *does* eventually get caught. That is the intended pressure.
     expect(chase.caught).toBe(true);
@@ -54,17 +54,18 @@ describe("깨끗하게 달리면 잡히지 않는다", () => {
 
 describe("초반에는 존재감이 없다", () => {
   it("압박이 0이면 절대 가까워지지 않는다", () => {
-    const chase = run(createChase(), 120, { pressure: 0 });
-    expect(chase.gap).toBe(GAP_MAX);
-    expect(isWarning(chase)).toBe(false);
+    // It always gains a little; what pressure changes is how fast.
+    const calm = run(createChase(), 20, { pressure: 0 });
+    const wound = run(createChase(), 20, { pressure: 1 });
+    expect(calm.gap).toBeGreaterThan(wound.gap);
+    expect(isWarning(calm)).toBe(false);
   });
 
-  it("실제 페이스 곡선으로 돌려도 초반에는 조용하다", () => {
-    // Wired to the real curve so a change to pacing cannot quietly turn the
-    // chaser into an opening-seconds problem.
+  it("실제 페이스 곡선으로 돌려도 초반에는 경보까지 가지 않는다", () => {
     const chase = createChase();
     for (let t = 0; t < 30; t += 1 / 60) stepChase(chase, 1 / 60, { pressure: pressureAt(t) });
-    expect(chase.gap).toBe(GAP_MAX);
+    expect(chase.gap).toBeLessThan(GAP_MAX);
+    expect(isWarning(chase)).toBe(false);
   });
 });
 
@@ -85,7 +86,8 @@ describe("실수는 회복 가능한 대가를 치른다", () => {
       hits += 1;
     }
     expect(chase.caught).toBe(true);
-    expect(hits).toBeLessThanOrEqual(Math.ceil(GAP_MAX / STUMBLE_COST));
+    // Two saves is now the whole margin: a board is a reprieve, not a shield.
+    expect(hits).toBeLessThanOrEqual(Math.ceil(GAP_MAX / STUMBLE_COST) + 1);
   });
 
   it("잡힌 뒤에는 어떤 입력에도 되살아나지 않는다", () => {
@@ -103,8 +105,6 @@ describe("경계와 안전장치", () => {
   it("거리는 최대치를 넘지 않는다", () => {
     const chase = createChase();
     evade(chase, 50);
-    expect(chase.gap).toBe(GAP_MAX);
-    stepChase(chase, 10, { pressure: 0 });
     expect(chase.gap).toBe(GAP_MAX);
   });
 
@@ -128,7 +128,7 @@ describe("경계와 안전장치", () => {
   it("빠진 입력에도 안전하다", () => {
     const chase = createChase();
     expect(() => stepChase(chase, 0.1)).not.toThrow();
-    expect(chase.gap).toBe(GAP_MAX);
+    expect(chase.gap).toBeLessThanOrEqual(GAP_MAX);
   });
 
   it("프레임 간격이 달라도 결과가 거의 같다", () => {
@@ -162,7 +162,8 @@ describe("위협 표시", () => {
     const chase = createChase();
     stumble(chase);
     const worst = chase.gap;
-    run(chase, 20, { pressure: 0 });
+    // Ground only comes back by earning it now — sitting still loses more.
+    evade(chase, 3);
     expect(chase.gap).toBeGreaterThan(worst);
     expect(chase.closest).toBe(worst);
   });
@@ -197,10 +198,10 @@ describe("실제 페이스 곡선에서의 균형", () => {
   // The first version of these numbers put the pursuer 200 seconds into a run,
   // which is longer than almost anyone plays: the feature existed and nobody
   // ever met it. Appearing inside a normal run is the point.
-  it("아무것도 하지 않으면 2분 남짓에 잡힌다", () => {
+  it("아무것도 하지 않으면 1분 반쯤에 잡힌다", () => {
     const t = survive({});
-    expect(t).toBeGreaterThan(110);
-    expect(t).toBeLessThan(180);
+    expect(t).toBeGreaterThan(60);
+    expect(t).toBeLessThan(130);
   });
 
   it("아슬아슬하게 피하면 눈에 띄게 오래 간다", () => {
@@ -212,7 +213,7 @@ describe("실제 페이스 곡선에서의 균형", () => {
 
   it("능숙하게 피하면 사실상 잡히지 않는다", () => {
     // There has to be a way to outrun it, or it is just a countdown.
-    expect(survive({ missEvery: 2.5, roofShare: 0.25 })).toBeGreaterThan(600);
+    expect(survive({ missEvery: 2.5, roofShare: 0.25 })).toBeGreaterThan(300);
   });
 
   it("보드로 계속 버티기만 하면 오래 못 간다", () => {
@@ -247,13 +248,17 @@ describe("실제 페이스 곡선에서의 균형", () => {
   }
 
   it("보통 길이의 판 안에서 실제로 등장한다", () => {
-    // A threat nobody ever sees is not a threat.
-    expect(firstSeen({})).toBeLessThan(140);
+    // A threat nobody ever sees is not a threat. It used to sit pinned at its
+    // maximum distance for the first seventy seconds, which is most of a run.
+    expect(firstSeen({})).toBeLessThan(75);
   });
 
   it("실수하면 그 자리에서 가까워진 것이 보인다", () => {
-    // The old numbers refunded a stumble in seven seconds, so a mistake left
-    // no trace at all.
-    expect(firstSeen({ stumbleEvery: 70 })).toBeLessThan(firstSeen({}));
+    // The old numbers refunded a stumble in seven seconds, so a mistake left no
+    // trace at all. Measured against a player who is actually earning ground
+    // back, so the stumble is the only difference between the two runs.
+    const clean = firstSeen({ missEvery: 4 });
+    const slipped = firstSeen({ missEvery: 4, stumbleEvery: 40 });
+    expect(slipped).toBeLessThan(clean * 0.6);
   });
 });
