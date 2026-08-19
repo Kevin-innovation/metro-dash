@@ -12,7 +12,8 @@
     "test:coverage": "vitest run --coverage",
     "build:vercel": "convex deploy --cmd 'vite build'",
     "check:ui": "node scripts/ui-check.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "audit": "node scripts/fairness-audit.mjs 40 420"
   },
   "dependencies": {
     "convex": "^1.44.0",

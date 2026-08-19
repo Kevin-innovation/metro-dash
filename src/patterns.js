@@ -1,4 +1,4 @@
-import { GRAVITY, JUMP_V, SNEAKER_JUMP_MULT } from "./config.js";
+import { GRAVITY, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from "./config.js";
 import { SPEC } from "./specs.js";
 
 export const ALL_LANES = [-1, 0, 1];
@@ -547,6 +547,64 @@ export const DISMOUNT_LEAD_SECONDS = 0.6;
 export const MOUNT_LEAD_SECONDS = 0.8;
 /** Out of a slide the runner has to stand before the jump is worth anything. */
 export const MOUNT_AFTER_SLIDE_SECONDS = 1.0;
+
+/** A lane change settles in about this long, and can be started in mid-air. */
+export const LANE_CHANGE_SECONDS = 0.19;
+/** Time to see a hazard and answer it. */
+export const REACTION_SECONDS = 0.22;
+
+/**
+ * The window in which a second gate cannot be answered.
+ *
+ * A slide runs for SLIDE_TIME and cannot be renewed while it is running. A gate
+ * arriving inside that window is still covered by the first slide; one arriving
+ * well after it can be answered with a second. In between there is nothing the
+ * runner can do — the slide has just ended and there is no time to start
+ * another. It is a forbidden band rather than a minimum, which is why no amount
+ * of extra spacing was ever going to fix it.
+ */
+export const SLIDE_DEAD_BAND = [SLIDE_TIME - 0.06, SLIDE_TIME + REACTION_SECONDS];
+
+/**
+ * Lanes the runner can be in on the far side of a row.
+ *
+ * A wall leaves all three: it is answered by jumping, sliding or riding it
+ * rather than by picking a lane, so it does not decide where the runner ends up.
+ */
+function passableLanes(row) {
+  return row.isWall ? ALL_LANES : ALL_LANES.filter((lane) => !row.lanes.includes(lane));
+}
+
+/**
+ * Seconds two consecutive rows need between them for the second to be
+ * answerable at all.
+ *
+ * One rule with two readers: the spawner enforces it when it places a pattern,
+ * and scripts/fairness-audit.mjs checks the result. Written down once because
+ * the two drifting apart is how a layout nobody can clear ships.
+ */
+export function requiredGapSeconds(previous, next) {
+  if (!previous || !next) return 0;
+  if (next.isWall) return requiredLeadSeconds(previous, next);
+
+  const runsThrough = passableLanes(previous).some((lane) => passableLanes(next).includes(lane));
+  if (runsThrough) return 0;
+
+  // No lane clears both. Either answer the second row with its own move…
+  if (next.requires === "jump" || next.requires === "slide") return REACTION_SECONDS;
+  // …or swerve into a free lane, which has to settle before the row arrives.
+  return LANE_CHANGE_SECONDS + REACTION_SECONDS;
+}
+
+/** True when a gap lands where a slide cannot be renewed in time. */
+export function inSlideDeadBand(previous, next, seconds) {
+  return (
+    previous?.requires === "slide" &&
+    next?.requires === "slide" &&
+    seconds > SLIDE_DEAD_BAND[0] &&
+    seconds < SLIDE_DEAD_BAND[1]
+  );
+}
 
 /**
  * How long the runner needs between the last hazard and an oncoming wall.

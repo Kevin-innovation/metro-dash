@@ -1,5 +1,6 @@
 import {
   CRUISE_SPEED,
+  ONCOMING_SPEED,
   LATE_PRESSURE_AT,
   MAX_SPEED,
   PRESSURE_FULL_AT,
@@ -70,6 +71,17 @@ export function pressureAt(t) {
   // Front-loaded. A straight line spent its first minute barely moving, which
   // is the minute that decides whether anyone plays a second run.
   return linear ** 0.72;
+}
+
+/**
+ * How fast a bus coming the other way travels at a given phase.
+ *
+ * Lives here rather than in Game because the spawner has to know it to work out
+ * where the runner will meet one, and the fairness audit has to know it to
+ * check the answer. Three readers, one number.
+ */
+export function oncomingSpeedAt(phaseId) {
+  return ONCOMING_SPEED + (9 + Math.max(0, phaseId) * 1.4) * 0.2;
 }
 
 /** Seconds of track the spawner leaves between patterns at time `t`. */

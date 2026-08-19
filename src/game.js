@@ -18,7 +18,7 @@ import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
 import { MISSION_TIERS, ensureMissions } from "./missions.js";
-import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
+import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { lookAt } from "./zones.js";
 
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
@@ -1005,6 +1005,7 @@ export class Game {
       // The title-screen preview stays at the gentlest pacing.
       reaction: playing ? reactionAt(this.runTime) : reactionAt(0),
       pressure: playing ? pressureAt(this.runTime) : 0,
+      oncomingSpeed: this.oncomingSpeed(),
       // The tunnel's low roof has to mean something, so it leans the pattern
       // pick towards the gates you can only get under by sliding.
       slideBias: playing ? lookAt(this.runTime).slideBias : 0,
@@ -1014,9 +1015,18 @@ export class Game {
     });
   }
 
+  /**
+   * How fast an oncoming bus travels at this phase.
+   *
+   * Read by the spawner too, so the spacing it works out is based on the speed
+   * the bus will really have rather than on a guess.
+   */
+  oncomingSpeed() {
+    return oncomingSpeedAt(this.phaseId);
+  }
+
   makeItemOncoming(item) {
-    const extra = 9 + this.phaseId * 1.4;
-    makeOncoming(item, ONCOMING_SPEED + extra * 0.2);
+    makeOncoming(item, this.oncomingSpeed());
     if (this.state === "playing" && !this.sawOncoming) {
       this.sawOncoming = true;
       this.screens.showToast("버스가 온다!");

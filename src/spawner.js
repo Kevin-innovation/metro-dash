@@ -5,10 +5,12 @@ import {
 } from "./config.js";
 import {
   POWERUP_PATTERNS,
+  SLIDE_DEAD_BAND,
   candidatesFor,
   describePattern,
+  inSlideDeadBand,
   patternById,
-  requiredLeadSeconds,
+  requiredGapSeconds,
 } from "./patterns.js";
 
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
@@ -27,6 +29,24 @@ const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
 /** Power-ups are dealt on a cadence; the jetpack stays the rare one. */
 const POWERUP_DECK = ["magnet", "double", "sneakers", "magnet", "jetpack", "double", "sneakers"];
 const POWERUP_EVERY = 6;
+
+/**
+ * Metres two patterns' hazards must keep between them, whatever the timing
+ * rules say.
+ *
+ * Rows closer than the collision test's own grouping distance stop being two
+ * layouts and become one: a gate wall with a bus arriving beside it is no
+ * longer a wall you slide under, it is a wall you have to be on top of. Neither
+ * pattern ever declared that, so nothing checked it.
+ *
+ * Twice the widest grouping distance (a train's 5.28m) rather than merely more
+ * than it: where a vehicle coming the other way is met is worked out from its
+ * speed and the runner's, and a metre of disagreement between two ways of
+ * computing that must not be able to turn two layouts into one. At fifty metres
+ * a second this costs a quarter of a second, which the gap between patterns
+ * already exceeds several times over.
+ */
+const MIN_PATTERN_SEPARATION = 12;
 
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 
@@ -107,7 +127,9 @@ export class Spawner {
 
     const { speed, reaction, pressure = 0 } = options;
     const ahead = Math.max(46, speed * 2.35);
-    const meta = this.place(playerZ + ahead, options);
+    // Where the runner is standing when this is placed, so a vehicle coming the
+    // other way can be resolved to where the two actually meet.
+    const meta = this.place(playerZ + ahead, { ...options, fromZ: playerZ });
 
     // The next pattern starts however far the runner travels before the timer
     // fires, so it must not fire until this one is cleared plus a margin. Both
@@ -121,22 +143,50 @@ export class Spawner {
     return meta;
   }
 
+  /**
+   * Where the runner meets a placement.
+   *
+   * A vehicle coming the other way closes at its own speed plus the runner's,
+   * so it is met far short of where it was put — at fifty metres a second a bus
+   * parked eighty metres ahead is reached in under a second, not in one and a
+   * half. Everything that reasons about spacing has to use the meeting point,
+   * or the fair-looking gap in front of an oncoming bus is not there at all.
+   */
+  static meetingPoint(placement, { fromZ, speed, oncomingSpeed }) {
+    if (!placement.oncoming || fromZ == null || !(speed > 0) || !(oncomingSpeed > 0)) {
+      return placement;
+    }
+    const closing = speed + oncomingSpeed;
+    const meetIn = Math.max(0, (placement.z - fromZ) / closing);
+    return { ...placement, z: fromZ + speed * meetIn };
+  }
+
   /** Materialise one pattern at `z` and report what it occupies. */
   place(z, options = {}) {
     this.patternCount += 1;
     const speed = options.speed ?? 20;
+    const met = (list) => list.map((placement) => Spawner.meetingPoint(placement, { ...options, speed }));
+
     let placements = this.choose(z, options);
-    let described = describePattern(z, placements);
+    let described = describePattern(z, met(placements));
 
     // How much room this layout needs from the one before it depends on what it
     // opens with, which is only knowable once it has been built. So build it,
     // measure the gap it actually landed with, and push it downtrack only by
     // the shortfall — applying the margin to the *following* gap instead would
     // protect the wrong pattern.
-    const shift = this.leadShortfall(described, speed);
-    if (shift > 0) {
-      placements = placements.map((placement) => ({ ...placement, z: placement.z + shift }));
-      described = describePattern(z + shift, placements);
+    //
+    // Repeated rather than applied once, because of the vehicles coming the
+    // other way: moving one a metre downtrack only moves the point where it is
+    // met by about eight tenths of that, so a single correction always lands
+    // short of what it was asked for.
+    let shift = 0;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const extra = this.leadShortfall(described, speed);
+      if (extra <= 0.01) break;
+      shift += extra;
+      placements = placements.map((placement) => ({ ...placement, z: placement.z + extra }));
+      described = describePattern(z + shift, met(placements));
     }
 
     for (const placement of placements) {
@@ -155,17 +205,35 @@ export class Spawner {
     return { ...described, span: described.span + shift, shift };
   }
 
-  /** Metres this pattern must move downtrack to give the runner a fair lead. */
+  /**
+   * Metres this pattern must move downtrack to give the runner a fair lead.
+   *
+   * Applied to every pattern rather than only to walls. A layout with a free
+   * lane is still unclearable if that lane is not the one the previous row left
+   * the runner in and there is no time to move — which is most of what the
+   * fairness audit was finding.
+   */
   leadShortfall(described, speed) {
     const entry = described.entryRow;
-    if (!entry?.isWall || !this.lastHazard) return 0;
-    const needed = speed * requiredLeadSeconds(this.lastHazard, entry);
-    return Math.max(0, needed - (entry.z - this.lastHazard.z));
+    if (!entry || !this.lastHazard || !(speed > 0)) return 0;
+
+    const metres = entry.z - this.lastHazard.z;
+    const gap = metres / speed;
+    let target = Math.max(gap, requiredGapSeconds(this.lastHazard, entry));
+    // The dead band is a hole, not a floor: a gap inside it is pushed past it
+    // rather than merely widened.
+    if (inSlideDeadBand(this.lastHazard, entry, target)) target = SLIDE_DEAD_BAND[1];
+    return Math.max(0, Math.max(target * speed, MIN_PATTERN_SEPARATION) - metres);
   }
 
   rememberHazard(described) {
     const last = described.rows[described.rows.length - 1];
-    if (last) this.lastHazard = last;
+    if (!last) return;
+    // The furthest downtrack, not simply the most recent. Vehicles coming the
+    // other way are met well before where they were put, so a pattern can end
+    // *behind* the one before it — and measuring the next pattern from that
+    // leaves it free to land on top of the older row.
+    if (!this.lastHazard || last.z >= this.lastHazard.z) this.lastHazard = last;
   }
 
   choose(z, {
