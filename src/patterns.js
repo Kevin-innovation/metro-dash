@@ -444,8 +444,14 @@ export function describeRows(placements) {
       z: row.z,
       lanes: [...row.lanes].sort(),
       isWall: row.lanes.size >= ALL_LANES.length,
-      // A wall of rideable vehicles is cleared by landing on a roof.
-      requires: row.rideable && row.lanes.size >= ALL_LANES.length ? "mount" : [...row.clears][0] ?? null,
+      // A wall of rideable vehicles is cleared by landing on a roof — but only
+      // when riding is the *only* thing on offer. A gate wall with a train
+      // standing in one of its lanes was being called a mount: you would land
+      // on the roof and straight into the gate above it. The explicit move
+      // wins, and the vehicle's lane is simply one nobody can use.
+      requires:
+        [...row.clears][0] ??
+        (row.rideable && row.lanes.size >= ALL_LANES.length ? "mount" : null),
       rideable: row.rideable,
     }))
     .sort((a, b) => a.z - b.z);
