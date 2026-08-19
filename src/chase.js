@@ -15,30 +15,38 @@
  */
 
 /** How far back the pursuer sits when the player is doing everything right. */
-export const GAP_MAX = 30;
+export const GAP_MAX = 24;
 
 /** Under this it is close enough to see clearly and worth warning about. */
 export const GAP_WARN = 14;
 
-/** Metres per second the gap recovers when nothing has gone wrong. */
-export const RECOVER_RATE = 1.9;
+/**
+ * Metres per second the gap recovers on its own.
+ *
+ * Deliberately a trickle. At a realistic-sounding 1.9 it refunded a whole
+ * stumble in seven seconds, so a mistake left no trace and the pursuer never
+ * appeared in a run anyone actually played. Ground is meant to be *earned*
+ * back; this is only enough to keep an early clean run from creeping downwards.
+ */
+export const RECOVER_RATE = 0.5;
 
 /**
  * Metres per second the gap closes at full pressure.
  *
- * Below the recovery rate on purpose: clean running always gains ground, so the
- * chaser is a consequence of mistakes rather than a timer nobody can beat.
+ * Above the passive recovery rate on purpose: a run that never takes a risk
+ * does eventually get caught. Near misses and roof rides are what beat it, so
+ * the pursuer rewards the play the rest of the game already asks for.
  */
-export const DRIFT_RATE = 3.1;
+export const DRIFT_RATE = 2.0;
 
 /** Ground lost to a hit the hoverboard absorbed. */
-export const STUMBLE_COST = 13;
+export const STUMBLE_COST = 10;
 
 /** Ground regained by a single near miss. */
-export const NEAR_MISS_GAIN = 3.4;
+export const NEAR_MISS_GAIN = 2.4;
 
 /** Metres per second regained while riding a roof, which is its own risk. */
-export const ROOF_RATE = 2.6;
+export const ROOF_RATE = 2.0;
 
 /**
  * Where the pursuer is, as a plain object so the caller owns the state.

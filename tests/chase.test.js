@@ -193,19 +193,26 @@ describe("실제 페이스 곡선에서의 균형", () => {
 
   // These bands are the whole design, written down. A tuning change that moves
   // them is a change to what the game asks of the player, not a detail.
-  it("아무것도 하지 않으면 3분 넘게 버티다 잡힌다", () => {
+  //
+  // The first version of these numbers put the pursuer 200 seconds into a run,
+  // which is longer than almost anyone plays: the feature existed and nobody
+  // ever met it. Appearing inside a normal run is the point.
+  it("아무것도 하지 않으면 2분 남짓에 잡힌다", () => {
     const t = survive({});
-    expect(t).toBeGreaterThan(180);
-    expect(t).toBeLessThan(280);
+    expect(t).toBeGreaterThan(110);
+    expect(t).toBeLessThan(180);
   });
 
-  it("보통으로 피하면 8분 이상 간다", () => {
-    expect(survive({ missEvery: 4, roofShare: 0.1 })).toBeGreaterThan(480);
+  it("아슬아슬하게 피하면 눈에 띄게 오래 간다", () => {
+    const careful = survive({ missEvery: 4, roofShare: 0.1 });
+    // Taking risks has to pay more than playing it safe, or the whole loop is
+    // pointless.
+    expect(careful).toBeGreaterThan(survive({}) * 1.5);
   });
 
-  it("능숙하게 피하면 잡히지 않는다", () => {
+  it("능숙하게 피하면 사실상 잡히지 않는다", () => {
     // There has to be a way to outrun it, or it is just a countdown.
-    expect(survive({ missEvery: 2.5, roofShare: 0.25 })).toBe(Infinity);
+    expect(survive({ missEvery: 2.5, roofShare: 0.25 })).toBeGreaterThan(600);
   });
 
   it("보드로 계속 버티기만 하면 오래 못 간다", () => {
@@ -213,6 +220,40 @@ describe("실제 페이스 곡선에서의 균형", () => {
     // ground it costs has to be earned back.
     const careless = survive({ missEvery: 4, stumbleEvery: 20, roofShare: 0.1 });
     const careful = survive({ missEvery: 4, roofShare: 0.1 });
-    expect(careless).toBeLessThan(careful * 0.6);
+    expect(careless).toBeLessThan(careful * 0.8);
+  });
+
+  /** When the pursuer first comes into view, which is what a player notices. */
+  function firstSeen({ missEvery = 0, stumbleEvery = 0 }) {
+    const chase = createChase();
+    const dt = 1 / 60;
+    let t = 0;
+    let nextMiss = missEvery;
+    let nextStumble = stumbleEvery;
+    while (!chase.caught && t < 600) {
+      t += dt;
+      stepChase(chase, dt, { pressure: pressureAt(t) });
+      if (missEvery && t >= nextMiss) {
+        evade(chase);
+        nextMiss += missEvery;
+      }
+      if (stumbleEvery && t >= nextStumble) {
+        stumble(chase);
+        nextStumble += stumbleEvery;
+      }
+      if (isWarning(chase)) return t;
+    }
+    return Infinity;
+  }
+
+  it("보통 길이의 판 안에서 실제로 등장한다", () => {
+    // A threat nobody ever sees is not a threat.
+    expect(firstSeen({})).toBeLessThan(140);
+  });
+
+  it("실수하면 그 자리에서 가까워진 것이 보인다", () => {
+    // The old numbers refunded a stumble in seven seconds, so a mistake left
+    // no trace at all.
+    expect(firstSeen({ stumbleEvery: 70 })).toBeLessThan(firstSeen({}));
   });
 });

@@ -46,6 +46,9 @@ const CHASE_NEAR = 1.2;
 /** How far out on the ballast it rides, clear of all three lanes. */
 const CHASE_SIDE_X = 5.4;
 
+/** Gap kept between the camera and a roof overhead. */
+const CAMERA_HEADROOM = 0.5;
+
 const $ = (id) => document.getElementById(id);
 
 /** Seconds the whole frame freezes on a heavy impact, for weight. */
@@ -716,6 +719,9 @@ export class Game {
       roofs: this.collectRoofs(),
       held: this.input.held,
       flying: this.state === "playing" && this.run.powerupActive("jetpack"),
+      // Read inside the fixed step, not from the rendered look, so the ceiling
+      // the runner bumps into is the same one on every machine.
+      ceiling: this.state === "playing" ? lookAt(this.runTime).ceiling : null,
       onMount: (item, hop) => this.onMount(item, hop),
     });
 
@@ -1024,7 +1030,16 @@ export class Game {
     }
 
     const tx = p.x * 0.34;
-    const ty = 3.6 + p.y * 0.5 + spdK * 0.25;
+    const wantY = 3.6 + p.y * 0.5 + spdK * 0.25;
+    // Stopping the runner at the roof is only half of it: the camera rides
+    // above them, so without this it climbs out through the tunnel and looks
+    // back down at the roof from the outside.
+    const ceiling = this.state === "playing" ? lookAt(this.runTime).ceiling : null;
+    const limit = ceiling != null ? ceiling - CAMERA_HEADROOM : Infinity;
+    const ty = Math.min(wantY, limit);
+    // How much height the roof took away. With none left to look down from,
+    // the shot has to level out or the runner slides off the top of frame.
+    const pinned = Math.min(1, Math.max(0, (wantY - limit) / 1.5));
     const tz = p.z - (7.4 + spdK * 0.7);
     this.cam.x += (tx - this.cam.x) * approach(9.7, dt);
     this.cam.y += (ty - this.cam.y) * approach(6.9, dt);
@@ -1034,7 +1049,9 @@ export class Game {
     const sy = (Math.random() - 0.5) * this.shake * 0.25;
     this.camera.position.set(this.cam.x + sx, this.cam.y + sy, this.cam.z);
     // Aim well down the track so obstacles enter frame with time to read them.
-    this.camera.lookAt(p.x * 0.5, 1.35 + p.y * 0.28, p.z + 14);
+    const groundAim = 1.35 + p.y * 0.28;
+    const aimY = groundAim + pinned * (p.y - groundAim) * 0.9;
+    this.camera.lookAt(p.x * 0.5, Math.min(aimY, limit), p.z + 14);
   }
 }
 

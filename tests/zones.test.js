@@ -145,3 +145,33 @@ describe("터널이 실제로 슬라이드를 요구하는가", () => {
     }
   });
 });
+
+describe("천장이 게임을 막지 않는가", () => {
+  it("천장 아래 여유 높이가 모든 장애물 위에 있다", async () => {
+    const { CEILING_CLEARANCE } = await import("../src/player.js");
+    const { SIGN_BOARD_TOP } = await import("../src/config.js");
+
+    // A jetpack clamped by the roof must still be over everything lethal, or
+    // a power-up turns into a death sentence the moment a tunnel starts.
+    for (const zone of ZONES) {
+      if (zone.ceiling === null) continue;
+      const flying = zone.ceiling - CEILING_CLEARANCE;
+      expect(flying, `${zone.name}`).toBeGreaterThan(SIGN_BOARD_TOP + 0.5);
+    }
+  });
+
+  it("일반 점프와 스니커즈 점프는 천장에 막히지 않는다", async () => {
+    const { CEILING_CLEARANCE } = await import("../src/player.js");
+    const { GRAVITY, JUMP_V, SNEAKER_JUMP_MULT } = await import("../src/config.js");
+    const apex = (v) => (v * v) / (2 * -GRAVITY);
+
+    // Ordinary movement has to feel the same everywhere. Only the jetpack,
+    // which flies well above the whole obstacle band, is meant to be capped.
+    for (const zone of ZONES) {
+      if (zone.ceiling === null) continue;
+      const limit = zone.ceiling - CEILING_CLEARANCE;
+      expect(apex(JUMP_V), `${zone.name} 일반 점프`).toBeLessThan(limit);
+      expect(apex(JUMP_V * SNEAKER_JUMP_MULT), `${zone.name} 스니커즈`).toBeLessThanOrEqual(limit);
+    }
+  });
+});

@@ -74,7 +74,10 @@ export const ZONES = [
     hemi: 0.62,
     sun: 0.25,
     ambient: 0.44,
-    ceiling: 4.6,
+    // Above the boosted jump apex (5.04m) with a little to spare, and roughly
+    // where the slide gantries sit — so a super-sneaker jump grazes the roof
+    // rather than passing through it, and the gates read as ceiling-mounted.
+    ceiling: 5.6,
     wall: 0.85,
     // The ceiling has to mean something, so the tunnel leans on slide gates.
     slideBias: 0.5,

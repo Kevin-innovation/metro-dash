@@ -329,6 +329,9 @@ export function bestRoof(p, roofs, x = p.x) {
   return best;
 }
 
+/** Headroom kept between the runner's feet and a ceiling overhead. */
+export const CEILING_CLEARANCE = 0.55;
+
 export function updatePlayer(p, dt, speed, ctx = {}) {
   const roofs = ctx.roofs || [];
   const held = ctx.held || {};
@@ -414,6 +417,19 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
     if (p.sliding) {
       p.slideT -= dt;
       if (p.slideT <= 0) p.sliding = false;
+    }
+  }
+
+  // A roof overhead is a hard stop. Without this a super-sneaker jump — and a
+  // jetpack far more so — carries the runner straight through the tunnel
+  // ceiling and out over the top of the world.
+  if (ctx.ceiling != null) {
+    const limit = Math.max(0, ctx.ceiling - CEILING_CLEARANCE);
+    if (p.y > limit) {
+      p.y = limit;
+      // Rising into it stops the climb; falling is left alone so the runner
+      // still comes back down normally.
+      if (p.vy > 0) p.vy = 0;
     }
   }
 
