@@ -1,6 +1,5 @@
 import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
-import { isWarning, threat } from "./chase.js";
 import { LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
 import { loadSchoolNames } from "./school-list.js";
 import { missionLabel } from "./missions.js";
@@ -364,30 +363,7 @@ export class Screens {
     if (confirm) confirm.disabled = busy;
   }
 
-  /**
-   * The ground a near miss just bought, shown beside the gauge.
-   *
-   * Without it the bar twitches and nothing says why. This is the one place
-   * that connects "I squeezed past that" to "the thing behind me fell back".
-   */
-  flashChaseGain(metres) {
-    const el = $("chase-gain");
-    if (!el || metres < 0.5) return;
-    el.textContent = `+${metres.toFixed(0)}m`;
-    el.classList.remove("hidden", "pop");
-    void el.offsetWidth;
-    el.classList.add("pop");
-    clearTimeout(this.chaseGainTimer);
-    this.chaseGainTimer = setTimeout(() => el.classList.add("hidden"), 700);
-  }
 
-  /** How hard the pursuer is pressing, 0..1, as a closing red vignette. */
-  setChasePressure(heat) {
-    const el = $("chase-vignette");
-    if (!el) return;
-    el.style.opacity = heat <= 0.02 ? "0" : Math.min(1, heat * 0.9).toFixed(3);
-    el.classList.toggle("beat", heat > 0.35);
-  }
 
   showReportNote(message) {
     const note = $("report-note");
@@ -632,107 +608,8 @@ export class Screens {
       phaseName: game.phaseName(),
       speed: game.speed,
     });
-    this.syncChase(game.chase, game.chaser.visible);
   }
 
-  /**
-   * The pursuer gauge.
-   *
-   * On screen the whole time the pursuer is, not only when it is close. It is
-   * the only readout of what the thing behind the runner is *doing* — hidden
-   * until the last moment, the player sees a vehicle following them and never
-   * learns that their own near misses are pushing it back.
-   */
-  syncChase(chase, visible) {
-    const meter = $("chase-meter");
-    if (!meter) return;
-    const show = visible && !chase.caught;
-    meter.classList.toggle("hidden", !show);
-    if (!show) return;
-
-    const heat = threat(chase);
-    // A sliver always shows, so the bar reads as a gauge with a value rather
-    // than as an empty box the player assumes is broken.
-    $("chase-fill").style.transform = `scaleX(${Math.max(0.06, heat).toFixed(3)})`;
-    // Only alarms once it is genuinely near; before that it is information.
-    meter.classList.toggle("close", isWarning(chase));
-    $("chase-gap").textContent = `${Math.round(chase.gap)}m`;
-  }
-
-  showToast(text) {
-    const el = $("speed-toast");
-    el.textContent = text;
-    el.classList.remove("hidden", "pop");
-    void el.offsetWidth;
-    el.classList.add("pop");
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => {
-      el.classList.add("hidden");
-      el.classList.remove("pop");
-    }, 1200);
-  }
-
-  flashCoinGain(gain) {
-    const gainEl = $("coin-gain");
-    gainEl.textContent = `+${gain}`;
-    gainEl.classList.remove("hidden", "pop");
-    void gainEl.offsetWidth;
-    gainEl.classList.add("pop");
-    clearTimeout(this.gainTimer);
-    this.gainTimer = setTimeout(() => gainEl.classList.add("hidden"), 520);
-
-    const scoreEl = $("score");
-    scoreEl.classList.remove("score-punch");
-    void scoreEl.offsetWidth;
-    scoreEl.classList.add("score-punch");
-
-    const chip = $("coin-count").parentElement;
-    chip.classList.remove("coin-punch");
-    void chip.offsetWidth;
-    chip.classList.add("coin-punch");
-  }
-
-  flashNearMiss() {
-    const el = $("near-miss");
-    if (!el) return;
-    el.classList.remove("hidden", "pop");
-    void el.offsetWidth;
-    el.classList.add("pop");
-    clearTimeout(this.nearMissTimer);
-    this.nearMissTimer = setTimeout(() => el.classList.add("hidden"), 520);
-  }
-
-  // --- game over -----------------------------------------------------------
-
-  showGameOver(run, save, result, reason = "crash") {
-    const rounded = Math.floor(run.score);
-
-    // Being caught is a different ending from hitting something, and saying so
-    // is what teaches the player that the gauge was the thing to watch.
-    const title = $("gameover-title");
-    if (title) title.textContent = reason === "caught" ? "따라잡혔다!" : "충돌!";
-
-    $("final-score").textContent = rounded.toLocaleString();
-    $("break-dist").textContent = Math.floor(run.scoreDist).toLocaleString();
-    $("break-coins").textContent = Math.floor(run.scoreCoins).toLocaleString();
-    $("break-bonus").textContent = Math.floor(run.scoreBonus).toLocaleString();
-    $("final-coins").textContent = String(run.coins);
-    $("final-dist").textContent = `${Math.floor(run.distance)}m`;
-    $("final-combo").textContent = String(run.comboMax);
-    $("over-best").textContent = save.best.toLocaleString();
-    $("new-best").classList.toggle("hidden", rounded < save.best || rounded === 0);
-
-    const nearEl = $("final-nearmiss");
-    if (nearEl) nearEl.textContent = String(run.metrics.nearMisses);
-    const mountEl = $("final-mounts");
-    if (mountEl) mountEl.textContent = String(run.metrics.mounts);
-    const xpEl = $("final-xp");
-    if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
-
-    const cleared = this.renderMissionResults(result);
-    this.setOverlay("dead");
-    return cleared;
-  }
 
   /** @returns {boolean} whether any mission was cleared, so the caller can cue audio */
   renderMissionResults(result) {
