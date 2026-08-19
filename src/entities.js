@@ -312,8 +312,6 @@ export class EntityPool {
       type,
       lane,
       z,
-      /** Simulated lane position. The mesh is drawn at this plus the bend. */
-      x,
       powerup: spec.powerup ?? null,
       /** Set once the runner has passed it, so near misses only score once. */
       scored: false,
@@ -329,8 +327,6 @@ export class EntityPool {
       rideable: !!spec.rideable,
       roofY: spec.roofY || 0,
       moving: false,
-      /** Facing on a straight track; the line's heading is added when drawn. */
-      baseYaw: 0,
       vz: 0,
       warned: false,
       mesh,
@@ -366,13 +362,9 @@ export class EntityPool {
   }
 }
 
-/** Facing before the track's own heading is added on top. */
 export function setBusFacing(item, oncoming) {
   if (!item?.mesh || item.type !== "bus") return;
-  // Kept separate from the mesh's rotation because the track's own heading is
-  // added on top of it every frame.
-  item.baseYaw = oncoming ? Math.PI : 0;
-  item.mesh.rotation.y = item.baseYaw;
+  item.mesh.rotation.y = oncoming ? Math.PI : 0;
   item.mesh.traverse((child) => {
     if (!child.userData?.headlight || !child.material) return;
     child.material.emissiveIntensity = oncoming ? 1.8 : 0.85;

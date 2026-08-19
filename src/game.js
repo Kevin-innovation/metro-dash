@@ -20,7 +20,6 @@ import { Interactions } from "./interactions.js";
 import { MISSION_TIERS, ensureMissions } from "./missions.js";
 import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { lookAt } from "./zones.js";
-import { bendX, bendYaw } from "./track.js";
 
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
@@ -34,10 +33,6 @@ import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
 import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
 
-
-/** How far down the track the camera looks, and how much of the bend it follows. */
-const CAMERA_LOOKAHEAD = 26;
-const CAMERA_TURN = 0.3;
 
 /** Gap kept between the camera and a roof overhead. */
 const CAMERA_HEADROOM = 0.3;
@@ -795,6 +790,7 @@ export class Game {
     for (const item of this.pool.live) {
       if (!item.moving || item.taken) continue;
       item.z += item.vz * dt;
+      item.mesh.position.z = item.z;
       const gap = item.z - this.player.z;
       if (!item.warned && gap < 22 && gap > 6 && this.state === "playing") {
         item.warned = true;
@@ -809,7 +805,7 @@ export class Game {
       if (!item.rideable || item.taken || !item.mesh.visible) continue;
       roofs.push({
         item,
-        x: item.x,
+        x: item.mesh.position.x,
         z: item.z,
         length: item.length,
         roofY: item.roofY,
@@ -828,12 +824,6 @@ export class Game {
         item.mesh.rotation.y += dt * 2.4;
         item.mesh.position.y = item.y + Math.sin(this.player.runT * 4 + item.z) * 0.14;
       }
-      // Drawn on the line. `item.x` and `item.z` stay the straight-track values
-      // the collision test works in; only the mesh moves.
-      item.mesh.position.x = item.x + bendX(item.z);
-      item.mesh.position.z = item.z;
-      // Turned to face along the track, or a long train reads as crooked.
-      if (item.length > 2) item.mesh.rotation.y = item.baseYaw + bendYaw(item.z);
     }
   }
 
@@ -929,8 +919,7 @@ export class Game {
       this.camera.updateProjectionMatrix();
     }
 
-    // Following the line, or the runner slides to the edge of frame on a bend.
-    const tx = p.x * 0.34 + bendX(p.z);
+    const tx = p.x * 0.34;
     let wantY = 3.6 + p.y * 0.5 + spdK * 0.25;
     // Indoors the lens has to stay above the runner's head. Below it, the roof
     // covers everything above the horizon — including the runner — and they
@@ -956,17 +945,7 @@ export class Game {
     // Aim well down the track so obstacles enter frame with time to read them.
     const groundAim = 1.35 + p.y * 0.28;
     const aimY = groundAim + pinned * (p.y - groundAim) * 0.9;
-    // Deliberately under-turned.
-    //
-    // A camera that follows the heading exactly keeps the track pointing
-    // straight up the middle of the screen and the curve becomes invisible —
-    // the world slides sideways instead of bending. Turning only part of the
-    // way lets the line sweep across the frame, which is what a bend looks like
-    // from inside it.
-    const ahead = bendX(p.z + CAMERA_LOOKAHEAD);
-    const here = bendX(p.z);
-    const aimX = p.x * 0.5 + here + (ahead - here) * CAMERA_TURN;
-    this.camera.lookAt(aimX, Math.min(aimY, limit), p.z + CAMERA_LOOKAHEAD);
+    this.camera.lookAt(p.x * 0.5, Math.min(aimY, limit), p.z + 14);
   }
 }
 
