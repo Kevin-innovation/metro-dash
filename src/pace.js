@@ -1,9 +1,12 @@
 import {
+  CRUISE_SPEED,
+  LATE_PRESSURE_AT,
   MAX_SPEED,
   PRESSURE_FULL_AT,
   PRESSURE_STARTS_AT,
   REACTION_EASY,
   REACTION_HARD,
+  REACTION_LATE,
   START_SPEED,
 } from "./config.js";
 
@@ -44,7 +47,12 @@ export function speedAt(t) {
   if (t < 34) return 20.5 + (t - 16) * 0.36;
   if (t < 56) return 27 + (t - 34) * 0.36;
   if (t < 84) return 35 + (t - 56) * 0.29;
-  return Math.min(MAX_SPEED, 43 + (t - 84) * 0.16);
+  const cruise = Math.min(CRUISE_SPEED, 43 + (t - 84) * 0.16);
+  if (t <= LATE_PRESSURE_AT) return cruise;
+  // A creep rather than a climb — 50 to 56 over four minutes. Small enough that
+  // the sight lines still work, large enough that the layouts a player has
+  // learned start arriving before they are ready for them.
+  return Math.min(MAX_SPEED, CRUISE_SPEED + (t - LATE_PRESSURE_AT) * 0.025);
 }
 
 /**
@@ -61,5 +69,11 @@ export function pressureAt(t) {
 
 /** Seconds of track the spawner leaves between patterns at time `t`. */
 export function reactionAt(t) {
-  return REACTION_EASY + (REACTION_HARD - REACTION_EASY) * pressureAt(t);
+  const base = REACTION_EASY + (REACTION_HARD - REACTION_EASY) * pressureAt(t);
+  if (t <= LATE_PRESSURE_AT) return base;
+  // Past the first ramp the gap keeps closing, just far more slowly. Without
+  // this the run stopped getting harder at exactly the point most players stop
+  // improving, which is the wrong way round.
+  const late = Math.min(1, (t - LATE_PRESSURE_AT) / 240);
+  return REACTION_HARD + (REACTION_LATE - REACTION_HARD) * late;
 }

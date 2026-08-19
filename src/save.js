@@ -27,6 +27,11 @@ export function defaultSave() {
     upgrades,
     missions: [],
     missionsDone: 0,
+    /** Consecutive days played, and the day the last run started. */
+    streak: 0,
+    lastDay: 0,
+    /** Best streak ever reached, kept because losing one should still count. */
+    bestStreak: 0,
     settings: { ...DEFAULT_SETTINGS },
   };
 }
@@ -57,6 +62,9 @@ export function normalizeSave(raw) {
     xp: clampInt(raw.xp),
     hoverboards: clampInt(raw.hoverboards, 0, 99),
     missionsDone: clampInt(raw.missionsDone),
+    streak: clampInt(raw.streak),
+    lastDay: clampInt(raw.lastDay),
+    bestStreak: clampInt(raw.bestStreak),
   };
 
   out.settings = normalizeSettings(raw.settings);

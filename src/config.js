@@ -3,7 +3,16 @@ export const SEGMENT_LEN = 30;
 export const SEGMENT_COUNT = 12;
 export const START_SPEED = 16;
 export const TITLE_SPEED = 10;
-export const MAX_SPEED = 50;
+/** Speed the run settles at once it is wound up, reached around two minutes. */
+export const CRUISE_SPEED = 50;
+/**
+ * Ceiling on speed.
+ *
+ * Above cruise the run creeps rather than climbs, and only after the reaction
+ * gap has finished tightening — at that point every other difficulty dial has
+ * stopped moving, and a run that stops changing is a run that stops being read.
+ */
+export const MAX_SPEED = 56;
 export const GRAVITY = -44;
 export const JUMP_V = 16.2;
 export const FAST_FALL = -34;
@@ -44,11 +53,31 @@ export const PATTERN_CLEARANCE = 6;
 
 /** Seconds before the run starts winding up, and when it is fully wound. */
 export const PRESSURE_STARTS_AT = 12;
-export const PRESSURE_FULL_AT = 240;
+/**
+ * Brought in from 240s. The first ramp used to finish at four minutes, by which
+ * point a good player was around forty thousand points — and everything past it
+ * was the same minute on repeat, so the strongest runs were the least
+ * interesting. The first ramp now finishes at three, and LATE_PRESSURE_AT picks
+ * the run up from there.
+ */
+export const PRESSURE_FULL_AT = 180;
 
 /** Seconds between patterns at the start of a run, and once fully wound up. */
 export const REACTION_EASY = 1.15;
 export const REACTION_HARD = 0.45;
+
+/**
+ * The second, much slower squeeze.
+ *
+ * Runs it from the end of the first ramp to REACTION_LATE over four more
+ * minutes. Gentle by design: the floor of what a person can read is somewhere
+ * near here, and the patterns' own spacing floors are what actually keep a
+ * layout clearable — this only decides how soon the next one starts.
+ */
+// Starts exactly where the first ramp ends, so there is no stretch in the
+// middle where nothing at all is changing.
+export const LATE_PRESSURE_AT = PRESSURE_FULL_AT;
+export const REACTION_LATE = 0.36;
 
 /** Runway between patterns, as seconds of travel, at each end of the ramp. */
 export const CLEARANCE_SECONDS_EASY = 0.5;

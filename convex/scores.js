@@ -18,11 +18,12 @@ export const LEADERBOARD_LIMIT = 50;
 /**
  * Coins one run may add to the ledger beyond the ones it picked up.
  *
- * Three daily missions can complete in a single run and the richest pays 190,
- * so 600 covers the best case with room to spare. Loose on purpose: the ledger
- * exists to stop a save claiming a million coins, not to audit a good run.
+ * Everything the client is allowed to pay out around a run has to fit under
+ * this, or an honest save gets refused: three missions at up to 190, a streak
+ * bonus of up to 420, and a rank-up worth up to 2000. Loose on purpose — the
+ * ledger exists to stop a save claiming a million coins, not to audit a run.
  */
-export const MISSION_COINS_PER_RUN = 600;
+export const CLIENT_COINS_PER_RUN = 3000;
 
 export const submit = mutation({
   args: {
@@ -73,7 +74,7 @@ export const submit = mutation({
     }
     // A validated run is the only thing that can pay coins out, so it is the
     // only thing that lifts the ceiling on what a save may be worth.
-    patch.coinLedger = (player.coinLedger ?? 0) + Math.floor(args.coins) + MISSION_COINS_PER_RUN;
+    patch.coinLedger = (player.coinLedger ?? 0) + Math.floor(args.coins) + CLIENT_COINS_PER_RUN;
     await ctx.db.patch(player._id, patch);
 
     if (score > player.best) {

@@ -14,6 +14,29 @@ export const RANKS = [
   { level: 9, xp: 50000, name: "전설" },
 ];
 
+/**
+ * Coins paid for reaching a new rank.
+ *
+ * Scaled by the rank so the ladder keeps paying: the ranks are far apart by
+ * design, and arriving at 「메트로 마스터」 for the same 250 coins as 「통근자」
+ * would make the climb feel like it stopped mattering halfway up.
+ */
+export const RANK_UP_COINS = 250;
+
+export function rankReward(level) {
+  return RANK_UP_COINS * Math.max(0, Math.floor(level) - 1);
+}
+
+/** Everything earned by crossing from one rank to another, ranks included. */
+export function rankUpBetween(fromLevel, toLevel) {
+  const gained = [];
+  for (let level = fromLevel + 1; level <= toLevel; level++) {
+    const rank = RANKS.find((entry) => entry.level === level);
+    if (rank) gained.push(rank);
+  }
+  return { ranks: gained, coins: gained.reduce((sum, rank) => sum + rankReward(rank.level), 0) };
+}
+
 /** XP awarded for a finished run, on top of any mission rewards. */
 export function runXp(score) {
   return Math.floor(Math.max(0, score) / 25);

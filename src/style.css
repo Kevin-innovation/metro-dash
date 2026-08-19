@@ -1629,6 +1629,65 @@ button.report-flag:disabled {
   white-space: normal;
 }
 
+/* Days in a row, sitting beside the coin bank on the title card. Warm against
+   the gold so the two numbers do not read as one. */
+.streak-chip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 122, 60, 0.16);
+  border: 1px solid rgba(255, 122, 60, 0.4);
+  color: #ffb08a;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* The one moment the rank ladder pays off, so it gets the whole width of the
+   card and the gold the score itself uses. */
+.rank-up {
+  margin: 4px 0 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 210, 74, 0.2), rgba(255, 210, 74, 0.06));
+  border: 1px solid rgba(255, 210, 74, 0.5);
+  animation: rankUpIn 0.42s ease-out;
+}
+
+.rank-up-title {
+  margin: 0;
+  font-family: var(--font-numeric);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  color: #ffe9a3;
+}
+
+.rank-up-name {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.rank-up-reward {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #ffe9a3;
+}
+
+@keyframes rankUpIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* A field that has been switched off by 일반부 or by the confirmation step has
    to look switched off, or it reads as a form that stopped responding. */
 .account-form input:disabled,

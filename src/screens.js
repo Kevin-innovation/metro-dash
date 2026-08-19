@@ -648,6 +648,15 @@ export class Screens {
   // --- persistent profile --------------------------------------------------
 
   refreshProfile(save) {
+    // Days in a row, where the player sees it before deciding to play rather
+    // than after. A streak nobody can see is not a streak.
+    const streakEl = $("streak-chip");
+    if (streakEl) {
+      const days = Math.max(0, Math.floor(save.streak ?? 0));
+      streakEl.classList.toggle("hidden", days < 1);
+      streakEl.textContent = `🔥 ${days}일 연속`;
+    }
+
     const best = save.best.toLocaleString();
     for (const id of ["best-score", "hud-best", "over-best"]) {
       const el = $(id);
@@ -754,7 +763,7 @@ export class Screens {
 
   // --- game over -----------------------------------------------------------
 
-  showGameOver(run, save, result) {
+  showGameOver(run, save, result, promotion = null) {
     const rounded = Math.floor(run.score);
 
     $("final-score").textContent = rounded.toLocaleString();
@@ -774,9 +783,27 @@ export class Screens {
     const xpEl = $("final-xp");
     if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
 
+    this.renderPromotion(promotion);
     const cleared = this.renderMissionResults(result);
     this.setOverlay("dead");
     return cleared;
+  }
+
+  /** The rank climbed by this run, when there was one. */
+  renderPromotion(promotion) {
+    const box = $("rank-up");
+    if (!box) return;
+    if (!promotion?.ranks?.length) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+    const top = promotion.ranks[promotion.ranks.length - 1];
+    box.classList.remove("hidden");
+    box.innerHTML = `
+      <p class="rank-up-title">LEVEL UP</p>
+      <p class="rank-up-name">Lv.${top.level} ${escapeHtml(top.name)}</p>
+      <p class="rank-up-reward">🪙 +${promotion.coins.toLocaleString()}</p>`;
   }
 
   /** @returns {boolean} whether any mission was cleared, so the caller can cue audio */

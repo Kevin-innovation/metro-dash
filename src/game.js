@@ -33,6 +33,7 @@ import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
 import { perkFor } from "./characters.js";
+import { attendance, dayKey } from "./daily.js";
 import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
 
 
@@ -441,11 +442,44 @@ export class Game {
     return phaseAt(this.runTime).name;
   }
 
+  /**
+   * Pay for turning up today.
+   *
+   * Claimed when a run starts rather than when the app opens: opening the game
+   * and putting it down again is not playing, and a streak that counts those
+   * days rewards the wrong habit.
+   */
+  claimAttendance() {
+    const now = Date.now();
+    const visit = attendance(this.store.data, now);
+    this.store.data.lastDay = dayKey(now);
+    if (!visit.first) {
+      this.store.flush();
+      return;
+    }
+    this.store.data.streak = visit.streak;
+    this.store.data.bestStreak = Math.max(this.store.data.bestStreak ?? 0, visit.streak);
+    this.store.addCoins(visit.reward);
+    this.screens.showToast(`${visit.streak}일 연속 출석 · 🪙 +${visit.reward}`);
+    this.audio.purchase();
+  }
+
   showGameOver() {
+    // Read before banking: the rank is what the XP about to be paid may change.
+    const before = rankAt(this.store.data.xp).level;
     const result = this.bankProgress(false);
+    const after = rankAt(this.store.data.xp).level;
+
+    // A rank was climbed and nothing said so. The bar under the nickname moved
+    // and that was the whole event, which is a strange way to treat the one
+    // number a player spends a week pushing.
+    const promotion = after > before ? rankUpBetween(before, after) : null;
+    if (promotion?.coins) this.store.addCoins(promotion.coins);
+
     this.syncRun();
-    const cleared = this.screens.showGameOver(this.run, this.store.data, result);
-    if (cleared) this.audio.mission();
+    const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion);
+    if (promotion) this.audio.purchase();
+    else if (cleared) this.audio.mission();
     this.screens.refreshProfile(this.store.data);
   }
 
@@ -496,6 +530,7 @@ export class Game {
     if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
       this.bankProgress(true);
     }
+    this.claimAttendance();
     this.input.clear();
     this.resetRunState();
     this.state = "playing";
