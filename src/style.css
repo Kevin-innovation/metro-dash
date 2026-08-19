@@ -11,6 +11,9 @@
      it is reserved for the numerals in the HUD. */
   --font-display: "Do Hyeon", "Jua", sans-serif;
   --font-numeric: "Black Han Sans", "Do Hyeon", sans-serif;
+
+  /* Tall enough for a name with a second line under it, padding included. */
+  --board-row-h: 58px;
 }
 
 * {
@@ -1351,6 +1354,11 @@ kbd {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
+  /* One height for every row in both columns, whether the second line is there
+     or not. A school row always carries its member count and a player row only
+     sometimes carries a school, so left them to their content the two columns
+     ran at different pitches and the boards read as two unrelated lists. */
+  min-height: var(--board-row-h);
   border-radius: 12px;
   background: rgba(7, 16, 24, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.06);
