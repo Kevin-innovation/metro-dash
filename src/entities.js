@@ -8,6 +8,7 @@ import {
   TRAIN_COLORS,
 } from "./config.js";
 import { SPEC } from "./specs.js";
+import { makeContainerSkin } from "./textures.js";
 
 const BUS_COLORS = [0xffc107, 0x26c6da, 0xef5350, 0x66bb6a];
 
@@ -171,14 +172,61 @@ export function makeSign() {
   return g;
 }
 
+/**
+ * Freight container.
+ *
+ * Deliberately nothing like a bus. The buses are bright, pastel and glassy —
+ * amber, cyan, red, green — so the container takes the colours a bus never
+ * wears (rust, marine teal, deep navy), wears corrugated steel instead of flat
+ * paint, and carries a yellow hazard stripe along the top edge, which is the
+ * part the player is about to jump over.
+ */
+const CONTAINER_COLORS = [0xe0651f, 0x1e9aa4, 0x3f6ea8];
+
+/**
+ * Shared once for every container ever pooled. Geometry and materials are the
+ * expensive half of an entity; the meshes that reference them are cheap.
+ */
+let containerParts = null;
+function container() {
+  if (containerParts) return containerParts;
+  const skin = makeContainerSkin();
+  containerParts = {
+    skin,
+    shell: new THREE.BoxGeometry(1.45, 1.15, 1.35),
+    post: new THREE.BoxGeometry(0.11, 1.19, 0.11),
+    stripe: new THREE.BoxGeometry(1.32, 0.05, 0.3),
+    // Corner castings: the pale steel is what separates the silhouette from the
+    // dark road behind it once the body colour goes dark.
+    postMat: lambert(0x9fb0bb),
+    stripeMat: lambert(0xffd400, { emissive: 0x6b5200, emissiveIntensity: 0.35 }),
+  };
+  return containerParts;
+}
+
 export function makeCrate() {
+  const parts = container();
   const g = new THREE.Group();
-  const box = new THREE.Mesh(new THREE.BoxGeometry(1.45, 1.15, 1.35), lambert(0xc48a3a));
-  box.position.y = 0.58;
-  g.add(box);
-  const band = new THREE.Mesh(new THREE.BoxGeometry(1.47, 0.12, 1.37), lambert(0x6d4c41));
-  band.position.y = 0.58;
-  g.add(band);
+
+  const colour = CONTAINER_COLORS[(Math.random() * CONTAINER_COLORS.length) | 0];
+  const shell = new THREE.Mesh(parts.shell, lambert(colour, { map: parts.skin }));
+  shell.position.y = 0.575;
+  g.add(shell);
+
+  [
+    [-0.7, -0.65],
+    [0.7, -0.65],
+    [-0.7, 0.65],
+    [0.7, 0.65],
+  ].forEach(([x, z]) => {
+    const post = new THREE.Mesh(parts.post, parts.postMat);
+    post.position.set(x, 0.595, z);
+    g.add(post);
+  });
+
+  const stripe = new THREE.Mesh(parts.stripe, parts.stripeMat);
+  stripe.position.y = 1.175;
+  g.add(stripe);
   return g;
 }
 

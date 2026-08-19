@@ -54,6 +54,8 @@ export class Game {
     this.lastFrame = 0;
     this.shake = 0;
     this.hitstop = 0;
+    /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
+    this.fovPunch = 0;
 
     this.store = new SaveStore();
     this.settings = this.store.data.settings;
@@ -83,7 +85,10 @@ export class Game {
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: true,
+      // Multisampling costs a full extra buffer, and on a 2x phone screen the
+      // pixels are already smaller than the aliasing it removes. Decided once,
+      // here, because the flag cannot be changed after the context exists.
+      antialias: (globalThis.devicePixelRatio ?? 1) < 2,
       powerPreference: "high-performance",
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -557,6 +562,7 @@ export class Game {
     }
 
     this.shake = Math.max(0, this.shake - frameDt * 6);
+    this.fovPunch = Math.max(0, this.fovPunch - frameDt * 2.4);
     this.emitAmbientParticles(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
@@ -605,6 +611,34 @@ export class Game {
     }
   }
 
+  /**
+   * A fistful of speed lines at once.
+   *
+   * The ambient emitter above trickles these out to describe how fast the run
+   * is; this fires a clump of them at the instant something changed, which is
+   * what the eye actually reads as acceleration.
+   */
+  speedBurst(count) {
+    if (!this.quality.speedLines || this.state !== "playing") return;
+    const p = this.player;
+    this.particles.emit(count, () => {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      return {
+        x: p.x + side * (2.2 + Math.random() * 2.8),
+        y: 0.5 + Math.random() * 3.6,
+        z: p.z + 12 + Math.random() * 14,
+        vx: 0,
+        vy: 0,
+        vz: -this.speed * 1.7,
+        life: 0.3,
+        size: 0.5,
+        colour: [1, 1, 1],
+        gravity: 0,
+        drag: 0,
+      };
+    });
+  }
+
   /** A single fixed-size simulation step. */
   simulate(dt) {
     if (this.state === "playing") this.advanceRun(dt);
@@ -648,10 +682,19 @@ export class Game {
     this.speed += (target - this.speed) * approach(2.6, dt);
 
     if (phase.id !== this.phaseId) {
+      const faster = phase.id > this.phaseId;
       this.phaseId = phase.id;
       this.bgm.setPhase(phase.id);
       this.screens.setPhaseLabel(phase.name);
       if (phase.toast) this.screens.showToast(phase.toast);
+      // Felt, not just read: the lens widens, the world lurches and the air
+      // fills with streaks for a moment.
+      if (faster) {
+        this.fovPunch = 1;
+        this.shake = Math.max(this.shake, 0.3);
+        this.speedBurst(14);
+        vibrate(18);
+      }
     }
 
     const expired = this.run.advance(dt, {
@@ -689,6 +732,11 @@ export class Game {
     if (hop) this.audio.hop();
     else this.audio.mount();
     this.run.addMount(hop);
+    // Landing on a roof is a landing: it gets the same thump as hitting the
+    // deck, or riding a bus feels like floating onto it.
+    const p = this.player;
+    this.particles.dust(p.x, p.y, p.z, { count: 7, speed: 2.6 + this.speed * 0.04 });
+    this.shake = Math.max(this.shake, hop ? 0.12 : 0.2);
     if (!hop) vibrate(12);
   }
 
@@ -855,6 +903,22 @@ export class Game {
       this.audio.nearMiss();
       this.screens.flashNearMiss();
     }
+    if (cleared.nearMisses > 0) {
+      // The whole point of a near miss is that it was close. Without something
+      // physical the player only learns about it from a word on the HUD.
+      const p = this.player;
+      this.shake = Math.max(this.shake, 0.1);
+      this.fovPunch = Math.max(this.fovPunch, 0.4);
+      this.speedBurst(5);
+      this.particles.burst(p.x, p.y + 0.8, p.z + 0.4, {
+        count: 5,
+        colour: 0xbfe9ff,
+        speed: 3.4,
+        life: 0.24,
+        size: 0.26,
+      });
+      vibrate(6);
+    }
 
     // A hoverboard eats the first hit; grace covers the recovery.
     if (this.boardGrace <= 0 && this.interactions.detectCrash(this.player)) {
@@ -913,7 +977,9 @@ export class Game {
   updateCamera(dt) {
     const p = this.player;
     const spdK = THREE.MathUtils.clamp((this.speed - 16) / 34, 0, 1);
-    const fov = 58 + spdK * 9;
+    // The steady part tracks speed; the punch is what makes a gear change feel
+    // like one instead of a number quietly going up in the corner.
+    const fov = 58 + spdK * 9 + this.fovPunch * 7;
     if (Math.abs(this.camera.fov - fov) > 0.2) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();

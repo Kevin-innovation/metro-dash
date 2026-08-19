@@ -41,6 +41,47 @@ export function makeBallast() {
   });
 }
 
+/**
+ * Corrugated steel skin for the freight container.
+ *
+ * Drawn in greys so one upload can be tinted to every container colour by the
+ * material, and so the folds read as folds — the flat-coloured box it replaced
+ * was the same shape and brightness as a bus at distance, which is exactly the
+ * read the player has to make in a hurry.
+ */
+export function makeContainerSkin() {
+  return canvasTexture(128, 128, (ctx, w, h) => {
+    ctx.fillStyle = "#cfcfcf";
+    ctx.fillRect(0, 0, w, h);
+
+    // Vertical folds: a lit face and a shaded face per rib, which is what makes
+    // the surface read as pressed metal rather than as printed stripes.
+    const pitch = 16;
+    for (let x = 0; x < w; x += pitch) {
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillRect(x, 0, pitch * 0.34, h);
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.fillRect(x + pitch * 0.6, 0, pitch * 0.32, h);
+    }
+
+    // Top and bottom rails, the heavy edges every container is built around.
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.fillRect(0, 0, w, 11);
+    ctx.fillRect(0, h - 11, w, 11);
+    ctx.fillStyle = "rgba(255,255,255,0.28)";
+    ctx.fillRect(0, 11, w, 2);
+
+    // A little weathering, so three identical boxes in a row do not look
+    // stamped from the same frame.
+    for (let i = 0; i < 26; i++) {
+      const x = hash(i, 31) * w;
+      const y = 12 + hash(i, 32) * (h - 34);
+      ctx.fillStyle = `rgba(60,34,18,${0.05 + hash(i, 33) * 0.12})`;
+      ctx.fillRect(x, y, 1 + hash(i, 34) * 3, 4 + hash(i, 35) * 22);
+    }
+  });
+}
+
 export function makeWood() {
   return canvasTexture(128, 64, (ctx, w, h) => {
     ctx.fillStyle = "#5d3c24";

@@ -53,6 +53,9 @@ export function renderRank(nameEl, barEl, xpEl, xp) {
  * Power-up chips with their remaining-time bars. Rebuilt only when the set of
  * active power-ups changes; the bars themselves are scaled every frame.
  */
+/** The bar nodes of the chips currently mounted, so the frame loop never queries. */
+let powerupFills = [];
+
 export function renderPowerupHud(el, timers, durations) {
   if (!el) return;
   const active = Object.keys(POWERUPS).filter((id) => timers[id] > 0);
@@ -71,12 +74,14 @@ export function renderPowerupHud(el, timers, durations) {
           </div>`;
       })
       .join("");
+    // Looked up once per change of the set, rather than three querySelectors
+    // every frame for the whole of a magnet.
+    powerupFills = active.map((id) => [id, el.querySelector(`[data-pw="${id}"] .pw-fill`)]);
+    el.classList.toggle("hidden", active.length === 0);
   }
 
-  el.classList.toggle("hidden", active.length === 0);
-  for (const id of active) {
-    const chip = el.querySelector(`[data-pw="${id}"] .pw-fill`);
-    if (chip) chip.style.transform = `scaleX(${Math.max(0, timers[id] / (durations[id] || 1))})`;
+  for (const [id, fill] of powerupFills) {
+    if (fill) fill.style.transform = `scaleX(${Math.max(0, timers[id] / (durations[id] || 1))})`;
   }
 }
 
@@ -84,33 +89,71 @@ export function renderPowerupHud(el, timers, durations) {
  * Per-frame HUD sync. Everything here is cheap string/transform work; anything
  * that rebuilds DOM guards on a change first.
  */
-export function renderHud(state) {
-  $("score").textContent = Math.floor(state.score).toLocaleString();
-  $("coin-count").textContent = String(state.coins);
-
-  const comboEl = $("combo");
-  const tier = comboTier(state.combo);
-  if (state.combo >= 2) {
-    comboEl.classList.remove("hidden");
-    comboEl.textContent = tier.label
-      ? `${tier.label}  x${tier.multiplier}`
-      : `COMBO x${state.combo}`;
-  } else {
-    comboEl.classList.add("hidden");
-  }
-
-  renderPowerupHud($("powerup-stack"), state.powerups, state.durations);
-
+/**
+ * Nodes the run touches every frame.
+ *
+ * Resolved once. getElementById is cheap on its own, but this runs sixty times
+ * a second on a phone that is also drawing the world, and none of these ids
+ * ever point at a different element.
+ */
+let hud = null;
+function hudNodes() {
+  if (hud) return hud;
   const boardWrap = $("board-wrap");
-  if (boardWrap) {
-    boardWrap.classList.toggle("riding", state.boarding);
-    const fill = boardWrap.querySelector(".board-fill");
-    if (fill) fill.style.transform = `scaleX(${state.boardT / HOVERBOARD_TIME})`;
-    const count = $("board-count");
-    if (count) count.textContent = String(state.hoverboards);
+  hud = {
+    score: $("score"),
+    coins: $("coin-count"),
+    combo: $("combo"),
+    powerups: $("powerup-stack"),
+    boardWrap,
+    boardFill: boardWrap?.querySelector(".board-fill") ?? null,
+    boardCount: $("board-count"),
+    pace: $("pace-chip"),
+    /** Last value written, so an unchanged string is not written again. */
+    last: { score: null, coins: null, combo: null, boards: null, pace: null },
+  };
+  return hud;
+}
+
+export function renderHud(state) {
+  const el = hudNodes();
+  const last = el.last;
+
+  const score = Math.floor(state.score).toLocaleString();
+  if (score !== last.score) {
+    el.score.textContent = score;
+    last.score = score;
+  }
+  if (state.coins !== last.coins) {
+    el.coins.textContent = String(state.coins);
+    last.coins = state.coins;
   }
 
-  $("pace-chip").textContent = `${state.phaseName}  ${Math.round(state.speed)}`;
+  const tier = comboTier(state.combo);
+  const combo =
+    state.combo >= 2 ? (tier.label ? `${tier.label}  x${tier.multiplier}` : `COMBO x${state.combo}`) : "";
+  if (combo !== last.combo) {
+    el.combo.classList.toggle("hidden", !combo);
+    if (combo) el.combo.textContent = combo;
+    last.combo = combo;
+  }
+
+  renderPowerupHud(el.powerups, state.powerups, state.durations);
+
+  if (el.boardWrap) {
+    el.boardWrap.classList.toggle("riding", state.boarding);
+    if (el.boardFill) el.boardFill.style.transform = `scaleX(${state.boardT / HOVERBOARD_TIME})`;
+    if (el.boardCount && state.hoverboards !== last.boards) {
+      el.boardCount.textContent = String(state.hoverboards);
+      last.boards = state.hoverboards;
+    }
+  }
+
+  const pace = `${state.phaseName}  ${Math.round(state.speed)}`;
+  if (pace !== last.pace) {
+    el.pace.textContent = pace;
+    last.pace = pace;
+  }
 }
 
 export function renderSettings(root, settings, activeTier) {

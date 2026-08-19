@@ -26,12 +26,14 @@ export const PATTERNS = [
     id: "coins",
     minPhase: 0,
     weight: 3,
+    late: 1,
     build: ({ z, lane }) => coinLine(lane, z, 7, 1.6, 0.7),
   },
   {
     id: "train",
     minPhase: 0,
     weight: 3,
+    late: 1,
     build: ({ z, lane, others }) => [
       { type: "train", lane, z },
       ...coinLine(others[0], z - 4, 5),
@@ -41,12 +43,14 @@ export const PATTERNS = [
     id: "bus",
     minPhase: 0,
     weight: 3,
+    late: 1,
     build: ({ z, lane }) => [{ type: "bus", lane, z }, ...coinLine(lane, z - 3, 6, 1.35, 2.55)],
   },
   {
     id: "barrier",
     minPhase: 0,
     weight: 3,
+    late: 1,
     build: ({ z, lane }) => [
       { type: "barrier", lane, z },
       ...Array.from({ length: 4 }, (_, i) => ({
@@ -61,6 +65,7 @@ export const PATTERNS = [
     id: "crate",
     minPhase: 0,
     weight: 2,
+    late: 1,
     build: ({ z, lane }) => [{ type: "crate", lane, z }],
   },
   {
@@ -69,6 +74,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 1,
     weight: 3,
+    late: 2,
     build: ({ z, lane }) => [
       { type: "sign", lane, z },
       { type: "coin", lane, z, y: 0.42 },
@@ -78,6 +84,7 @@ export const PATTERNS = [
     id: "two-trains",
     minPhase: 1,
     weight: 2,
+    late: 2,
     build: ({ z, lanes }) => [
       { type: "train", lane: lanes[0], z },
       { type: "train", lane: lanes[1], z },
@@ -88,6 +95,7 @@ export const PATTERNS = [
     id: "bus-roof",
     minPhase: 1,
     weight: 2,
+    late: 2,
     build: ({ z, lane }) => [
       { type: "bus", lane, z },
       ...coinLine(lane, z - 3.2, 7, 1.35, 2.55),
@@ -97,6 +105,7 @@ export const PATTERNS = [
     id: "mixed",
     minPhase: 1,
     weight: 2,
+    late: 3,
     build: ({ z, lanes, gap }) => [
       { type: "bus", lane: lanes[0], z },
       { type: "barrier", lane: lanes[1], z: z + gap(0.2, 4) },
@@ -107,6 +116,7 @@ export const PATTERNS = [
     id: "oncoming-bus",
     minPhase: 1,
     weight: 2,
+    late: 3,
     build: ({ z, lane, others, gap }) => [
       { type: "bus", lane, z: z + gap(0.6, 16), oncoming: true },
       ...coinLine(others[0], z - 2, 5),
@@ -116,6 +126,7 @@ export const PATTERNS = [
     id: "triple-barrier",
     minPhase: 2,
     weight: 2,
+    late: 3,
     build: ({ z }) => [
       ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z })),
       ...ALL_LANES.map((lane) => ({ type: "coin", lane, z, y: 1.6 })),
@@ -127,6 +138,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 2,
     weight: 2,
+    late: 3,
     build: ({ z }) => [
       ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
       ...ALL_LANES.map((lane) => ({ type: "coin", lane, z, y: 0.42 })),
@@ -136,6 +148,7 @@ export const PATTERNS = [
     id: "two-bus",
     minPhase: 2,
     weight: 2,
+    late: 2,
     build: ({ z, lanes }) => [
       { type: "bus", lane: lanes[0], z },
       { type: "bus", lane: lanes[1], z },
@@ -146,6 +159,7 @@ export const PATTERNS = [
     id: "bus-hop",
     minPhase: 2,
     weight: 2,
+    late: 3,
     build: ({ z, lanes, gap }) => {
       const step = gap(0.6, 12, 0.42);
       return [
@@ -160,6 +174,7 @@ export const PATTERNS = [
     id: "oncoming-two",
     minPhase: 2,
     weight: 2,
+    late: 3,
     build: ({ z, lanes, gap }) => {
       const lead = gap(0.6, 16);
       return [
@@ -173,6 +188,7 @@ export const PATTERNS = [
     id: "zigzag",
     minPhase: 3,
     weight: 2,
+    late: 3,
     build: ({ z, gap }) => {
       const step = gap(0.62, 14, 0.44);
       return [
@@ -188,6 +204,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 3,
     weight: 2,
+    late: 3,
     // The gate wall has to sit beyond the runner's airtime, and super sneakers
     // stretch that to ~0.96s — so this gap is sized for the boosted jump and is
     // deliberately left out of the pressure compression. Compressing it would
@@ -206,6 +223,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 3,
     weight: 2,
+    late: 3,
     build: ({ z, gap }) => {
       const step = gap(0.75, 14, 0.52);
       return [
@@ -218,6 +236,7 @@ export const PATTERNS = [
     id: "train-hop",
     minPhase: 3,
     weight: 2,
+    late: 3,
     build: ({ z, lanes, gap }) => [
       { type: "train", lane: lanes[0], z },
       { type: "bus", lane: lanes[1], z: z + gap(0.7, 14, 0.5) },
@@ -228,6 +247,7 @@ export const PATTERNS = [
     id: "oncoming-mix",
     minPhase: 3,
     weight: 2,
+    late: 3,
     build: ({ z, lanes, gap }) => [
       { type: "bus", lane: lanes[0], z },
       { type: "bus", lane: lanes[1], z: z + gap(0.8, 20, 0.58), oncoming: true },
@@ -238,6 +258,7 @@ export const PATTERNS = [
     id: "gauntlet",
     minPhase: 4,
     weight: 2,
+    late: 4,
     build: ({ z, lanes, gap }) => {
       const first = gap(0.8, 16, 0.6);
       const second = first + gap(0.6, 12, 0.45);
@@ -252,6 +273,7 @@ export const PATTERNS = [
     id: "roof-weave",
     minPhase: 4,
     weight: 2,
+    late: 4,
     build: ({ z, gap }) => {
       const step = gap(0.6, 12, 0.45);
       return [
@@ -267,6 +289,7 @@ export const PATTERNS = [
     id: "triple-bus",
     minPhase: 4,
     weight: 1,
+    late: 3,
     build: ({ z }) => [
       ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
       ...coinLine(0, z - 2, 5, 1.35, 2.55),
@@ -358,13 +381,33 @@ export function describePattern(z, placements) {
  */
 export const SLIDE_BIAS_MAX = 3;
 
+/** The phase at which `late` weights are fully in effect. */
+const FULL_PHASE = 6;
+
+/**
+ * A pattern's share of the pile at this phase.
+ *
+ * Unlocking harder layouts was not enough on its own: the single-obstacle
+ * openers keep their weight forever, so a late run was mostly one bus at a time
+ * arriving very fast — quick, but not actually harder to read. `late` is the
+ * weight a pattern drifts towards as the run winds up, which thins the fillers
+ * out and lets the gauntlets take the space. Never below one copy, so nothing
+ * ever disappears from the run entirely.
+ */
+export function weightAt(pattern, phaseId) {
+  const late = pattern.late ?? pattern.weight;
+  const span = Math.max(1, FULL_PHASE - pattern.minPhase);
+  const t = Math.min(1, Math.max(0, (phaseId - pattern.minPhase) / span));
+  return Math.max(1, Math.round(pattern.weight + (late - pattern.weight) * t));
+}
+
 export function candidatesFor(phaseId, slideBias = 0) {
   const bias = Math.min(1, Math.max(0, slideBias));
   const pool = [];
   for (const pattern of PATTERNS) {
     if (pattern.minPhase > phaseId) continue;
     const extra = pattern.slide ? 1 + SLIDE_BIAS_MAX * bias : 1;
-    const copies = Math.round(pattern.weight * extra);
+    const copies = Math.round(weightAt(pattern, phaseId) * extra);
     for (let i = 0; i < copies; i++) pool.push(pattern);
   }
   return pool;
