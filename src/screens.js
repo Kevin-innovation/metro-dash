@@ -134,16 +134,26 @@ export class Screens {
     }
     // The PIN field is digits only, enforced as it is typed so the rule is
     // obvious rather than a rejection after the fact.
+    //
+    // Both fields only ever write back a value that actually differs, and never
+    // while a syllable is still being composed: assigning .value mid-composition
+    // throws away the Hangul in progress and moves the caret to the end, which
+    // is what made typing a nickname feel like the keyboard was skipping.
     const pin = $("field-pin");
     if (pin) {
-      pin.addEventListener("input", () => {
-        pin.value = pin.value.replace(/\D/g, "").slice(0, 4);
+      pin.addEventListener("input", (event) => {
+        if (event.isComposing) return;
+        const digits = pin.value.replace(/\D/g, "").slice(0, 4);
+        if (digits !== pin.value) pin.value = digits;
       });
     }
     const handle = $("field-handle");
     if (handle) {
-      handle.addEventListener("input", () => {
-        handle.value = handle.value.slice(0, HANDLE_MAX);
+      handle.addEventListener("input", (event) => {
+        if (event.isComposing) return;
+        // Counted in code points, matching the length the validator applies.
+        const capped = [...handle.value].slice(0, HANDLE_MAX).join("");
+        if (capped !== handle.value) handle.value = capped;
       });
     }
 

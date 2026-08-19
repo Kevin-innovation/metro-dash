@@ -10,6 +10,13 @@ export const DOUBLE_TAP_MS = 280;
 export const BOARD_HINT = "점프를 두 번 빠르게";
 export const BOARD_HINT_LONG = "달리는 중 점프를 두 번 빠르게 누르면 꺼내지고, 충돌 1회를 막아줍니다";
 
+/** Fields the player types into, where a key means a character and nothing else. */
+const TYPING_TARGETS = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
+
+function isTyping(target) {
+  return target instanceof Element && Boolean(target.closest(TYPING_TARGETS));
+}
+
 export class Input {
   constructor(el) {
     this.queue = [];
@@ -34,6 +41,11 @@ export class Input {
     };
 
     window.addEventListener("keydown", (e) => {
+      // A key aimed at a text field is not a control input. Without this the
+      // nickname box eats w/a/s/d/p and both arrows — preventDefault stops the
+      // character ever being inserted — so typing a name looked like the
+      // keyboard was dropping letters, and Enter never submitted the form.
+      if (isTyping(e.target) || e.isComposing) return;
       const act = map[e.code];
       if (!act) return;
       e.preventDefault();
