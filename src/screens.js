@@ -719,6 +719,22 @@ export class Screens {
     });
   }
 
+  /** The banner that says what this stretch of track is for. */
+  showEvent(event) {
+    const el = $("event-chip");
+    if (!el) return;
+    el.style.setProperty("--event", event.colour ?? "var(--gold)");
+    el.textContent =
+      event.scoreMultiplier > 1
+        ? `${event.name} · 점수 ×${event.scoreMultiplier}`
+        : event.name;
+    el.classList.remove("hidden");
+  }
+
+  hideEvent() {
+    $("event-chip")?.classList.add("hidden");
+  }
+
   showToast(text) {
     const el = $("speed-toast");
     el.textContent = text;

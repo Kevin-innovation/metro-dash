@@ -23,6 +23,20 @@ export const ALL_LANES = [-1, 0, 1];
  */
 export const PATTERNS = [
   {
+    // Section-only: three lanes of coins and nothing that can kill you. Never
+    // dealt by the ordinary draw — `section` keeps it out of the pile — because
+    // as a random pattern it would just be a gap in the run.
+    id: "rush-coins",
+    section: true,
+    minPhase: 0,
+    weight: 1,
+    build: ({ z }) => [
+      ...coinLine(-1, z, 8, 1.5, 0.7),
+      ...coinLine(0, z + 0.75, 8, 1.5, 1.95),
+      ...coinLine(1, z, 8, 1.5, 0.7),
+    ],
+  },
+  {
     id: "coins",
     minPhase: 0,
     weight: 2,
@@ -500,7 +514,7 @@ export function candidatesFor(phaseId, slideBias = 0) {
   const bias = Math.min(1, Math.max(0, slideBias));
   const pool = [];
   for (const pattern of PATTERNS) {
-    if (pattern.minPhase > phaseId) continue;
+    if (pattern.section || pattern.minPhase > phaseId) continue;
     const extra = pattern.slide ? 1 + SLIDE_BIAS_MAX * bias : 1;
     const copies = Math.round(weightAt(pattern, phaseId) * extra);
     for (let i = 0; i < copies; i++) pool.push(pattern);

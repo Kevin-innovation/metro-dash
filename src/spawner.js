@@ -3,7 +3,13 @@ import {
   CLEARANCE_SECONDS_HARD,
   PATTERN_CLEARANCE,
 } from "./config.js";
-import { POWERUP_PATTERNS, candidatesFor, describePattern, requiredLeadSeconds } from "./patterns.js";
+import {
+  POWERUP_PATTERNS,
+  candidatesFor,
+  describePattern,
+  patternById,
+  requiredLeadSeconds,
+} from "./patterns.js";
 
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
 const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
@@ -150,7 +156,14 @@ export class Spawner {
     if (last) this.lastHazard = last;
   }
 
-  choose(z, { speed = 20, phaseId = 1, tutorial = false, pressure = 0, slideBias = 0 }) {
+  choose(z, {
+    speed = 20,
+    phaseId = 1,
+    tutorial = false,
+    pressure = 0,
+    slideBias = 0,
+    eventPatterns = null,
+  }) {
     const context = {
       z,
       lane: pick([-1, 0, 1]),
@@ -163,6 +176,16 @@ export class Spawner {
       const wanted = TUTORIAL[this.patternCount - 1];
       const pattern = candidatesFor(9).find((p) => p.id === wanted);
       if (pattern) return pattern.build(context);
+    }
+
+    // A section overrides the draw entirely, including the phase gate: its
+    // layouts are chosen for what the section is asking the player to do, and
+    // a coin rush interrupted by a power-up drop is not a coin rush.
+    if (eventPatterns?.length) {
+      const chosen = eventPatterns
+        .map((id) => patternById(id))
+        .filter((pattern) => pattern && typeof pattern.build === "function");
+      if (chosen.length) return pick(chosen).build(context);
     }
 
     if (this.patternCount % POWERUP_EVERY === 0) {

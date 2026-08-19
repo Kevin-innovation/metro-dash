@@ -39,6 +39,8 @@ export class Run {
     this.scoreCoins = 0;
     this.scoreBonus = 0;
     this.coins = 0;
+    /** Set by Game while a section is running; 1 the rest of the time. */
+    this.eventMultiplier = 1;
     this.combo = 0;
     this.comboMax = 0;
     this.comboT = 0;
@@ -70,9 +72,10 @@ export class Run {
     return totalScore(this.scoreDist, this.scoreCoins, this.scoreBonus);
   }
 
-  /** Combo tier times any power-up bonus. */
+  /** Combo tier times any power-up bonus, times the section running now. */
   multiplier() {
-    return scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
+    const base = scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
+    return base * (this.eventMultiplier ?? 1);
   }
 
   bumpCombo() {

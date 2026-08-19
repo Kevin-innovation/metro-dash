@@ -34,6 +34,7 @@ import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
+import { eventAt } from "./events.js";
 import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
 
 
@@ -508,6 +509,10 @@ export class Game {
     this.boardGrace = 0;
     this.boardUsed = false;
     this.airborne = false;
+    this.sectionId = null;
+    // Optional call: the constructor resets the run state before the Screens
+    // layer exists, and a throw there would stop the game booting at all.
+    this.screens?.hideEvent();
   }
 
   resize() {
@@ -845,6 +850,24 @@ export class Game {
       }
     }
 
+    // Sections: for fifteen seconds the run asks for something else. Tracked
+    // here rather than in the spawner so the banner, the multiplier and the
+    // layouts all turn over on the same tick.
+    const section = eventAt(this.runTime);
+    const sectionId = section?.event.id ?? null;
+    if (sectionId !== this.sectionId) {
+      this.sectionId = sectionId;
+      if (section) {
+        this.screens.showEvent(section.event);
+        this.screens.showToast(`${section.event.name}!`);
+        this.audio.powerup();
+        this.fovPunch = Math.max(this.fovPunch, 0.7);
+      } else {
+        this.screens.hideEvent();
+      }
+    }
+    this.run.eventMultiplier = section?.event.scoreMultiplier ?? 1;
+
     const expired = this.run.advance(dt, {
       travelled: this.speed * dt,
       mounted: !!this.player.mounted,
@@ -977,6 +1000,8 @@ export class Game {
       // The tunnel's low roof has to mean something, so it leans the pattern
       // pick towards the gates you can only get under by sliding.
       slideBias: playing ? lookAt(this.runTime).slideBias : 0,
+      // While a section runs, its layouts are the only ones dealt.
+      eventPatterns: playing ? (eventAt(this.runTime)?.event.patterns ?? null) : null,
       tutorial: playing,
     });
   }
