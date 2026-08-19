@@ -1636,8 +1636,13 @@ button.report-flag:disabled {
   left: 50%;
   top: calc(116px + env(safe-area-inset-top));
   transform: translateX(-50%);
-  padding: 7px 18px;
-  border-radius: 999px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 170px;
+  padding: 7px 16px 8px;
+  border-radius: 16px;
   background: rgba(7, 16, 24, 0.8);
   border: 2px solid var(--event, var(--gold));
   color: var(--event, var(--gold));
@@ -1650,6 +1655,26 @@ button.report-flag:disabled {
   animation:
     eventIn 0.34s ease-out,
     eventPulse 1.6s ease-in-out 0.34s infinite;
+}
+
+.event-name {
+  text-align: center;
+}
+
+.event-track {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+/* Drains left to right as the section runs out, the same shape the power-up
+   chips use — one language for「이건 시간이 정해진 것」. */
+.event-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--event, var(--gold));
+  transform-origin: left center;
 }
 
 /* Breathing, so it stays visible against a moving background without having to

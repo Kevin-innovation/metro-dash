@@ -80,7 +80,7 @@ export function eventAt(t) {
   const seconds = event.seconds ?? EVENT_SECONDS;
   if (elapsed >= seconds) return null;
 
-  return { event, elapsed, remaining: seconds - elapsed };
+  return { event, elapsed, seconds, remaining: seconds - elapsed };
 }
 
 /** Score multiplier from the section alone, 1 when none is running. */

@@ -110,6 +110,8 @@ function hudNodes() {
     boardCount: $("board-count"),
     pace: $("pace-chip"),
     event: $("event-chip"),
+    eventName: $("event-name"),
+    eventFill: $("event-fill"),
     /** Last value written, so an unchanged string is not written again. */
     last: { score: null, coins: null, combo: null, boards: null, pace: null, event: null },
   };
@@ -153,14 +155,18 @@ export function renderHud(state) {
     }
   }
 
-  // The section banner counts down, which is what makes it read as a timed
-  // event rather than as the obstacles having stopped for no reason.
+  // The section banner drains a bar rather than printing a number. A gauge is
+  // read at a glance while the track is moving; a digit has to be focused on.
   if (el.event && state.event) {
     const bonus = state.event.multiplier > 1 ? ` ×${state.event.multiplier}` : "";
-    const text = `${state.event.name}${bonus} · ${Math.max(1, Math.ceil(state.event.remaining))}초`;
+    const text = `${state.event.name}${bonus}`;
     if (text !== last.event) {
-      el.event.textContent = text;
+      if (el.eventName) el.eventName.textContent = text;
       last.event = text;
+    }
+    if (el.eventFill) {
+      const left = Math.max(0, Math.min(1, state.event.remaining / (state.event.seconds || 1)));
+      el.eventFill.style.transform = `scaleX(${left})`;
     }
   } else {
     last.event = null;

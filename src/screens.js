@@ -721,6 +721,7 @@ export class Screens {
             name: game.section.event.name,
             multiplier: game.section.event.scoreMultiplier,
             remaining: game.section.remaining,
+            seconds: game.section.seconds,
           }
         : null,
     });
@@ -731,8 +732,7 @@ export class Screens {
     const el = $("event-chip");
     if (!el) return;
     el.style.setProperty("--event", event.colour ?? "var(--gold)");
-    // The text itself is written by the HUD sync, which has the countdown.
-    el.textContent = event.name;
+    // The label is written by the HUD sync, which also drains the bar.
     el.classList.remove("hidden");
   }
 

@@ -538,6 +538,17 @@ export const BASE_LEAD_SECONDS = 0.34;
 export const DISMOUNT_LEAD_SECONDS = 0.6;
 
 /**
+ * A wall of vehicles asks for a jump timed to land on the roof — not just any
+ * jump, which is what the old rule assumed when it handed mount walls the bare
+ * reaction time. At fifty metres a second that was seventeen metres of warning
+ * for a jump that has to be right to within a tenth of a second, and coming
+ * straight out of a gate the runner is still on the floor when it appears.
+ */
+export const MOUNT_LEAD_SECONDS = 0.8;
+/** Out of a slide the runner has to stand before the jump is worth anything. */
+export const MOUNT_AFTER_SLIDE_SECONDS = 1.0;
+
+/**
  * How long the runner needs between the last hazard and an oncoming wall.
  *
  * A wall has exactly one way through, so it is the one obstacle that cannot be
@@ -550,14 +561,17 @@ export const DISMOUNT_LEAD_SECONDS = 0.6;
 export function requiredLeadSeconds(previousRow, wallRow) {
   if (!previousRow) return 0;
 
-  // A wall of vehicles is cleared by landing on a roof, so arriving mid-air is
-  // an advantage rather than a trap.
-  if (wallRow?.requires === "mount") return BASE_LEAD_SECONDS;
-
   let seconds = BASE_LEAD_SECONDS;
   if (previousRow.rideable) seconds = Math.max(seconds, DISMOUNT_LEAD_SECONDS);
   // A jump commits the runner for its whole airtime; a slide can be cancelled
   // into a jump instantly, so it costs nothing beyond reaction.
   if (previousRow.requires === "jump") seconds = Math.max(seconds, BOOSTED_AIRTIME + 0.1);
+
+  if (wallRow?.requires === "mount") {
+    seconds = Math.max(seconds, MOUNT_LEAD_SECONDS);
+    if (previousRow.requires === "slide") {
+      seconds = Math.max(seconds, MOUNT_AFTER_SLIDE_SECONDS);
+    }
+  }
   return seconds;
 }

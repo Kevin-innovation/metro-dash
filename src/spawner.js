@@ -14,6 +14,16 @@ import {
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
 const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
 
+/**
+ * What follows a section, whatever the phase.
+ *
+ * A section trains one motion for ten seconds — slide, slide, slide — and the
+ * draw that comes after it used to be anything at all, including a wall of
+ * buses that has to be jumped onto within a tenth of a second. One ordinary
+ * layout in between is the difference between a hard game and a cheat.
+ */
+const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
+
 /** Power-ups are dealt on a cadence; the jetpack stays the rare one. */
 const POWERUP_DECK = ["magnet", "double", "sneakers", "magnet", "jetpack", "double", "sneakers"];
 const POWERUP_EVERY = 6;
@@ -58,6 +68,8 @@ export class Spawner {
      */
     this.lastHazard = null;
     this.nextSpawn = 0;
+    this.inEvent = false;
+    this.leavingEvent = false;
   }
 
   /**
@@ -176,6 +188,18 @@ export class Spawner {
       const wanted = TUTORIAL[this.patternCount - 1];
       const pattern = candidatesFor(9).find((p) => p.id === wanted);
       if (pattern) return pattern.build(context);
+    }
+
+    const inEvent = Boolean(eventPatterns?.length);
+    if (this.inEvent && !inEvent) this.leavingEvent = true;
+    this.inEvent = inEvent;
+
+    // The handover out of a section gets one ordinary layout before the game
+    // is allowed to ask for anything difficult again.
+    if (this.leavingEvent && !inEvent) {
+      this.leavingEvent = false;
+      const breather = AFTER_EVENT.map((id) => patternById(id)).filter(Boolean);
+      if (breather.length) return pick(breather).build(context);
     }
 
     // A section overrides the draw entirely, including the phase gate: its
