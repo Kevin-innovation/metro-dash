@@ -293,8 +293,13 @@ export const PATTERNS = [
     minPhase: 5,
     weight: 2,
     late: 4,
+    // A slide lasts SLIDE_TIME (0.7s) and cannot be renewed until it ends, so
+    // the gap between two gates has to be longer than that plus a moment to
+    // react — otherwise clearing the third gate means hitting the key inside a
+    // window of a few hundredths of a second. The floor is set from the slide,
+    // not from what looked hard on paper.
     build: ({ z, gap }) => {
-      const step = gap(0.95, 20, 0.78);
+      const step = gap(1.2, 26, 1.0);
       return [0, 1, 2].flatMap((i) =>
         ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + step * i })),
       );

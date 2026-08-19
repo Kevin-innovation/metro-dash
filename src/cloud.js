@@ -279,14 +279,18 @@ export class Cloud {
    * offline still counts locally, and the next sync carries it.
    */
   async save(profile) {
-    if (!this.signedIn) return false;
+    if (!this.signedIn) return { ok: false, reason: "offline" };
     try {
       // No score here on purpose: the server owns `best`, and it only moves
       // when a submitted run passes validation.
-      await this.mutation("players:save", { token: this.session.token, profile });
-      return true;
+      const result = await this.mutation("players:save", { token: this.session.token, profile });
+      // The server refuses a save worth more coins than the account could have
+      // earned. Reported rather than swallowed: a cloud copy that quietly
+      // stopped updating is the kind of fault nobody notices until they sign in
+      // on a new phone and find last month's save.
+      return result?.ok === false ? result : { ok: true };
     } catch {
-      return false;
+      return { ok: false, reason: "offline" };
     }
   }
 

@@ -355,7 +355,13 @@ export class Game {
       seconds: Math.floor(this.run.seconds),
       character: this.store.data.character,
     });
-    this.cloud.save(this.store.data);
+    this.cloud.save(this.store.data).then((result) => {
+      // Once per session: it is a standing condition, not an event, and a toast
+      // after every run would be nagging rather than informing.
+      if (result?.reason !== "ledger" || this.warnedLedger) return;
+      this.warnedLedger = true;
+      this.screens.showToast("클라우드 저장이 거절됐어요 · 선생님께 문의해 주세요");
+    });
   }
 
   // --- quality ------------------------------------------------------------
