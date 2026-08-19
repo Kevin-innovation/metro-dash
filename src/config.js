@@ -1,7 +1,10 @@
 export const LANES = [-2.2, 0, 2.2];
 export const SEGMENT_LEN = 30;
 export const SEGMENT_COUNT = 12;
-export const START_SPEED = 16;
+// The run used to open at a third of its cruising speed and take a minute and
+// a half to get there, so the first stretch was not the game — it was a queue
+// for the game.
+export const START_SPEED = 20;
 export const TITLE_SPEED = 10;
 /** Speed the run settles at once it is wound up, reached around two minutes. */
 export const CRUISE_SPEED = 50;
@@ -52,7 +55,7 @@ export const PATTERN_CLEARANCE = 6;
 // treadmill. These drive the part that actually tightens.
 
 /** Seconds before the run starts winding up, and when it is fully wound. */
-export const PRESSURE_STARTS_AT = 12;
+export const PRESSURE_STARTS_AT = 6;
 /**
  * Brought in from 240s. The first ramp used to finish at four minutes, by which
  * point a good player was around forty thousand points — and everything past it

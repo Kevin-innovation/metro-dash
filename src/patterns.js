@@ -25,14 +25,14 @@ export const PATTERNS = [
   {
     id: "coins",
     minPhase: 0,
-    weight: 3,
+    weight: 2,
     late: 1,
     build: ({ z, lane }) => coinLine(lane, z, 7, 1.6, 0.7),
   },
   {
     id: "train",
     minPhase: 0,
-    weight: 3,
+    weight: 2,
     late: 1,
     build: ({ z, lane, others }) => [
       { type: "train", lane, z },
@@ -42,14 +42,14 @@ export const PATTERNS = [
   {
     id: "bus",
     minPhase: 0,
-    weight: 3,
+    weight: 2,
     late: 1,
     build: ({ z, lane }) => [{ type: "bus", lane, z }, ...coinLine(lane, z - 3, 6, 1.35, 2.55)],
   },
   {
     id: "barrier",
     minPhase: 0,
-    weight: 3,
+    weight: 2,
     late: 1,
     build: ({ z, lane }) => [
       { type: "barrier", lane, z },
@@ -67,6 +67,50 @@ export const PATTERNS = [
     weight: 2,
     late: 1,
     build: ({ z, lane }) => [{ type: "crate", lane, z }],
+  },
+  {
+    // Two obstacles, two lanes, close enough that the second is read while the
+    // first is still being dodged. The early pile was single objects with empty
+    // track between them: one trivial decision every two seconds, which is not
+    // an easy game so much as an idle one.
+    id: "weave",
+    minPhase: 0,
+    weight: 3,
+    late: 2,
+    build: ({ z, lanes, gap }) => [
+      { type: "barrier", lane: lanes[0], z },
+      { type: "crate", lane: lanes[1], z: z + gap(0.55, 11, 0.42) },
+      ...coinLine(lanes[2], z - 1, 4),
+    ],
+  },
+  {
+    // The lane a player naturally swerves into is the one that is blocked next.
+    id: "lane-shift",
+    minPhase: 0,
+    weight: 3,
+    late: 2,
+    build: ({ z, lanes, gap }) => [
+      { type: "train", lane: lanes[0], z },
+      { type: "barrier", lane: lanes[1], z: z + gap(0.75, 16, 0.55) },
+      ...coinLine(lanes[2], z - 2, 5),
+    ],
+  },
+  {
+    // Coins arc over the barrier, so the jump pays rather than merely survives.
+    id: "hop-coins",
+    minPhase: 0,
+    weight: 2,
+    late: 1,
+    build: ({ z, lane, gap }) => [
+      { type: "barrier", lane, z },
+      ...Array.from({ length: 5 }, (_, i) => ({
+        type: "coin",
+        lane,
+        z: z + (i - 2) * 0.85,
+        y: 1.45 + Math.sin(i * 0.85) * 0.4,
+      })),
+      { type: "crate", lane, z: z + gap(0.7, 14, 0.5) },
+    ],
   },
   {
     id: "sign",

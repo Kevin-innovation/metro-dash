@@ -43,11 +43,13 @@ export function phaseAt(t) {
 
 export function speedAt(t) {
   if (t <= 0) return START_SPEED;
-  if (t < 16) return START_SPEED + t * 0.28;
-  if (t < 34) return 20.5 + (t - 16) * 0.36;
-  if (t < 56) return 27 + (t - 34) * 0.36;
-  if (t < 84) return 35 + (t - 56) * 0.29;
-  const cruise = Math.min(CRUISE_SPEED, 43 + (t - 84) * 0.16);
+  // Steep to begin with and easing off, rather than the old even climb: the
+  // first ten seconds are where a player decides whether this is a game about
+  // running, and 16m/s does not answer that question.
+  if (t < 12) return START_SPEED + t * 0.75;
+  if (t < 30) return 29 + (t - 12) * 0.4;
+  if (t < 60) return 36.2 + (t - 30) * 0.24;
+  const cruise = Math.min(CRUISE_SPEED, 43.4 + (t - 60) * 0.14);
   if (t <= LATE_PRESSURE_AT) return cruise;
   // A creep rather than a climb — 50 to 56 over four minutes. Small enough that
   // the sight lines still work, large enough that the layouts a player has
@@ -64,7 +66,10 @@ export function speedAt(t) {
 export function pressureAt(t) {
   const span = PRESSURE_FULL_AT - PRESSURE_STARTS_AT;
   if (span <= 0) return 1;
-  return Math.min(1, Math.max(0, (t - PRESSURE_STARTS_AT) / span));
+  const linear = Math.min(1, Math.max(0, (t - PRESSURE_STARTS_AT) / span));
+  // Front-loaded. A straight line spent its first minute barely moving, which
+  // is the minute that decides whether anyone plays a second run.
+  return linear ** 0.72;
 }
 
 /** Seconds of track the spawner leaves between patterns at time `t`. */
