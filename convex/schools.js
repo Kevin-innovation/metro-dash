@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { schoolKey, schoolLabel } from "../src/school.js";
+import { isGeneral, schoolKey, schoolLabel } from "../src/school.js";
 import { requirePlayer } from "./session.js";
 
 /**
@@ -95,7 +95,9 @@ export const top = query({
     const rows = await ctx.db.query("schools").withIndex("by_total").order("desc").take(take);
 
     return rows
-      .filter((row) => row.total > 0)
+      // 일반부 is an affiliation, not a school: it belongs under a player's name
+      // on the individual board, not in a ranking of schools.
+      .filter((row) => row.total > 0 && !isGeneral(row))
       .map((row, index) => ({
         rank: index + 1,
         key: row.key,
@@ -111,7 +113,8 @@ export const standing = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
     const player = await requirePlayer(ctx, token);
-    if (!player.schoolKey) return null;
+    // Nothing to stand in for 일반부, which the board above leaves out.
+    if (!player.schoolKey || isGeneral(player.school)) return null;
 
     const row = await ctx.db
       .query("schools")
@@ -124,6 +127,9 @@ export const standing = query({
       .withIndex("by_total", (q) => q.gt("total", row.total))
       .collect();
 
-    return { rank: above.length + 1, label: row.label, total: row.total, members: row.members };
+    // Counted the same way the board is, or a 일반부 total above this one would
+    // push every school below it down a place that does not exist on screen.
+    const ahead = above.filter((other) => !isGeneral(other)).length;
+    return { rank: ahead + 1, label: row.label, total: row.total, members: row.members };
   },
 });

@@ -31,6 +31,22 @@ export const LEVELS = [
 ];
 
 /**
+ * Everyone who is not at a school: teachers, parents, anyone past school age.
+ *
+ * Modelled as an affiliation like any other so it travels through the same
+ * validation, the same one-time choice and the same staff tools — but it is not
+ * a school, so `schools:top` leaves it off the school ranking. Without it an
+ * adult either has to claim a school they do not attend or stay unaffiliated.
+ */
+export const GENERAL_LEVEL = "일";
+export const GENERAL = { region: "일반", level: GENERAL_LEVEL, name: "일반부", label: "일반부" };
+
+/** @returns {boolean} true for the 일반부 affiliation rather than a real school. */
+export function isGeneral(school) {
+  return school?.level === GENERAL_LEVEL;
+}
+
+/**
  * Long enough for the real ones. Checked against the national list: the longest
  * legitimate name is 「이화여자대학교사범대학부속이화금란」 at seventeen syllables,
  * so anything under that would refuse actual schools.
@@ -89,6 +105,35 @@ const SUFFIXES = [
   { pattern: /중$/, level: "중", keep: "", certain: false },
   { pattern: /고$/, level: "고", keep: "", certain: false },
 ];
+
+/**
+ * Schools whose official name really does begin with their own region, and
+ * which would collide with a different school if that were taken off.
+ *
+ * There is exactly one nationwide: 인천삼산초등학교 and 삼산초등학교 are two
+ * schools, both in 인천. Every other region prefix in the national list is
+ * removable without merging two real schools — see `stripRegion`.
+ */
+const KEEP_REGION_PREFIX = new Set(["인천|초|인천삼산"]);
+
+/**
+ * Take the region off the front of a name that already carries it.
+ *
+ * Most schools outside Seoul are registered with their city in the name —
+ * 224 of the 237 primary schools in 대구 are 「대구○○초등학교」. A student writes
+ * whichever half they say out loud, so 「범어초」 and 「대구범어초등학교」 arrive as
+ * two different names for one school and the ranking splits in two. The region
+ * is already known from the menu, so it is dropped from the name and put back
+ * by the label, which makes both spellings the same school.
+ *
+ * The name is only shortened, never lengthened: 「계성초등학교」 in 서울 stays
+ * 「계성」 and is shown as 「서울계성초」.
+ */
+function stripRegion(region, level, name) {
+  if (!name.startsWith(region) || name.length === region.length) return name;
+  if (KEEP_REGION_PREFIX.has(`${region}|${level}|${name}`)) return name;
+  return name.slice(region.length);
+}
 
 export function levelLabel(code) {
   return LEVELS.find((level) => level.code === code)?.label ?? "";
@@ -149,6 +194,11 @@ function resolve(name, level) {
 export function validateSchool({ region, level, name } = {}) {
   const fail = (reason) => ({ ok: false, reason, message: REJECT_SCHOOL_MESSAGE[reason] });
 
+  // 일반부 carries no region and no name, so it is answered before either is
+  // looked at — and answered here rather than at the caller, so every path in
+  // and out of the database agrees on what it is.
+  if (level === GENERAL_LEVEL) return { ok: true, school: { ...GENERAL }, label: GENERAL.label };
+
   if (!REGIONS.includes(region)) return fail(REJECT_SCHOOL.REGION);
   if (!LEVELS.some((entry) => entry.code === level)) return fail(REJECT_SCHOOL.LEVEL);
 
@@ -168,12 +218,26 @@ export function validateSchool({ region, level, name } = {}) {
   // recovered later: 「용연학교」 is complete but 「서울대학교사범대학부설」 is not,
   // and nothing in the two strings tells them apart.
   const whole = impliedLevel === null && base.includes("학교");
-  const school = { region, level, name: base, label: composeLabel(region, level, base, whole) };
+  const name_ = stripRegion(region, level, base);
+  const school = { region, level, name: name_, label: composeLabel(region, level, name_, whole) };
   return { ok: true, school, label: school.label };
 }
 
+/**
+ * What a school is called on the board: 「대구범어초」, 「대구성화여중」.
+ *
+ * The region leads, because it is the one part every entry has and the part the
+ * ranking is read by, and the level is abbreviated the way a school is actually
+ * referred to out loud. Written this way the region cannot appear twice, which
+ * 「대구 대구동산초등학교」 did as long as the official name was kept whole.
+ */
 function composeLabel(region, level, name, whole) {
-  return `${region} ${name}${whole ? "" : levelLabel(level)}`;
+  // A name that already ends in 학교 is complete and takes nothing after it.
+  if (whole) return `${region}${name}`;
+  // 성화여자 + 중 → 성화여중, not 성화여자중.
+  const gender = name.endsWith("여자") ? "여" : name.endsWith("남자") ? "남" : "";
+  const stem = gender ? name.slice(0, -2) : name;
+  return `${region}${stem}${gender}${level}`;
 }
 
 /**
@@ -201,11 +265,37 @@ export function schoolLabel(school) {
 }
 
 /**
+ * Bring a stored school up to the current rules, for the maintenance pass that
+ * rewrites rows written by an older version.
+ *
+ * The name is not put back through `splitName` — it has already had its suffix
+ * taken off once, and a second pass would eat a syllable that is part of the
+ * name (「서울당중」 → 「서울당」). Only the region prefix and the label are redone.
+ *
+ * Whether the name is a complete school name cannot be read off the name alone
+ * (「용연학교」 is, 「서울대학교사범대학부설」 is not), so it is recovered from the
+ * stored label: a complete name was written with nothing after it. Rows saved
+ * before labels were kept fall back to the ending, which is right for every
+ * name that is complete because it ends in 학교.
+ */
+export function canonicalSchool({ region, level, name, label } = {}) {
+  if (level === GENERAL_LEVEL) return { ...GENERAL };
+  const base = normalizeHandle(name);
+  const whole = label
+    ? label.replace(/\s+/g, "") === `${region}${base}`
+    : base.endsWith("학교");
+  const canonical = stripRegion(region, level, base);
+  return { region, level, name: canonical, label: composeLabel(region, level, canonical, whole) };
+}
+
+/**
  * Best-effort label while someone is still typing, for the live preview under
  * the form. Never throws and never judges — it just shows what would be stored.
  */
 export function previewLabel({ region, level, name }) {
+  if (level === GENERAL_LEVEL) return GENERAL.label;
   const { base, impliedLevel } = resolve(name, level);
   if (!region || !level || !base) return "";
-  return composeLabel(region, level, base, impliedLevel === null && base.includes("학교"));
+  const whole = impliedLevel === null && base.includes("학교");
+  return composeLabel(region, level, stripRegion(region, level, base), whole);
 }

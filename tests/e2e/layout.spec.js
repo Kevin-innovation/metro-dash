@@ -12,11 +12,19 @@ import { findClippedText, findOrphanLines, findOverflow, openGame } from "./help
 
 /** Put plausible content into the lists that are empty without a server. */
 const SEED = () => {
-  const people = ["번개", "하늘달리기", "질주왕", "코인수집가", "동중에이스"];
+  // Name on top, affiliation under it — including the longest school name in
+  // the country, which is where the two-line row would break if anywhere.
+  const people = [
+    ["번개", "대구범어초"],
+    ["하늘달리기", "서울대학교사범대학부설초"],
+    ["질주왕", "일반부"],
+    ["코인수집가", ""],
+    ["동중에이스", "대구동중"],
+  ];
   document.getElementById("leaderboard-list").innerHTML = people
     .map(
-      (h, i) => `<li class="leaderboard-row"><span class="leaderboard-rank">${i + 1}</span>
-        <span class="leaderboard-handle">${h}</span>
+      ([h, school], i) => `<li class="leaderboard-row"><span class="leaderboard-rank">${i + 1}</span>
+        <span class="leaderboard-handle">${h}${school ? `<em class="row-school">${school}</em>` : ""}</span>
         <span class="leaderboard-score">${(14200 - i * 1130).toLocaleString()}</span>
         <button type="button" class="report-flag">🚩</button></li>`,
     )
@@ -25,9 +33,9 @@ const SEED = () => {
   // The longest real school name in the country, so the column is tested at its
   // worst rather than at a convenient average.
   const schools = [
-    ["서울 서울대학교사범대학부설초등학교", 41200, 24],
-    ["부산 대동남자고등학교", 38900, 6],
-    ["대구 성화여자중학교", 22400, 11],
+    ["서울대학교사범대학부설초", 41200, 24],
+    ["부산대동남고", 38900, 6],
+    ["대구성화여중", 22400, 11],
   ];
   document.getElementById("school-list").innerHTML = schools
     .map(
@@ -40,7 +48,7 @@ const SEED = () => {
 
   for (const [id, text] of [
     ["my-standing", "내 순위 5위 · 9,680점"],
-    ["my-school-standing", "서울 서울대학교사범대학부설초등학교 · 1위 · 41,200점"],
+    ["my-school-standing", "서울대학교사범대학부설초 · 1위 · 41,200점"],
     ["report-note", "신고했어요. 선생님이 확인합니다"],
   ]) {
     const el = document.getElementById(id);
@@ -50,7 +58,7 @@ const SEED = () => {
 
   document.getElementById("merge-local").textContent = "최고 12,400점\n코인 830개\n41판 · 2,100 XP";
   document.getElementById("merge-cloud").textContent = "최고 9,100점\n코인 220개\n12판 · 900 XP";
-  document.getElementById("school-confirm-label").textContent = "대구 동중학교";
+  document.getElementById("school-confirm-label").textContent = "대구동중";
 };
 
 const SCREENS = [
@@ -127,10 +135,10 @@ test("학교 이름 미리보기가 저장될 이름을 그대로 보여준다",
   await page.selectOption("#field-level", "중");
   await page.fill("#field-school", "동중");
   // The whole point: 「동중」 must not read as 「동중중학교」.
-  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구 동중학교");
+  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구동중");
 
   await page.fill("#field-school", "동");
-  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구 동중학교");
+  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구동중");
 });
 
 test("확정 단계가 수정 불가를 알리고 되돌릴 수 있다", async ({ page }) => {
@@ -143,7 +151,7 @@ test("확정 단계가 수정 불가를 알리고 되돌릴 수 있다", async (
   await page.click("#btn-school-submit");
 
   await expect(page.locator("#school-confirm")).toBeVisible();
-  await expect(page.locator("#school-confirm-label")).toHaveText("대구 동중학교");
+  await expect(page.locator("#school-confirm-label")).toHaveText("대구동중");
   await expect(page.locator(".school-confirm-warn")).toContainText("수정이 불가능합니다");
   // The fields are frozen so the name being confirmed cannot change underneath.
   await expect(page.locator("#field-school")).toBeDisabled();
@@ -164,4 +172,31 @@ test("학교급이 어긋나면 확정 단계로 넘어가지 않는다", async 
 
   await expect(page.locator("#school-confirm")).toBeHidden();
   await expect(page.locator("#school-error")).toContainText("학교급");
+});
+
+test("일반부를 고르면 학교 칸이 비활성화되고 일반부로 저장된다", async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => document.getElementById("btn-school").classList.remove("hidden"));
+  await page.click("#btn-school");
+
+  await page.selectOption("#field-region", "대구");
+  await page.selectOption("#field-level", "중");
+  await page.fill("#field-school", "동중");
+  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구동중");
+
+  await page.check("#field-general");
+  // Whatever was typed stops counting the moment 일반부 is ticked.
+  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 일반부");
+  await expect(page.locator("#field-school")).toBeDisabled();
+  await expect(page.locator("#field-region")).toBeDisabled();
+
+  await page.click("#btn-school-submit");
+  await expect(page.locator("#school-confirm-label")).toHaveText("일반부");
+
+  // Backing out returns the form to the state it was in, not to a blank one.
+  await page.click("#btn-school-cancel");
+  await expect(page.locator("#field-school")).toBeDisabled();
+  await page.uncheck("#field-general");
+  await expect(page.locator("#field-school")).toBeEnabled();
+  await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구동중");
 });

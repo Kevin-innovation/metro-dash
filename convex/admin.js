@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { handleKey, validateHandle } from "../src/nickname.js";
-import { schoolKey, schoolLabel, validateSchool } from "../src/school.js";
+import { canonicalSchool, schoolKey, schoolLabel, validateSchool } from "../src/school.js";
 import { ensureSchool, joinSchool, leaveSchool } from "./schools.js";
 
 /**
@@ -350,26 +350,36 @@ export const recomputeSchools = mutation({
     const tally = new Map();
     for await (const player of ctx.db.query("players")) {
       if (!player.school) continue;
-      // Recomputed from the stored school rather than the stored key, so a key
-      // written by an older version of the rules is corrected too.
-      const key = schoolKey(player.school);
-      const entry = tally.get(key) ?? { school: player.school, members: 0, total: 0, ids: [] };
+      // Put through the current rules rather than read as stored, so a name
+      // written under older ones is corrected: 「대구범어」 and 「범어」 are the same
+      // school and have to land on the same key before they are counted, or the
+      // rebuild would faithfully reproduce the split it exists to fix.
+      const school = canonicalSchool(player.school);
+      const key = schoolKey(school);
+      const entry = tally.get(key) ?? { school, members: 0, total: 0, ids: [] };
       entry.members += 1;
       entry.total += player.best;
       entry.ids.push(player._id);
       tally.set(key, entry);
     }
 
+    let moved = 0;
     for (const [key, entry] of tally) {
       const row = await ensureSchool(ctx, entry.school);
       await ctx.db.patch(row._id, {
+        // The name and the label are rewritten too: a row created before the
+        // rules changed keeps its old spelling until something replaces it.
+        name: entry.school.name,
+        label: entry.school.label,
         members: entry.members,
         total: entry.total,
         updatedAt: Date.now(),
       });
       for (const id of entry.ids) {
         const player = await ctx.db.get(id);
-        if (player.schoolKey !== key) await ctx.db.patch(id, { schoolKey: key });
+        if (player.schoolKey === key && player.school?.label === entry.school.label) continue;
+        await ctx.db.patch(id, { school: entry.school, schoolKey: key });
+        moved += 1;
       }
     }
 
@@ -382,7 +392,7 @@ export const recomputeSchools = mutation({
       }
     }
 
-    return { ok: true, schools: tally.size, removed };
+    return { ok: true, schools: tally.size, removed, moved };
   },
 });
 

@@ -1531,11 +1531,45 @@ button.report-flag:disabled {
   }
 }
 
-.school-members {
+.school-members,
+.row-school {
   display: block;
   font-style: normal;
   font-size: 11.5px;
   color: #7fa3ba;
+}
+
+/* A school name is longer than the nickname above it and must not push the
+   score sideways; it wraps instead. */
+.row-school {
+  white-space: normal;
+  line-height: 1.3;
+}
+
+/* A field that has been switched off by 일반부 or by the confirmation step has
+   to look switched off, or it reads as a form that stopped responding. */
+.account-form input:disabled,
+.account-form select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Not a school — say so quietly rather than in the same colour as one. */
+.school-general-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #9db4c4;
+  cursor: pointer;
+}
+
+.school-general-note input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold);
+  cursor: pointer;
 }
 
 @media (max-width: 620px) {

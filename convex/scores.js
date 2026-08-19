@@ -85,6 +85,9 @@ export const top = query({
         handle: player.handle,
         best: player.best,
         character: player.profile?.character ?? "runner",
+        // Shown under the name. Already rendered on the player document, so the
+        // board stays a single read.
+        school: player.school?.label ?? "",
       }));
   },
 });

@@ -1,6 +1,6 @@
 import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
-import { LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
+import { GENERAL_LEVEL, LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
 import { loadSchoolNames } from "./school-list.js";
 import { missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
@@ -265,9 +265,19 @@ export class Screens {
     region.onchange = onInput;
     level.onchange = onInput;
     $("field-school").oninput = onInput;
+    const general = $("field-general");
+    if (general) general.onchange = onInput;
+  }
+
+  /** True while 일반부 is ticked, which makes the school fields irrelevant. */
+  isGeneralPicked() {
+    return Boolean($("field-general")?.checked);
   }
 
   schoolInput() {
+    // 일반부 carries no region and no name, so none is sent: the rules answer on
+    // the level alone, and a half-filled form left behind cannot leak into it.
+    if (this.isGeneralPicked()) return { region: "", level: GENERAL_LEVEL, name: "" };
     return {
       region: $("field-region")?.value ?? "",
       level: $("field-level")?.value ?? "",
@@ -284,6 +294,17 @@ export class Screens {
   updateSchoolPreview() {
     const preview = $("school-preview");
     if (!preview) return;
+    const general = this.isGeneralPicked();
+    // The school fields are left visible but inert under 일반부, so what was
+    // typed is still there if the box is unticked again.
+    for (const id of ["field-region", "field-level", "field-school"]) {
+      const field = $(id);
+      if (field) field.disabled = general;
+    }
+
+    const submit = $("btn-school-submit");
+    if (submit) submit.textContent = general ? "일반부로 참여하기" : "이 학교로 정하기";
+
     const input = this.schoolInput();
     const label = previewLabel(input);
     preview.textContent = label
@@ -320,6 +341,8 @@ export class Screens {
   openSchool() {
     this.buildSchoolForm();
     $("field-school").value = "";
+    const general = $("field-general");
+    if (general) general.checked = false;
     this.showSchoolError(null);
     this.showSchoolConfirm(false);
     this.updateSchoolPreview();
@@ -350,8 +373,12 @@ export class Screens {
     $("btn-school-submit")?.classList.toggle("hidden", on);
     for (const id of ["field-region", "field-level", "field-school"]) {
       const field = $(id);
-      if (field) field.disabled = on;
+      // Back out of the confirmation and 일반부 decides again which of these are
+      // usable, rather than the confirmation handing them all back.
+      if (field) field.disabled = on || this.isGeneralPicked();
     }
+    const general = $("field-general");
+    if (general) general.disabled = on;
   }
 
   closeSchool() {
@@ -420,10 +447,15 @@ export class Screens {
                   row.handle,
                 )}" title="닉네임 신고" aria-label="${escapeHtml(row.handle)} 신고">🚩</button>`
               : `<span class="report-flag" aria-hidden="true"></span>`;
+          // The school under the name, where there is one. A player who has not
+          // picked yet simply has a one-line row.
+          const where = row.school
+            ? `<em class="row-school">${escapeHtml(row.school)}</em>`
+            : "";
           return `
             <li class="leaderboard-row${mine ? " me" : ""}">
               <span class="leaderboard-rank">${row.rank}</span>
-              <span class="leaderboard-handle">${escapeHtml(row.handle)}</span>
+              <span class="leaderboard-handle">${escapeHtml(row.handle)}${where}</span>
               <span class="leaderboard-score">${row.best.toLocaleString()}</span>
               ${flag}
             </li>`;

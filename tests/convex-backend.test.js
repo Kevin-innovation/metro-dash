@@ -448,9 +448,9 @@ describe("players:setSchool", () => {
     const { token } = await signUp(t, "학생일");
 
     const result = await joinSchool(t, token);
-    expect(result.schoolLabel).toBe("대구 동중학교");
+    expect(result.schoolLabel).toBe("대구동중");
     expect(await t.query(api.players.load, { token })).toMatchObject({
-      schoolLabel: "대구 동중학교",
+      schoolLabel: "대구동중",
       school: SCHOOL,
     });
   });
@@ -472,7 +472,7 @@ describe("players:setSchool", () => {
     // One row, three members — not three schools with one member each.
     const board = await t.query(api.schools.top, {});
     expect(board).toEqual([
-      expect.objectContaining({ rank: 1, label: "대구 동중학교", members: 3, total: 600 }),
+      expect.objectContaining({ rank: 1, label: "대구동중", members: 3, total: 600 }),
     ]);
   });
 
@@ -520,8 +520,8 @@ describe("schools:top", () => {
     await t.mutation(api.scores.submit, { token: c.token, ...plausibleRun({ score: 7000 }) });
 
     expect(await t.query(api.schools.top, {})).toEqual([
-      expect.objectContaining({ rank: 1, label: "대구 동중학교", total: 8000, members: 2 }),
-      expect.objectContaining({ rank: 2, label: "서울 한빛고등학교", total: 7000, members: 1 }),
+      expect.objectContaining({ rank: 1, label: "대구동중", total: 8000, members: 2 }),
+      expect.objectContaining({ rank: 2, label: "서울한빛고", total: 7000, members: 1 }),
     ]);
   });
 
@@ -579,7 +579,7 @@ describe("schools:standing", () => {
 
     expect(await t.query(api.schools.standing, { token: b.token })).toMatchObject({
       rank: 2,
-      label: "대구 동중학교",
+      label: "대구동중",
       total: 400,
     });
   });
@@ -608,7 +608,7 @@ describe("admin 학교 도구", () => {
 
     const board = await t.query(api.schools.top, {});
     expect(board).toEqual([
-      expect.objectContaining({ label: "서울 한빛고등학교", total: 3000, members: 1 }),
+      expect.objectContaining({ label: "서울한빛고", total: 3000, members: 1 }),
     ]);
   });
 
@@ -623,7 +623,7 @@ describe("admin 학교 도구", () => {
 
     await joinSchool(t, token, { region: "서울", level: "고", name: "한빛" });
     const [row] = await t.query(api.schools.top, {});
-    expect(row).toMatchObject({ label: "서울 한빛고등학교", total: 1200 });
+    expect(row).toMatchObject({ label: "서울한빛고", total: 1200 });
   });
 
   it("계정을 삭제하면 학교 점수에서도 빠진다", async () => {
@@ -687,14 +687,14 @@ describe("admin 학교 도구", () => {
       fromKey: typo.key,
       toKey: right.key,
     });
-    expect(merged).toMatchObject({ moved: 1, to: "대구 계성중학교" });
+    expect(merged).toMatchObject({ moved: 1, to: "대구계성중" });
 
     expect(await t.query(api.schools.top, {})).toEqual([
-      expect.objectContaining({ label: "대구 계성중학교", total: 4000, members: 2 }),
+      expect.objectContaining({ label: "대구계성중", total: 4000, members: 2 }),
     ]);
     // And the moved player now reads as being at the merged school.
     expect(await t.query(api.players.load, { token: a.token })).toMatchObject({
-      schoolLabel: "대구 계성중학교",
+      schoolLabel: "대구계성중",
     });
   });
 
@@ -730,7 +730,7 @@ describe("admin 학교 도구", () => {
         region: "대구",
         level: "중",
         name: "유령",
-        label: "대구 유령중학교",
+        label: "대구유령중",
         members: 3,
         total: 5000,
         updatedAt: 0,
@@ -743,12 +743,118 @@ describe("admin 학교 도구", () => {
     expect(await t.query(api.admin.schools, { adminKey: ADMIN_KEY })).toHaveLength(0);
   });
 
+  it("recompute 가 갈라진 학교를 하나로 되돌린다", async () => {
+    // The split that reached the live board: 대구범어초등학교 and 범어초등학교, one
+    // member each. Both rows are planted the way the old rules wrote them.
+    const t = backend();
+    const a = await signUp(t, "범어일", "1234", "d1");
+    const b = await signUp(t, "범어이", "1234", "d2");
+
+    await t.run(async (ctx) => {
+      const plant = async (session, name, label, best) => {
+        const key = `대구|초|${name}`;
+        const player = await ctx.db
+          .query("players")
+          .withIndex("by_token", (q) => q.eq("token", session.token))
+          .unique();
+        await ctx.db.patch(player._id, {
+          best,
+          school: { region: "대구", level: "초", name, label },
+          schoolKey: key,
+        });
+        await ctx.db.insert("schools", {
+          key,
+          region: "대구",
+          level: "초",
+          name,
+          label,
+          members: 1,
+          total: best,
+          updatedAt: 0,
+        });
+      };
+      await plant(a, "범어", "대구 범어초등학교", 13535);
+      await plant(b, "대구범어", "대구 대구범어초등학교", 6563);
+    });
+    expect(await t.query(api.schools.top, {})).toHaveLength(2);
+
+    const result = await t.mutation(api.admin.recomputeSchools, { adminKey: ADMIN_KEY });
+    expect(result).toMatchObject({ schools: 1, removed: 1, moved: 2 });
+
+    const rows = await t.query(api.schools.top, {});
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ label: "대구범어초", members: 2, total: 13535 + 6563 });
+
+    // The players' own copy is rewritten too, or the next join would recreate
+    // the row it was just merged out of.
+    for (const session of [a, b]) {
+      expect(await t.query(api.players.load, { token: session.token })).toMatchObject({
+        schoolLabel: "대구범어초",
+      });
+    }
+  });
+
   it("관리자 목록에 학교가 함께 보인다", async () => {
     const t = backend();
     const { token } = await signUp(t, "소속있음");
     await joinSchool(t, token);
     const [row] = await t.query(api.admin.list, { adminKey: ADMIN_KEY });
-    expect(row.school).toBe("대구 동중학교");
+    expect(row.school).toBe("대구동중");
+  });
+});
+
+describe("일반부", () => {
+  const GENERAL_INPUT = { region: "", level: "일", name: "" };
+
+  it("학생이 아니어도 소속을 정할 수 있다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "케빈");
+    const result = await joinSchool(t, token, GENERAL_INPUT);
+    expect(result.schoolLabel).toBe("일반부");
+    expect(await t.query(api.players.load, { token })).toMatchObject({ schoolLabel: "일반부" });
+  });
+
+  it("학교 랭킹에는 올라가지 않는다", async () => {
+    const t = backend();
+    const adult = await signUp(t, "어른", "1234", "d1");
+    const student = await signUp(t, "학생", "1234", "d2");
+    await joinSchool(t, adult.token, GENERAL_INPUT);
+    await joinSchool(t, student.token);
+    await t.mutation(api.scores.submit, { token: adult.token, ...plausibleRun({ score: 9000 }) });
+    await t.mutation(api.scores.submit, { token: student.token, ...plausibleRun({ score: 100 }) });
+
+    const rows = await t.query(api.schools.top, {});
+    expect(rows.map((row) => row.label)).toEqual(["대구동중"]);
+    // And the school below it is still first, not second behind 일반부.
+    expect(await t.query(api.schools.standing, { token: student.token })).toMatchObject({ rank: 1 });
+    expect(await t.query(api.schools.standing, { token: adult.token })).toBe(null);
+  });
+
+  it("개인 랭킹에는 이름 아래 일반부로 보인다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "케빈");
+    await joinSchool(t, token, GENERAL_INPUT);
+    await t.mutation(api.scores.submit, { token, ...plausibleRun({ score: 9000 }) });
+    const [row] = await t.query(api.scores.top, {});
+    expect(row).toMatchObject({ handle: "케빈", school: "일반부" });
+  });
+});
+
+describe("scores:top 의 소속", () => {
+  it("이름 아래에 학교가 함께 온다", async () => {
+    const t = backend();
+    const joined = await signUp(t, "소속있음", "1234", "d1");
+    const alone = await signUp(t, "소속없음", "1234", "d2");
+    await joinSchool(t, joined.token);
+    await t.mutation(api.scores.submit, { token: joined.token, ...plausibleRun({ score: 500 }) });
+    await t.mutation(api.scores.submit, { token: alone.token, ...plausibleRun({ score: 400 }) });
+
+    const rows = await t.query(api.scores.top, {});
+    expect(rows.map((row) => [row.handle, row.school])).toEqual([
+      ["소속있음", "대구동중"],
+      // Nothing to show for a player who has not chosen, and no undefined.
+      ["소속없음", ""],
+    ]);
   });
 });
 
