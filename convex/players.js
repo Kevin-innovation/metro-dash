@@ -9,6 +9,7 @@ import {
 } from "../src/leaderboard-rules.js";
 import { handleKey, validateHandle } from "../src/nickname.js";
 import { schoolLabel, validateSchool } from "../src/school.js";
+import { profileWorth } from "../src/shop.js";
 import { joinSchool } from "./schools.js";
 import { endSession, requirePlayer, startSession } from "./session.js";
 
@@ -117,6 +118,9 @@ export const register = mutation({
       pin,
       token: newToken(),
       profile: sanitizeProfile(profile, 0),
+      // A guest who played offline arrives with coins they really did earn, so
+      // the ledger opens where they are rather than at zero.
+      coinLedger: profileWorth(profile),
       // A new account starts at zero however good the local save claims to be;
       // the board is only ever climbed through a validated run.
       best: 0,
@@ -210,8 +214,24 @@ export const save = mutation({
   args: { token: v.string(), profile: v.any() },
   handler: async (ctx, { token, profile }) => {
     const player = await requirePlayer(ctx, token);
+    const worth = profileWorth(profile);
+
+    // First save under the ledger takes the account as it stands. Anything else
+    // would wipe coins people earned before the rule existed, which is a worse
+    // outcome than letting an old profile in unexamined once.
+    const ledger = player.coinLedger ?? Math.max(worth, profileWorth(player.profile));
+
+    if (worth > ledger) {
+      // Kept out of the cloud copy rather than argued with: the browser goes on
+      // playing from its own save, and staff get a name to look at. Whatever is
+      // stored here is what a new device restores, and that stays honest.
+      await ctx.db.patch(player._id, { coinLedger: ledger, flagged: true });
+      return { ok: false, reason: "ledger" };
+    }
+
     await ctx.db.patch(player._id, {
       profile: sanitizeProfile(profile, player.best),
+      coinLedger: ledger,
       updatedAt: Date.now(),
     });
     return { ok: true };

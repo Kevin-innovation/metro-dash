@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { validateRun } from "../src/leaderboard-rules.js";
+import { weekKey } from "../src/week.js";
 import { adjustSchool } from "./schools.js";
 import { requirePlayer } from "./session.js";
 
@@ -13,6 +14,15 @@ import { requirePlayer } from "./session.js";
  */
 
 export const LEADERBOARD_LIMIT = 50;
+
+/**
+ * Coins one run may add to the ledger beyond the ones it picked up.
+ *
+ * Three daily missions can complete in a single run and the richest pays 190,
+ * so 600 covers the best case with room to spare. Loose on purpose: the ledger
+ * exists to stop a save claiming a million coins, not to audit a good run.
+ */
+export const MISSION_COINS_PER_RUN = 600;
 
 export const submit = mutation({
   args: {
@@ -49,8 +59,24 @@ export const submit = mutation({
       createdAt: now,
     });
 
+    // This week's column resets by being written for a new key rather than by a
+    // sweep: an account that has not played since Monday simply is not in the
+    // week's index, so there is nothing to clear and nothing to schedule.
+    const week = weekKey(now);
+    const weekBest = player.weekKey === week ? (player.weekBest ?? 0) : 0;
+
+    const patch = { updatedAt: now };
+    if (score > player.best) patch.best = score;
+    if (score > weekBest || player.weekKey !== week) {
+      patch.weekKey = week;
+      patch.weekBest = Math.max(score, weekBest);
+    }
+    // A validated run is the only thing that can pay coins out, so it is the
+    // only thing that lifts the ceiling on what a save may be worth.
+    patch.coinLedger = (player.coinLedger ?? 0) + Math.floor(args.coins) + MISSION_COINS_PER_RUN;
+    await ctx.db.patch(player._id, patch);
+
     if (score > player.best) {
-      await ctx.db.patch(player._id, { best: score, updatedAt: now });
       // The school total is the sum of its members' bests, so it moves by the
       // same amount this player's best just moved by.
       await adjustSchool(ctx, player.schoolKey, { total: score - player.best });
@@ -67,23 +93,27 @@ export const submit = mutation({
  * player cannot fill the board with their own attempts.
  */
 export const top = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit }) => {
+  args: { limit: v.optional(v.number()), range: v.optional(v.string()) },
+  handler: async (ctx, { limit, range }) => {
     const take = Math.min(LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit ?? 20)));
-    const players = await ctx.db
-      .query("players")
-      .withIndex("by_best")
-      .order("desc")
-      .take(take);
+    const weekly = range === "week";
+    const week = weekKey(Date.now());
+    const players = weekly
+      ? await ctx.db
+          .query("players")
+          .withIndex("by_week_best", (q) => q.eq("weekKey", week))
+          .order("desc")
+          .take(take)
+      : await ctx.db.query("players").withIndex("by_best").order("desc").take(take);
 
     return players
       // Staff never play, so this is belt and braces — but a 0-point 「admin」
       // row appearing on a class leaderboard would be its own problem.
-      .filter((player) => player.best > 0 && player.role !== "admin")
+      .filter((player) => scoreOf(player, weekly) > 0 && player.role !== "admin")
       .map((player, index) => ({
         rank: index + 1,
         handle: player.handle,
-        best: player.best,
+        best: scoreOf(player, weekly),
         character: player.profile?.character ?? "runner",
         // Shown under the name. Already rendered on the player document, so the
         // board stays a single read.
@@ -92,20 +122,34 @@ export const top = query({
   },
 });
 
+/** The figure a board ranks on: this week's best, or the all-time one. */
+function scoreOf(player, weekly) {
+  if (!weekly) return player.best;
+  return player.weekKey === weekKey(Date.now()) ? (player.weekBest ?? 0) : 0;
+}
+
 /** Where the signed-in player sits, even when they are off the visible board. */
 export const standing = query({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
+  args: { token: v.string(), range: v.optional(v.string()) },
+  handler: async (ctx, { token, range }) => {
     const player = await requirePlayer(ctx, token);
-    if (player.best <= 0) return { rank: null, best: 0, handle: player.handle };
+    const weekly = range === "week";
+    const week = weekKey(Date.now());
+    const best = scoreOf(player, weekly);
+    if (best <= 0) return { rank: null, best: 0, handle: player.handle };
 
     // Counting only those above keeps this cheap for everyone but the leaders.
-    const above = await ctx.db
-      .query("players")
-      .withIndex("by_best", (q) => q.gt("best", player.best))
-      .collect();
+    const above = weekly
+      ? await ctx.db
+          .query("players")
+          .withIndex("by_week_best", (q) => q.eq("weekKey", week).gt("weekBest", best))
+          .collect()
+      : await ctx.db
+          .query("players")
+          .withIndex("by_best", (q) => q.gt("best", best))
+          .collect();
 
-    return { rank: above.length + 1, best: player.best, handle: player.handle };
+    return { rank: above.length + 1, best, handle: player.handle };
   },
 });
 

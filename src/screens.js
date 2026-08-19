@@ -6,6 +6,7 @@ import { loadSchoolNames } from "./school-list.js";
 import { missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { runXp } from "./progression.js";
+import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
 import {
   escapeHtml,
@@ -90,6 +91,11 @@ export class Screens {
     if (boardBtn2) boardBtn2.onclick = () => a.openLeaderboard();
     const boardClose = $("btn-leaderboard-close");
     if (boardClose) boardClose.onclick = () => this.closeLeaderboard();
+
+    for (const [id, range] of [["tab-board-week", "week"], ["tab-board-all", "all"]]) {
+      const tab = $(id);
+      if (tab) tab.onclick = () => a.setBoardRange(range);
+    }
 
     const boardList = $("leaderboard-list");
     if (boardList) {
@@ -246,8 +252,28 @@ export class Screens {
 
   // --- leaderboard ---------------------------------------------------------
 
-  openLeaderboard() {
+  openLeaderboard(range = "week") {
+    this.setBoardTab(range);
     $("leaderboard-screen").classList.remove("hidden");
+  }
+
+  /**
+   * Which stretch of time the individual column is counting.
+   *
+   * The weekly board is the default because it is the one a player can still
+   * do something about: an all-time list in a school fills up with whoever
+   * started first, and everyone who joins in March reads it as a closed door.
+   */
+  setBoardTab(range) {
+    const week = range !== "all";
+    $("tab-board-week")?.classList.toggle("on", week);
+    $("tab-board-all")?.classList.toggle("on", !week);
+    const note = $("board-reset");
+    if (note) {
+      note.textContent = week
+        ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
+        : "전체 기간 최고 기록";
+    }
   }
 
   closeLeaderboard() {

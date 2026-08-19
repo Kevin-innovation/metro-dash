@@ -23,6 +23,30 @@ export default defineSchema({
     best: v.number(),
 
     /**
+     * Best score inside one week, and which week that was.
+     *
+     * Kept beside the all-time figure rather than derived from the runs table:
+     * the weekly board is read far more often than it is written, and a stored
+     * column makes it the same single indexed read the all-time board already
+     * is. Absent until the account's first run under the weekly board.
+     */
+    weekBest: v.optional(v.number()),
+    weekKey: v.optional(v.string()),
+
+    /**
+     * Ceiling on what this account's save may be worth in coins.
+     *
+     * The profile is written by the browser, so coins, upgrades and characters
+     * arrive on trust. This is the one number the server owns: it starts at
+     * whatever the account already had and afterwards only grows by what a
+     * validated run could have paid out. A save worth more than this did not
+     * come from playing. Absent on accounts that have not saved since.
+     */
+    coinLedger: v.optional(v.number()),
+    /** Set when a save was refused for exceeding the ledger, for staff to see. */
+    flagged: v.optional(v.boolean()),
+
+    /**
      * School, chosen at most once by the player and thereafter only by staff.
      * Absent on every account created before schools existed, and on anyone who
      * has not picked one — those players simply sit outside the school ranking.
@@ -60,6 +84,9 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_device", ["deviceId"])
     .index("by_best", ["best"])
+    // Equality on the week first, so the weekly board is one indexed read and
+    // last week's leaders are not merely filtered out but never looked at.
+    .index("by_week_best", ["weekKey", "weekBest"])
     .index("by_school", ["schoolKey"]),
 
   /**

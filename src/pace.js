@@ -23,6 +23,13 @@ export const PHASES = [
   { id: 4, t: 84, name: "MAX", toast: "MAX SPEED" },
   { id: 5, t: 130, name: "OVERDRIVE", toast: "밀도 상승!" },
   { id: 6, t: 190, name: "CHAOS", toast: "쉴 틈 없다!" },
+  // Past this point speed and pressure have both topped out, so the run used to
+  // become the same minute repeating forever — hardest on the players who got
+  // there, which is backwards. These bring new layouts rather than new numbers:
+  // `weightAt` keeps handing more of the pile to the gauntlets, and the two
+  // rows below unlock the sections built for exactly this stretch.
+  { id: 7, t: 250, name: "SURGE", toast: "한계 돌파!" },
+  { id: 8, t: 330, name: "MAYHEM", toast: "여기서부터는 기록이다" },
 ];
 
 export function phaseAt(t) {

@@ -32,6 +32,7 @@ import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
+import { perkFor } from "./characters.js";
 import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
 
 
@@ -58,6 +59,8 @@ export class Game {
     this.lastFrame = 0;
     this.shake = 0;
     this.hitstop = 0;
+    /** Which leaderboard the individual column is showing. */
+    this.boardRange = "week";
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
     this.nearMissFx = 0;
@@ -133,6 +136,7 @@ export class Game {
       openAccount: () => this.openAccount(),
       submitAccount: (mode, handle, pin, remember) => this.submitAccount(mode, handle, pin, remember),
       openLeaderboard: () => this.openLeaderboard(),
+      setBoardRange: (range) => this.setBoardRange(range),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
       resolveMerge: (choice) => this.resolveMerge(choice),
@@ -288,19 +292,41 @@ export class Game {
 
   async openLeaderboard() {
     this.audio.resume();
-    this.screens.openLeaderboard();
+    this.screens.openLeaderboard(this.boardRange);
     this.screens.renderLeaderboard([], null, this.cloud.handle);
     this.screens.renderSchoolBoard([], null);
     // Both columns are fetched together so the two halves of the screen fill in
     // at the same time rather than one after the other.
     const [rows, standing, schools, schoolStanding] = await Promise.all([
-      this.cloud.leaderboard(10).catch(() => []),
-      this.cloud.standing(),
+      this.cloud.leaderboard(10, this.boardRange).catch(() => []),
+      this.cloud.standing(this.boardRange),
       this.cloud.schoolLeaderboard(10).catch(() => []),
       this.cloud.schoolStanding(),
     ]);
     this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
     this.screens.renderSchoolBoard(schools, schoolStanding, this.schoolStandingNote());
+  }
+
+  /**
+   * Switch the individual column between this week and all time.
+   *
+   * Only that column is refetched: the school ranking is cumulative and has no
+   * weekly form, so re-reading it here would be two wasted queries and a flash
+   * of an empty list for no reason.
+   */
+  async setBoardRange(range) {
+    if (this.boardRange === range) return;
+    this.boardRange = range;
+    this.screens.setBoardTab(range);
+    this.screens.renderLeaderboard([], null, this.cloud.handle);
+
+    const [rows, standing] = await Promise.all([
+      this.cloud.leaderboard(10, range).catch(() => []),
+      this.cloud.standing(range),
+    ]);
+    // Ignore a reply that arrived after the player moved on to the other tab.
+    if (this.boardRange !== range) return;
+    this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
   }
 
   /**
@@ -474,6 +500,18 @@ export class Game {
     this.shake = 0;
 
     resetPlayer(this.player, 0);
+    // Read once per run rather than per frame, and after resetPlayer, which
+    // returns the runner to its defaults.
+    const perk = perkFor(this.store.data.character);
+    this.player.slideScale = perk.slideTime ?? 1;
+    this.interactions.magnetScale = perk.magnetRange ?? 1;
+    if (perk.startBoard) {
+      // Free, and outside the shop economy: the board bought with coins is
+      // still spent from the inventory, this one comes with the character.
+      this.player.boarding = true;
+      this.boardT = HOVERBOARD_TIME;
+    }
+
     this.cam = { x: 0, y: 3.6, z: -7.4 };
     this.pool.clear();
     this.particles.clear();

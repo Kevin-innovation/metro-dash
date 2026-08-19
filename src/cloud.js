@@ -322,14 +322,15 @@ export class Cloud {
     return await this.mutation("reports:report", { token: this.session.token, handle });
   }
 
-  async leaderboard(limit = 20) {
-    return await this.query("scores:top", { limit });
+  /** @param {"week"|"all"} range which board to read. */
+  async leaderboard(limit = 20, range = "week") {
+    return await this.query("scores:top", { limit, range });
   }
 
-  async standing() {
+  async standing(range = "week") {
     if (!this.signedIn) return null;
     try {
-      return await this.query("scores:standing", { token: this.session.token });
+      return await this.query("scores:standing", { token: this.session.token, range });
     } catch {
       return null;
     }

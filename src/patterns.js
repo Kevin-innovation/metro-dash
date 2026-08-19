@@ -286,6 +286,52 @@ export const PATTERNS = [
     },
   },
   {
+    // Three gates back to back. Slide, stand, slide again — the spacing is the
+    // whole pattern, so it is measured from SLIDE_TIME rather than guessed.
+    id: "gate-run",
+    slide: true,
+    minPhase: 5,
+    weight: 2,
+    late: 4,
+    build: ({ z, gap }) => {
+      const step = gap(0.95, 20, 0.78);
+      return [0, 1, 2].flatMap((i) =>
+        ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + step * i })),
+      );
+    },
+  },
+  {
+    // Up onto the roofs, then straight back down for a jump. Both rows are
+    // full-width, and both have a way through: the buses are ridden, the
+    // barriers are jumped.
+    id: "roof-drop",
+    minPhase: 6,
+    weight: 2,
+    late: 4,
+    build: ({ z, gap }) => [
+      ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
+      ...coinLine(0, z - 2, 4, 1.35, 2.55),
+      ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + gap(1.15, 24) })),
+    ],
+  },
+  {
+    // Two lanes coming at you and a container parked in the third, far enough
+    // apart that the lane you are pushed into is not the lane it sits in.
+    id: "oncoming-storm",
+    minPhase: 6,
+    weight: 2,
+    late: 3,
+    build: ({ z, lanes, gap }) => {
+      const lead = gap(0.6, 16);
+      return [
+        { type: "bus", lane: lanes[0], z: z + lead, oncoming: true },
+        { type: "bus", lane: lanes[1], z: z + lead + gap(0.45, 10, 0.34), oncoming: true },
+        { type: "crate", lane: lanes[2], z: z + lead + gap(0.9, 20, 0.66) },
+        ...coinLine(lanes[2], z - 1, 4),
+      ];
+    },
+  },
+  {
     id: "triple-bus",
     minPhase: 4,
     weight: 1,

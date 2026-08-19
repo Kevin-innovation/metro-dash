@@ -16,6 +16,30 @@ export function upgradeCost(level) {
 }
 
 /**
+ * The coins a profile represents: what it is holding plus what it has spent.
+ *
+ * The server uses this to bound a save against what the account could actually
+ * have earned. Deliberately an *under*-estimate — hoverboards get used up, so
+ * the ones still owned are fewer than the ones bought — because the number is
+ * used to refuse saves, and a refusal aimed at an honest player is far worse
+ * than a cheat that squeaks through.
+ */
+export function profileWorth(save) {
+  let spent = 0;
+  for (const id of POWERUP_IDS) {
+    const level = Math.max(1, Math.floor(save?.upgrades?.[id] ?? 1));
+    for (let step = 2; step <= Math.min(level, POWERUP_MAX_LEVEL); step++) {
+      spent += UPGRADE_COSTS[step] ?? 0;
+    }
+  }
+  for (const id of save?.characters ?? []) {
+    spent += CHARACTERS.find((character) => character.id === id)?.cost ?? 0;
+  }
+  spent += Math.max(0, Math.floor(save?.hoverboards ?? 0)) * HOVERBOARD_COST;
+  return Math.max(0, Math.floor(save?.coins ?? 0)) + spent;
+}
+
+/**
  * Everything the shop screen needs to render, derived from the save profile.
  * Returning plain data keeps the DOM layer dumb and the pricing testable.
  */

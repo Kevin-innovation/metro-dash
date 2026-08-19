@@ -31,6 +31,8 @@ export class Interactions {
     this.pool = pool;
     this.run = run;
     this.particles = particles;
+    /** Character perk: multiplier on how far the magnet reaches. */
+    this.magnetScale = 1;
   }
 
   /** Player capsule at the start / end of the current simulation step. */
@@ -200,7 +202,7 @@ export class Interactions {
       const dy = player.y + 1.05 - item.mesh.position.y;
       const dz = player.z + 0.7 - item.z;
       const distance = Math.hypot(dx, dy, dz);
-      if (distance >= MAGNET_RANGE || distance <= 0.0001) continue;
+      if (distance >= MAGNET_RANGE * this.magnetScale || distance <= 0.0001) continue;
 
       const pull = Math.max(speed * 2.1, 32);
       const step = Math.min(distance, pull * dt) / distance;

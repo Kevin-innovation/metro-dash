@@ -4,6 +4,7 @@ import { handleKey, validateHandle } from "../src/nickname.js";
 import { canonicalSchool, schoolKey, schoolLabel, validateSchool } from "../src/school.js";
 import { ensureSchool, joinSchool, leaveSchool } from "./schools.js";
 import { endAllSessions } from "./session.js";
+import { weekKey, weekStart } from "../src/week.js";
 
 /**
  * Teacher tools.
@@ -51,6 +52,8 @@ export const list = query({
     return players.map((player) => ({
       handle: player.handle,
       best: player.best,
+      /** True once a save was refused for claiming more than it could earn. */
+      flagged: Boolean(player.flagged),
       school: player.school ? schoolLabel(player.school) : "",
       lockedUntil: player.lockedUntil,
       failedAttempts: player.failedAttempts,
@@ -337,6 +340,44 @@ export const mergeSchools = mutation({
     await ctx.db.delete(from._id);
 
     return { ok: true, moved: members.length, from: from.label, to: to.label };
+  },
+});
+
+/**
+ * Fill in this week's column from the runs already recorded.
+ *
+ * The weekly board reads a stored `weekBest`, which only starts being written
+ * when a run is submitted. Without this the board would open empty on the day
+ * it ships even though the week is half over and the runs are all still there
+ * in the scores table. Safe to run at any time: it only ever raises a figure,
+ * and it reads the same week boundary the query does.
+ */
+export const backfillWeek = mutation({
+  args: { adminKey: v.string() },
+  handler: async (ctx, { adminKey }) => {
+    requireAdmin(adminKey);
+    const now = Date.now();
+    const since = weekStart(now);
+    const week = weekKey(now);
+
+    const best = new Map();
+    for await (const run of ctx.db.query("scores")) {
+      if (run.createdAt < since) continue;
+      const id = String(run.playerId);
+      if (run.score > (best.get(id)?.score ?? 0)) best.set(id, { id: run.playerId, score: run.score });
+    }
+
+    let updated = 0;
+    for (const { id, score } of best.values()) {
+      const player = await ctx.db.get(id);
+      if (!player) continue;
+      const current = player.weekKey === week ? (player.weekBest ?? 0) : 0;
+      if (score <= current) continue;
+      await ctx.db.patch(id, { weekKey: week, weekBest: score });
+      updated += 1;
+    }
+
+    return { ok: true, week, players: updated };
   },
 });
 

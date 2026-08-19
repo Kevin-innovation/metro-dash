@@ -197,6 +197,8 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     roofY: 0,
     /** Jetpack cruise mode: gravity and ground obstacles stop mattering. */
     flying: false,
+    /** Character perk: how long a slide holds, as a multiplier of SLIDE_TIME. */
+    slideScale: 1,
     /** Hoverboard deployed — absorbs the next crash. */
     boarding: false,
   };
@@ -293,7 +295,7 @@ export function applyAction(p, action, audio, opts = {}) {
       audio?.slam();
     } else if (!p.sliding) {
       p.sliding = true;
-      p.slideT = SLIDE_TIME;
+      p.slideT = SLIDE_TIME * (p.slideScale ?? 1);
       audio?.slide();
     }
   }
@@ -418,7 +420,7 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
         p.roofY = 0;
         if (held.slide || wasDive) {
           p.sliding = true;
-          p.slideT = SLIDE_TIME;
+          p.slideT = SLIDE_TIME * (p.slideScale ?? 1);
         }
       }
     }
