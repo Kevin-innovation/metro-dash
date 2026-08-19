@@ -44,6 +44,9 @@ const $ = (id) => document.getElementById(id);
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
 
+/** Least time between two near-miss flourishes, so they cannot stack up. */
+const NEAR_MISS_FX_COOLDOWN = 0.28;
+
 export class Game {
   constructor(root) {
     this.root = root;
@@ -56,6 +59,7 @@ export class Game {
     this.hitstop = 0;
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
+    this.nearMissFx = 0;
 
     this.store = new SaveStore();
     this.settings = this.store.data.settings;
@@ -414,6 +418,10 @@ export class Game {
     this.phaseId = 0;
     this.sawOncoming = false;
     this.hitstop = 0;
+    // Cleared with the rest of the run, so a kick from the last one cannot
+    // still be decaying over the first seconds of the next.
+    this.fovPunch = 0;
+    this.nearMissFx = 0;
     this.boardT = 0;
     this.boardGrace = 0;
     this.airborne = false;
@@ -562,7 +570,10 @@ export class Game {
     }
 
     this.shake = Math.max(0, this.shake - frameDt * 6);
-    this.fovPunch = Math.max(0, this.fovPunch - frameDt * 2.4);
+    this.nearMissFx = Math.max(0, this.nearMissFx - frameDt);
+    // Eased rather than linear: the kick lands hard and lets go softly, which
+    // is the shape that reads as force instead of as a glitch.
+    this.fovPunch = Math.max(0, this.fovPunch - frameDt * (1.2 + this.fovPunch * 2.6));
     this.emitAmbientParticles(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
@@ -903,12 +914,13 @@ export class Game {
       this.audio.nearMiss();
       this.screens.flashNearMiss();
     }
-    if (cleared.nearMisses > 0) {
-      // The whole point of a near miss is that it was close. Without something
-      // physical the player only learns about it from a word on the HUD.
+    // A near miss gets air and a nudge, never a lens kick. They arrive several
+    // a second through a dense stretch, and a camera that punches on every one
+    // spends the whole run juddering.
+    if (cleared.nearMisses > 0 && this.nearMissFx <= 0) {
       const p = this.player;
-      this.shake = Math.max(this.shake, 0.1);
-      this.fovPunch = Math.max(this.fovPunch, 0.4);
+      this.nearMissFx = NEAR_MISS_FX_COOLDOWN;
+      this.shake = Math.max(this.shake, 0.09);
       this.speedBurst(5);
       this.particles.burst(p.x, p.y + 0.8, p.z + 0.4, {
         count: 5,
@@ -980,7 +992,11 @@ export class Game {
     // The steady part tracks speed; the punch is what makes a gear change feel
     // like one instead of a number quietly going up in the corner.
     const fov = 58 + spdK * 9 + this.fovPunch * 7;
-    if (Math.abs(this.camera.fov - fov) > 0.2) {
+    // Follow it closely. The old 0.2° threshold was fine for a lens that only
+    // drifted with speed, but a punch decays past it in a fraction of a frame's
+    // worth of change — some frames updated and some did not, and a zoom moving
+    // in visible steps reads as the whole game stuttering.
+    if (Math.abs(this.camera.fov - fov) > 0.02) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
     }
