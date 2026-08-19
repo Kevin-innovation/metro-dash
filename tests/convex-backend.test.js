@@ -4,6 +4,7 @@ import { convexTest } from "convex-test";
 import schema from "../convex/schema.js";
 import { api } from "../convex/_generated/api.js";
 import { FREE_ATTEMPTS, MAX_ACCOUNTS_PER_DEVICE, maxDistanceIn } from "../src/leaderboard-rules.js";
+import { MAX_SESSIONS } from "../convex/session.js";
 
 /**
  * The backend, run against an in-memory Convex.
@@ -122,16 +123,62 @@ describe("players:available", () => {
 });
 
 describe("players:signIn", () => {
-  it("accepts the right PIN and rotates the token", async () => {
+  it("accepts the right PIN and issues a token for that device", async () => {
     const t = backend();
     const first = await signUp(t, "다시로그인");
-    const second = await t.mutation(api.players.signIn, { handle: "다시로그인", pin: "1234" });
+    const second = await t.mutation(api.players.signIn, {
+      handle: "다시로그인",
+      pin: "1234",
+      deviceId: "another-device",
+    });
 
     expect(second.ok).toBe(true);
     expect(second.token).not.toBe(first.token);
 
-    // The old token is dead, so a stolen one stops working at the next sign-in.
+    // And the browser that was already signed in stays signed in. This used to
+    // be the opposite: one token per account meant signing in on a phone signed
+    // the desktop out, silently, with no way for the player to tell why.
+    expect(await t.query(api.players.load, { token: first.token })).toMatchObject({
+      handle: "다시로그인",
+    });
+  });
+
+  it("같은 기기에서 다시 로그인하면 그 기기의 세션만 갈린다", async () => {
+    const t = backend();
+    const first = await signUp(t, "같은기기", "1234", "device-a");
+    const again = await t.mutation(api.players.signIn, {
+      handle: "같은기기",
+      pin: "1234",
+      deviceId: "device-a",
+    });
+
+    // The device's own previous token goes, so signing in twice on one browser
+    // does not leave a row behind every time.
     await expect(t.query(api.players.load, { token: first.token })).rejects.toThrow(/세션/);
+    expect(await t.query(api.players.load, { token: again.token })).toMatchObject({
+      handle: "같은기기",
+    });
+  });
+
+  it("기기 수가 늘어도 최근 것들은 살아 있다", async () => {
+    const t = backend();
+    await signUp(t, "여러기기", "1234", "d0");
+    const tokens = [];
+    for (let i = 1; i <= MAX_SESSIONS; i++) {
+      const result = await t.mutation(api.players.signIn, {
+        handle: "여러기기",
+        pin: "1234",
+        deviceId: `d${i}`,
+      });
+      tokens.push(result.token);
+    }
+
+    // The cap drops the oldest, never the one that just signed in.
+    for (const token of tokens.slice(-3)) {
+      expect(await t.query(api.players.load, { token })).toMatchObject({ handle: "여러기기" });
+    }
+    const rows = await t.run(async (ctx) => await ctx.db.query("sessions").collect());
+    expect(rows.length).toBeLessThanOrEqual(MAX_SESSIONS);
   });
 
   it("keeps counting wrong PINs instead of losing the count to a rollback", async () => {
@@ -246,6 +293,64 @@ describe("players:signOut", () => {
     const { token } = await signUp(t, "로그아웃");
     await t.mutation(api.players.signOut, { token });
     await expect(t.query(api.players.load, { token })).rejects.toThrow(/세션/);
+  });
+
+  it("다른 기기는 로그인된 채로 둔다", async () => {
+    const t = backend();
+    const phone = await signUp(t, "두기기", "1234", "phone");
+    const desktop = await t.mutation(api.players.signIn, {
+      handle: "두기기",
+      pin: "1234",
+      deviceId: "desktop",
+    });
+
+    await t.mutation(api.players.signOut, { token: phone.token });
+
+    await expect(t.query(api.players.load, { token: phone.token })).rejects.toThrow(/세션/);
+    expect(await t.query(api.players.load, { token: desktop.token })).toMatchObject({
+      handle: "두기기",
+    });
+  });
+});
+
+describe("세션", () => {
+  it("세션이 생기기 전에 발급된 토큰도 계속 통한다", async () => {
+    // What an already-signed-in browser is holding when this ships. Rejecting
+    // those would have signed out everyone who was signed in at the time.
+    const t = backend();
+    const { token } = await signUp(t, "옛토큰");
+    const legacy = await t.run(async (ctx) => {
+      const player = await ctx.db.query("players").first();
+      const rows = await ctx.db.query("sessions").collect();
+      for (const row of rows) await ctx.db.delete(row._id);
+      return player.token;
+    });
+
+    await expect(t.query(api.players.load, { token })).rejects.toThrow(/세션/);
+    expect(await t.query(api.players.load, { token: legacy })).toMatchObject({ handle: "옛토큰" });
+  });
+
+  it("로그아웃은 그 옛 토큰까지 끊는다", async () => {
+    const t = backend();
+    await signUp(t, "옛토큰정리");
+    const legacy = await t.run(async (ctx) => (await ctx.db.query("players").first()).token);
+
+    await t.mutation(api.players.signOut, { token: legacy });
+    await expect(t.query(api.players.load, { token: legacy })).rejects.toThrow(/세션/);
+  });
+
+  it("비밀번호를 다시 정하면 모든 기기가 로그아웃된다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "비번리셋");
+    await t.mutation(api.admin.resetPin, { adminKey: ADMIN_KEY, handle: "비번리셋", newPin: "9999" });
+    await expect(t.query(api.players.load, { token })).rejects.toThrow(/세션/);
+  });
+
+  it("계정을 지우면 세션도 남지 않는다", async () => {
+    const t = backend();
+    await signUp(t, "지워질사람");
+    await t.mutation(api.admin.remove, { adminKey: ADMIN_KEY, handle: "지워질사람" });
+    expect(await t.run(async (ctx) => await ctx.db.query("sessions").collect())).toEqual([]);
   });
 });
 
@@ -751,11 +856,11 @@ describe("admin 학교 도구", () => {
     const b = await signUp(t, "범어이", "1234", "d2");
 
     await t.run(async (ctx) => {
-      const plant = async (session, name, label, best) => {
+      const plant = async (handle, name, label, best) => {
         const key = `대구|초|${name}`;
         const player = await ctx.db
           .query("players")
-          .withIndex("by_token", (q) => q.eq("token", session.token))
+          .withIndex("by_handleKey", (q) => q.eq("handleKey", handle))
           .unique();
         await ctx.db.patch(player._id, {
           best,
@@ -773,8 +878,8 @@ describe("admin 학교 도구", () => {
           updatedAt: 0,
         });
       };
-      await plant(a, "범어", "대구 범어초등학교", 13535);
-      await plant(b, "대구범어", "대구 대구범어초등학교", 6563);
+      await plant("범어일", "범어", "대구 범어초등학교", 13535);
+      await plant("범어이", "대구범어", "대구 대구범어초등학교", 6563);
     });
     expect(await t.query(api.schools.top, {})).toHaveLength(2);
 

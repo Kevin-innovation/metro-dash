@@ -87,6 +87,28 @@ export default defineSchema({
     .index("by_total", ["total"]),
 
   /**
+   * Signed-in devices, one row each.
+   *
+   * The token used to live on the player document, which meant an account had
+   * exactly one of them: signing in on a phone rotated the token the desktop
+   * was holding, and the desktop was silently signed out the next time it
+   * asked for anything. A row per device is what lets both stay signed in.
+   *
+   * Tokens issued before this table existed still work — see `requirePlayer`.
+   */
+  sessions: defineTable({
+    playerId: v.id("players"),
+    /** Bearer token held by that one browser. */
+    token: v.string(),
+    /** Which browser it was issued to, so a re-login replaces its own row. */
+    deviceId: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_player", ["playerId"])
+    .index("by_player_device", ["playerId", "deviceId"]),
+
+  /**
    * Nickname reports.
    *
    * The word list cannot catch a name with characters inserted mid-word, so the

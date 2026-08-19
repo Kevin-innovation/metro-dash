@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { handleKey, validateHandle } from "../src/nickname.js";
 import { canonicalSchool, schoolKey, schoolLabel, validateSchool } from "../src/school.js";
 import { ensureSchool, joinSchool, leaveSchool } from "./schools.js";
+import { endAllSessions } from "./session.js";
 
 /**
  * Teacher tools.
@@ -131,6 +132,10 @@ export const resetPin = mutation({
       lockedUntil: 0,
       updatedAt: Date.now(),
     });
+    // Every device the account was open on is signed out. A PIN is reset either
+    // because it was forgotten or because someone else knows it, and the second
+    // case is not helped by leaving those sessions open.
+    await endAllSessions(ctx, player._id);
     return { ok: true, handle: player.handle };
   },
 });
@@ -431,6 +436,10 @@ export const remove = mutation({
       .withIndex("by_target", (q) => q.eq("targetId", player._id))
       .collect();
     for (const row of filed) await ctx.db.delete(row._id);
+
+    // Their signed-in devices go too, or the rows would point at a player that
+    // no longer exists and a stale browser would ask about it forever.
+    await endAllSessions(ctx, player._id);
 
     await ctx.db.delete(player._id);
     return { ok: true, runsRemoved: runs.length, reportsRemoved: filed.length };

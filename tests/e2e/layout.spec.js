@@ -200,3 +200,12 @@ test("일반부를 고르면 학교 칸이 비활성화되고 일반부로 저�
   await expect(page.locator("#field-school")).toBeEnabled();
   await expect(page.locator("#school-preview")).toHaveText("이렇게 저장돼요 → 대구동중");
 });
+
+test("자동 로그인 체크박스가 기본으로 켜져 있다", async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(() => document.getElementById("btn-account").classList.remove("hidden"));
+  await page.click("#btn-account");
+  // On by default: staying signed in is what almost everyone wants, and the box
+  // is there for the one who does not.
+  await expect(page.locator("#field-remember")).toBeChecked();
+});

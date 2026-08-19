@@ -121,7 +121,7 @@ export class Game {
       toggleSetting: (key) => this.toggleSetting(key),
       setQuality: (tier) => this.setQuality(tier),
       openAccount: () => this.openAccount(),
-      submitAccount: (mode, handle, pin) => this.submitAccount(mode, handle, pin),
+      submitAccount: (mode, handle, pin, remember) => this.submitAccount(mode, handle, pin, remember),
       openLeaderboard: () => this.openLeaderboard(),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
@@ -156,15 +156,15 @@ export class Game {
     this.screens.openAccount("signin");
   }
 
-  async submitAccount(mode, handle, pin) {
+  async submitAccount(mode, handle, pin, remember = true) {
     this.screens.showAccountError(null);
     this.screens.setAccountBusy(true);
     try {
       const justSignedUp = mode === "signup";
       if (justSignedUp) {
-        await this.cloud.register(handle, pin, this.store.data);
+        await this.cloud.register(handle, pin, this.store.data, remember);
       } else {
-        const result = await this.cloud.signIn(handle, pin);
+        const result = await this.cloud.signIn(handle, pin, remember);
         // The staff account manages rather than plays: straight to the tools,
         // before any of the profile reconciliation a player would go through.
         if (result?.staff) {

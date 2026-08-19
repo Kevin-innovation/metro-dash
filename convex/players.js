@@ -10,7 +10,7 @@ import {
 import { handleKey, validateHandle } from "../src/nickname.js";
 import { schoolLabel, validateSchool } from "../src/school.js";
 import { joinSchool } from "./schools.js";
-import { requirePlayer } from "./session.js";
+import { endSession, requirePlayer, startSession } from "./session.js";
 
 /**
  * Accounts.
@@ -109,12 +109,13 @@ export const register = mutation({
     }
 
     const now = Date.now();
-    const token = newToken();
+    // Still written to the player document so the by_token index has a value to
+    // hold; the token actually handed out belongs to a session row.
     const id = await ctx.db.insert("players", {
       handle: check.handle,
       handleKey: handleKey(check.handle),
       pin,
-      token,
+      token: newToken(),
       profile: sanitizeProfile(profile, 0),
       // A new account starts at zero however good the local save claims to be;
       // the board is only ever climbed through a validated run.
@@ -126,6 +127,7 @@ export const register = mutation({
       updatedAt: now,
     });
 
+    const token = await startSession(ctx, id, deviceId);
     return { token, ...publicProfile(await ctx.db.get(id)) };
   },
 });
@@ -139,8 +141,9 @@ export const register = mutation({
  * published nickname and someone else's account.
  */
 export const signIn = mutation({
-  args: { handle: v.string(), pin: v.string() },
-  handler: async (ctx, { handle, pin }) => {
+  // deviceId is optional so a client from before sessions existed still works.
+  args: { handle: v.string(), pin: v.string(), deviceId: v.optional(v.string()) },
+  handler: async (ctx, { handle, pin, deviceId }) => {
     const player = await byHandle(ctx, handle);
     // Same message either way, so the form cannot be used to enumerate names.
     const rejection = "닉네임이나 비밀번호가 맞지 않아요";
@@ -171,10 +174,11 @@ export const signIn = mutation({
       };
     }
 
-    // A fresh token on every sign-in, so an old one stops working.
-    const token = newToken();
+    // A token for this device, and only this device. Rotating one token per
+    // account — which is what this used to do — signed out every other browser
+    // the player was already using, with no message and no way to tell why.
+    const token = await startSession(ctx, player._id, deviceId ?? "unknown");
     await ctx.db.patch(player._id, {
-      token,
       failedAttempts: 0,
       lockedUntil: 0,
       updatedAt: now,
@@ -242,7 +246,11 @@ export const signOut = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
     const player = await requirePlayer(ctx, token);
-    await ctx.db.patch(player._id, { token: newToken() });
+    await endSession(ctx, token);
+    // Signing out is the one place worth being blunt: the pre-sessions token on
+    // the player document is retired here too, so a browser still holding one
+    // cannot keep the account open after someone has asked to be signed out.
+    if (player.token === token) await ctx.db.patch(player._id, { token: newToken() });
     return { ok: true };
   },
 });

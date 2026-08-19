@@ -8,6 +8,8 @@
  */
 
 const SESSION_KEY = "metro-dash-session";
+/** Remembers the state of the 자동 로그인 box, not the session itself. */
+const REMEMBER_KEY = "metro-dash-remember";
 /** Must match the key src/admin.js reads. */
 const ADMIN_KEY_STORE = "metro-dash-admin-key";
 const DEVICE_KEY = "metro-dash-device";
@@ -27,6 +29,56 @@ function writeLocal(key, value) {
   } catch {
     /* private mode — the session simply does not persist */
   }
+}
+
+/**
+ * Where a session is kept.
+ *
+ * With 자동 로그인 on it goes to localStorage and survives closing the browser.
+ * With it off it goes to sessionStorage instead, which lasts as long as the tab
+ * — a reload does not sign you out, but a shared computer does not stay signed
+ * in after the tab is closed. It is written to exactly one of the two, so the
+ * choice cannot be undone by a copy left behind in the other.
+ */
+function writeSession(session) {
+  try {
+    if (!session) {
+      localStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
+      return;
+    }
+    const keep = session.remember !== false;
+    (keep ? sessionStorage : localStorage).removeItem(SESSION_KEY);
+    (keep ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    /* private mode — the session simply does not persist */
+  }
+}
+
+function readSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY) ?? localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether 자동 로그인 was ticked last time, so the box opens the way it was left. */
+export function readRemember() {
+  return readLocal(REMEMBER_KEY) !== "0";
+}
+
+/**
+ * Did the server reject this token, or did the call simply not get through?
+ *
+ * Convex reports an application error as a string in `error.data`; a dropped
+ * connection, a deploy in progress or a browser opened offline arrive without
+ * one. The difference decides whether the saved session is thrown away, and
+ * getting it wrong is what signed people out for good after one bad moment.
+ */
+function sessionRejected(error) {
+  return typeof error?.data === "string" && error.data.length > 0;
 }
 
 /**
@@ -104,11 +156,15 @@ export class Cloud {
       const { ConvexClient } = await import("convex/browser");
       this.client = new ConvexClient(this.url);
       this.ready = true;
-      const saved = readLocal(SESSION_KEY);
+      const saved = readSession();
       if (saved) {
-        this.session = JSON.parse(saved);
-        // Confirm the token is still good before trusting it.
-        await this.refresh().catch(() => this.clearSession());
+        this.session = saved;
+        // Confirm the token is still good before trusting it — but only throw it
+        // away if the server actually says so. A failed call on a train tunnel
+        // used to end the session permanently.
+        await this.refresh().catch((error) => {
+          if (sessionRejected(error)) this.clearSession();
+        });
       }
     } catch {
       this.client = null;
@@ -120,16 +176,20 @@ export class Cloud {
 
   clearSession() {
     this.session = null;
-    writeLocal(SESSION_KEY, null);
+    writeSession(null);
     this.emit();
   }
 
-  keepSession(result) {
+  keepSession(result, remember = true) {
+    // Stored with the session, so every later write goes back to the same place
+    // without having to ask the form again.
+    writeLocal(REMEMBER_KEY, remember ? "1" : "0");
     this.session = {
       token: result.token,
       handle: result.handle,
       schoolLabel: result.schoolLabel ?? "",
       staff: Boolean(result.staff),
+      remember,
     };
     // Handed over to the tools page through sessionStorage, which is per-tab
     // and cleared when the tab closes — the key is never written to disk.
@@ -140,7 +200,7 @@ export class Cloud {
         /* private mode — the tools page will ask for the key itself */
       }
     }
-    writeLocal(SESSION_KEY, JSON.stringify(this.session));
+    writeSession(this.session);
     this.emit();
     return result;
   }
@@ -163,26 +223,28 @@ export class Cloud {
     return await this.query("players:available", { handle });
   }
 
-  async register(handle, pin, profile) {
+  async register(handle, pin, profile, remember = true) {
     const result = await this.mutation("players:register", {
       handle,
       pin,
       deviceId: deviceId(),
       profile,
     });
-    return this.keepSession(result);
+    return this.keepSession(result, remember);
   }
 
-  async signIn(handle, pin) {
+  async signIn(handle, pin, remember = true) {
     // The server reports a bad PIN as a value rather than an error, so its
     // attempt counter survives; turn it back into an error for the caller.
-    const result = await this.mutation("players:signIn", { handle, pin });
+    // The device id goes with it: the token comes back scoped to this browser,
+    // so signing in here does not sign the same account out anywhere else.
+    const result = await this.mutation("players:signIn", { handle, pin, deviceId: deviceId() });
     if (!result?.ok) {
       const error = new Error(result?.message ?? "로그인하지 못했어요");
       error.data = result?.message ?? "로그인하지 못했어요";
       throw error;
     }
-    return this.keepSession(result);
+    return this.keepSession(result, remember);
   }
 
   async signOut() {
@@ -201,6 +263,7 @@ export class Cloud {
       schoolLabel: result.schoolLabel ?? "",
       staff: Boolean(result.staff),
     };
+    writeSession(this.session);
     this.emit();
     return result;
   }
@@ -245,7 +308,7 @@ export class Cloud {
       name,
     });
     this.session = { ...this.session, schoolLabel: result.schoolLabel };
-    writeLocal(SESSION_KEY, JSON.stringify(this.session));
+    writeSession(this.session);
     this.emit();
     return result;
   }

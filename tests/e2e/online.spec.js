@@ -56,7 +56,7 @@ test("학교를 정하면 표기가 어떻든 같은 이름으로 저장된다",
     await page.click("#btn-school-confirm");
 
     await expect(page.locator("#school-screen")).toBeHidden({ timeout: 20_000 });
-    await expect(page.locator("#account-state")).toContainText("대구 동중학교");
+    await expect(page.locator("#account-state")).toContainText("대구동중");
     // Never 「동중중학교」, whatever was typed.
     await expect(page.locator("#account-state")).not.toContainText("중중");
     // The offer is withdrawn once taken, because it cannot be taken twice.
@@ -206,4 +206,72 @@ test.describe("관리자 페이지", () => {
     await expect(page.locator("#admin-schools")).not.toBeEmpty();
     await expect(page.locator("#admin-signout")).toBeVisible();
   });
+});
+
+test("자동 로그인을 켜두면 새로고침해도 로그인이 풀리지 않는다", async ({ page }) => {
+  const handle = freshHandle("유");
+  try {
+    await openGame(page);
+    await signUp(page, handle);
+    await page.click("#btn-school-close");
+    await expect(page.locator("#account-state")).toContainText(handle);
+
+    await page.reload();
+    await expect(page.locator("#title-screen")).toBeVisible();
+    // The session is confirmed with the server on start-up; the account row is
+    // what shows the answer came back good.
+    await expect(page.locator("#account-state")).toContainText(handle, { timeout: 20_000 });
+
+    // And it survives a second browser signing in to the same account, which
+    // used to rotate the one token this browser was holding.
+    const other = await page.context().browser().newContext();
+    const otherPage = await other.newPage();
+    try {
+      await otherPage.goto(page.url());
+      await expect(otherPage.locator("#title-screen")).toBeVisible();
+      await otherPage.click("#btn-account");
+      await otherPage.fill("#field-handle", handle);
+      await otherPage.fill("#field-pin", "1234");
+      await otherPage.click("#btn-account-submit");
+      await expect(otherPage.locator("#account-screen")).toBeHidden({ timeout: 20_000 });
+
+      await page.reload();
+      await expect(page.locator("#account-state")).toContainText(handle, { timeout: 20_000 });
+    } finally {
+      await other.close();
+    }
+  } finally {
+    await deleteAccount(handle);
+  }
+});
+
+test("자동 로그인을 끄면 이 탭에서만 유지된다", async ({ page }) => {
+  const handle = freshHandle("탭");
+  try {
+    await openGame(page);
+    await page.click("#btn-account");
+    await page.click("#tab-signup");
+    await page.fill("#field-handle", handle);
+    await page.fill("#field-pin", "1234");
+    await page.uncheck("#field-remember");
+    await page.click("#btn-account-submit");
+    await expect(page.locator("#account-screen")).toBeHidden({ timeout: 20_000 });
+    await page.click("#btn-school-close");
+
+    // A reload is not a new session — the tab is the same one.
+    await page.reload();
+    await expect(page.locator("#account-state")).toContainText(handle, { timeout: 20_000 });
+
+    // Nothing was written where it would outlive the tab.
+    expect(await page.evaluate(() => localStorage.getItem("metro-dash-session"))).toBe(null);
+    expect(await page.evaluate(() => sessionStorage.getItem("metro-dash-session"))).not.toBe(null);
+
+    // And the box remembers the choice for next time: sign out, open it again.
+    await page.click("#btn-account");
+    await expect(page.locator("#account-state")).toContainText("게스트", { timeout: 20_000 });
+    await page.click("#btn-account");
+    await expect(page.locator("#field-remember")).not.toBeChecked();
+  } finally {
+    await deleteAccount(handle);
+  }
 });

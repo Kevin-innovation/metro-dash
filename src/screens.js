@@ -1,3 +1,4 @@
+import { readRemember } from "./cloud.js";
 import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
 import { GENERAL_LEVEL, LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
@@ -129,7 +130,12 @@ export class Screens {
     if (form) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        a.submitAccount(this.accountMode ?? "signin", $("field-handle").value, $("field-pin").value);
+        a.submitAccount(
+          this.accountMode ?? "signin",
+          $("field-handle").value,
+          $("field-pin").value,
+          $("field-remember")?.checked ?? true,
+        );
       });
     }
     // The PIN field is digits only, enforced as it is typed so the rule is
@@ -198,6 +204,10 @@ export class Screens {
     this.setAccountMode(mode);
     $("field-handle").value = "";
     $("field-pin").value = "";
+    // Opens the way it was left, so someone on a shared computer does not have
+    // to remember to untick it every single time.
+    const remember = $("field-remember");
+    if (remember) remember.checked = readRemember();
     this.showAccountError(null);
     $("account-screen").classList.remove("hidden");
     $("field-handle").focus();
