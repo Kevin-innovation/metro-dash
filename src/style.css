@@ -264,21 +264,18 @@ h3,
 
 /* Only on screen once the chaser is genuinely close, so the alarm is not
    wallpaper the player has learned to ignore by the time it matters. */
+/* In the chip column with the score and the pace, because that is where the
+   eye already goes. At the bottom of the screen it was outside the field of
+   attention entirely and players reported never seeing it. */
 .chase-meter {
-  position: absolute;
-  left: 50%;
-  bottom: calc(96px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px 6px 8px;
+  gap: 7px;
+  padding: 5px 10px 5px 8px;
   border-radius: 999px;
-  /* Calm while the pursuer is merely present; the alarm is saved for `.close`,
-     so it still means something when it arrives. */
   background: rgba(10, 16, 24, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  white-space: nowrap;
 }
 
 .chase-meter.close {
@@ -300,13 +297,13 @@ h3,
 }
 
 .chase-icon {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1;
 }
 
 .chase-track {
-  width: 92px;
-  height: 6px;
+  width: 74px;
+  height: 7px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.16);
   overflow: hidden;
@@ -319,6 +316,37 @@ h3,
   background: linear-gradient(90deg, #ff7a3c, #ff3d5a);
   transform-origin: left center;
   transform: scaleX(0);
+}
+
+.chase-gain {
+  position: absolute;
+  left: 100%;
+  margin-left: 8px;
+  color: #7dfcd4;
+  font-family: var(--font-numeric);
+  font-size: 15px;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 2px 0 #041018;
+}
+
+.chase-gain.pop {
+  animation: chaseGain 0.7s ease-out;
+}
+
+@keyframes chaseGain {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scale(1);
+  }
 }
 
 @keyframes chasePulse {

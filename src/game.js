@@ -983,11 +983,15 @@ export class Game {
     if (cleared.nearMisses) {
       const before = this.chase.gap;
       evade(this.chase, cleared.nearMisses);
-      // Shown the first time it actually works, so the connection between the
-      // near miss and the gauge moving is made once and explicitly.
-      if (!this.chasePushed && this.chaser.visible && this.chase.gap > before + 0.1) {
-        this.chasePushed = true;
-        this.screens.showToast("추격자를 밀어냈다!");
+      const gained = this.chase.gap - before;
+      if (this.chaser.visible && gained > 0.1) {
+        // Every time, not just once: this is the feedback loop the whole
+        // mechanic runs on, and it has to be legible on every near miss.
+        this.screens.flashChaseGain(gained);
+        if (!this.chasePushed) {
+          this.chasePushed = true;
+          this.screens.showToast("추격자를 밀어냈다!");
+        }
       }
     }
 

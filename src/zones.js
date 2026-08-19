@@ -74,10 +74,11 @@ export const ZONES = [
     hemi: 0.62,
     sun: 0.25,
     ambient: 0.44,
-    // Above the boosted jump apex (5.04m) with a little to spare, and roughly
-    // where the slide gantries sit — so a super-sneaker jump grazes the roof
-    // rather than passing through it, and the gates read as ceiling-mounted.
-    ceiling: 5.6,
+    // Has to clear the *top of the runner* at their highest ordinary jump:
+    // 5.04m of super-sneaker apex plus 1.55m of runner. Only the jetpack is
+    // meant to be pushed down in here, and it still flies far above every
+    // obstacle.
+    ceiling: 7,
     wall: 1,
     // The ceiling has to mean something, so the tunnel leans on slide gates.
     slideBias: 0.5,
@@ -95,7 +96,7 @@ export const ZONES = [
     hemi: 0.95,
     sun: 0.7,
     ambient: 0.45,
-    ceiling: 7.4,
+    ceiling: 9,
     // Nearly closed: a half-height wall under a roof reads as a mistake, and a
     // station concourse is a room.
     wall: 0.92,
@@ -201,14 +202,14 @@ export function mixColor(a, b, k) {
  *
  * Two constraints pin this number. It has to clear everything that can reach
  * it — the jetpack cruises at 6.2m and needs its headroom — so it cannot be
- * lower. And it wants to be as low as that allows: every metre above the roof's
- * resting height is a metre of empty box the runner passes through on the way
- * in, and a tall enough one reads as a cathedral rather than as a tunnel.
+ * lower — and "clear" means clear of the runner's head, not their feet. It also
+ * wants to be as low as that allows, since every metre above the roof's resting
+ * height is empty box the runner passes through on the way in.
  *
  * Having a number rather than `null` is what lets a roof *descend* into place
  * instead of appearing from nothing.
  */
-export const OPEN_CEILING = 7.2;
+export const OPEN_CEILING = 9.6;
 
 export function lookAt(t) {
   const { from, to, k } = zoneBlend(t);

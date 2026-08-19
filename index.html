@@ -51,6 +51,12 @@
             <div class="hud-chips">
               <div class="best-chip">최고 <strong id="hud-best">0</strong></div>
               <div id="pace-chip">START</div>
+              <div id="chase-meter" class="chase-meter hidden" style="position: relative">
+                <span class="chase-icon">🚨</span>
+                <div class="chase-track"><div id="chase-fill" class="chase-fill"></div></div>
+                <span id="chase-gap" class="chase-gap">30m</span>
+                <span id="chase-gain" class="chase-gain hidden"></span>
+              </div>
             </div>
           </div>
           <div class="score-stack">
@@ -59,12 +65,6 @@
             <div id="coin-gain" class="coin-gain hidden">+10</div>
           </div>
           <button id="btn-pause" type="button" aria-label="일시정지">II</button>
-        </div>
-
-        <div id="chase-meter" class="chase-meter hidden">
-          <span class="chase-icon">🚨</span>
-          <div class="chase-track"><div id="chase-fill" class="chase-fill"></div></div>
-          <span id="chase-gap" class="chase-gap">30m</span>
         </div>
 
         <div id="powerup-stack" class="powerup-stack hidden"></div>

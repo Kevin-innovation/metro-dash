@@ -364,6 +364,23 @@ export class Screens {
     if (confirm) confirm.disabled = busy;
   }
 
+  /**
+   * The ground a near miss just bought, shown beside the gauge.
+   *
+   * Without it the bar twitches and nothing says why. This is the one place
+   * that connects "I squeezed past that" to "the thing behind me fell back".
+   */
+  flashChaseGain(metres) {
+    const el = $("chase-gain");
+    if (!el || metres < 0.5) return;
+    el.textContent = `+${metres.toFixed(0)}m`;
+    el.classList.remove("hidden", "pop");
+    void el.offsetWidth;
+    el.classList.add("pop");
+    clearTimeout(this.chaseGainTimer);
+    this.chaseGainTimer = setTimeout(() => el.classList.add("hidden"), 700);
+  }
+
   showReportNote(message) {
     const note = $("report-note");
     if (!note) return;
@@ -626,7 +643,9 @@ export class Screens {
     if (!show) return;
 
     const heat = threat(chase);
-    $("chase-fill").style.transform = `scaleX(${Math.max(0.04, heat).toFixed(3)})`;
+    // A sliver always shows, so the bar reads as a gauge with a value rather
+    // than as an empty box the player assumes is broken.
+    $("chase-fill").style.transform = `scaleX(${Math.max(0.06, heat).toFixed(3)})`;
     // Only alarms once it is genuinely near; before that it is information.
     meter.classList.toggle("close", isWarning(chase));
     $("chase-gap").textContent = `${Math.round(chase.gap)}m`;

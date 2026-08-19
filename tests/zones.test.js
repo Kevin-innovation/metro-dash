@@ -200,4 +200,19 @@ describe("천장이 게임을 막지 않는가", () => {
       expect(apex(JUMP_V * SNEAKER_JUMP_MULT), `${zone.name} 스니커즈`).toBeLessThanOrEqual(limit);
     }
   });
+
+  it("어떤 높이에서도 러너의 머리가 천장을 뚫지 않는다", async () => {
+    const { CEILING_CLEARANCE } = await import("../src/player.js");
+    const { PLAYER_HEIGHT } = await import("../src/config.js");
+
+    // `p.y` is the feet. Clamping those alone left the head a metre inside the
+    // roof, which on screen looked like the runner being swallowed by it —
+    // the bug this whole set of numbers exists to prevent.
+    expect(CEILING_CLEARANCE).toBeGreaterThan(PLAYER_HEIGHT);
+    for (const zone of ZONES) {
+      if (zone.ceiling === null) continue;
+      const head = zone.ceiling - CEILING_CLEARANCE + PLAYER_HEIGHT;
+      expect(head, `${zone.name} 머리끝`).toBeLessThan(zone.ceiling);
+    }
+  });
 });

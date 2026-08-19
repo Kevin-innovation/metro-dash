@@ -329,8 +329,15 @@ export function bestRoof(p, roofs, x = p.x) {
   return best;
 }
 
-/** Headroom kept between the runner's feet and a ceiling overhead. */
-export const CEILING_CLEARANCE = 0.55;
+/**
+ * Headroom kept between the runner's feet and a ceiling overhead.
+ *
+ * `p.y` is the position of the *feet*, so this has to cover the whole runner.
+ * Clamping the feet alone left the head a metre inside the roof — the runner
+ * looked like they had been swallowed by the ceiling, which is exactly what it
+ * was.
+ */
+export const CEILING_CLEARANCE = PLAYER_HEIGHT + 0.25;
 
 export function updatePlayer(p, dt, speed, ctx = {}) {
   const roofs = ctx.roofs || [];
