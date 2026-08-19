@@ -46,6 +46,33 @@ export function makeTrain(color = 0xff5252) {
     light.position.set(x, 0.85, 5.82);
     g.add(light);
   });
+
+  // The back of the train, for the same reason as the bus: this is the end the
+  // player actually runs at, and it was a blank wall of colour.
+  const rearWindow = new THREE.Mesh(
+    new THREE.BoxGeometry(1.62, 0.6, 0.2),
+    lambert(0x44647c, { emissive: 0x14212b, emissiveIntensity: 0.22 }),
+  );
+  rearWindow.position.set(0, 1.72, -5.78);
+  g.add(rearWindow);
+
+  [-0.45, 0.45].forEach((x) => {
+    const tail = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.18, 0.08),
+      lambert(0xff5c5c, { emissive: 0xd50000, emissiveIntensity: 0.9 }),
+    );
+    tail.position.set(x, 0.85, -5.82);
+    g.add(tail);
+  });
+
+  const coupler = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.3, 0.3), lambert(0x263238));
+  // Kept inside the 12m footprint the pattern table reasons about.
+  coupler.position.set(0, 0.55, -5.85);
+  g.add(coupler);
+
+  const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.22, 0.16), lambert(0x263238));
+  skirt.position.set(0, 0.32, -5.8);
+  g.add(skirt);
   return g;
 }
 
@@ -92,6 +119,44 @@ export function makeBus(color = 0xffc107) {
     light.userData.headlight = true;
     g.add(light);
   });
+  // The back of the bus.
+  //
+  // Every detail above sits on the front face, which the player only ever sees
+  // on an oncoming bus. A bus travelling the same way is met from behind, and
+  // from behind it was a plain coloured box — indistinguishable from a freight
+  // container, which is exactly how it read in play. So the rear gets its own
+  // window, lights, plate and bumper.
+  const rearGlass = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 0.66, 0.12),
+    lambert(0x4a6b80, { emissive: 0x14212b, emissiveIntensity: 0.25 }),
+  );
+  rearGlass.position.set(0, 1.5, -4.42);
+  g.add(rearGlass);
+
+  const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.26, 0.18), lambert(0x263238));
+  rearBumper.position.set(0, 0.4, -4.45);
+  g.add(rearBumper);
+
+  // Red at the back, white at the front: the one cue that says at a glance
+  // whether this thing is running away from you or straight at you.
+  [-0.6, 0.6].forEach((x) => {
+    const tail = new THREE.Mesh(
+      new THREE.BoxGeometry(0.26, 0.2, 0.08),
+      lambert(0xff5c5c, { emissive: 0xd50000, emissiveIntensity: 0.9 }),
+    );
+    tail.position.set(x, 0.78, -4.46);
+    g.add(tail);
+  });
+
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.06), lambert(0xeceff1));
+  plate.position.set(0, 0.78, -4.46);
+  g.add(plate);
+
+  // Seam down the middle of the rear doors, so the face has a scale to read.
+  const seam = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.78, 0.06), lambert(0x37474f));
+  seam.position.set(0, 1.02, -4.44);
+  g.add(seam);
+
   [
     [-0.72, -2.8],
     [0.72, -2.8],
