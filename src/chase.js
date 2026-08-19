@@ -39,8 +39,14 @@ export const RECOVER_RATE = 0.5;
  */
 export const DRIFT_RATE = 2.0;
 
-/** Ground lost to a hit the hoverboard absorbed. */
-export const STUMBLE_COST = 10;
+/**
+ * Ground lost to a hit the hoverboard absorbed.
+ *
+ * Big enough that a single save drops the gap straight into the warning band:
+ * the point of the pursuer is that a mistake is *felt*, and a cost the player
+ * has to infer from a slow-moving bar is not felt at all.
+ */
+export const STUMBLE_COST = 14;
 
 /** Ground regained by a single near miss. */
 export const NEAR_MISS_GAIN = 2.4;

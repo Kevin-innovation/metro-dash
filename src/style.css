@@ -262,6 +262,37 @@ h3,
 
 /* --- pursuer ------------------------------------------------------------- */
 
+/* Closes in from the edges as the pursuer does. Peripheral rather than central
+   so it presses on the player without hiding the track they need to read. */
+.chase-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(255, 0, 32, 0) 42%,
+    rgba(255, 12, 46, 0.42) 78%,
+    rgba(140, 0, 20, 0.72) 100%
+  );
+  transition: opacity 0.18s linear;
+}
+
+.chase-vignette.beat {
+  animation: chaseBeat 0.62s ease-in-out infinite;
+}
+
+@keyframes chaseBeat {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  45% {
+    filter: brightness(1.5);
+  }
+}
+
+
 /* Only on screen once the chaser is genuinely close, so the alarm is not
    wallpaper the player has learned to ignore by the time it matters. */
 /* In the chip column with the score and the pace, because that is where the

@@ -37,6 +37,9 @@ const TUNNEL_BEHIND = 60;
 /** Tall enough that the foot of the wall is always below the track. */
 const WALL_HEIGHT = 18;
 
+/** Thickness of the roof slab. The zone's ceiling is its *underside*. */
+const ROOF_THICKNESS = 0.6;
+
 function recycle(item, cycle, playerZ) {
   const floor = playerZ - RECYCLE_BEHIND;
   // Loops rather than a single add so a reset back to the start of the track
@@ -88,7 +91,7 @@ export function createWorld(scene, quality) {
   const roofMat = new THREE.MeshLambertMaterial({ color: 0x4a525e, emissive: 0x1a1f26 });
   // Wide enough to fill the view. A narrow roof reads as a dark bar hanging in
   // front of the skyline rather than as a ceiling over the track.
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(26, 0.6, TUNNEL_LEN), roofMat);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(26, ROOF_THICKNESS, TUNNEL_LEN), roofMat);
   shell.add(roof);
   const walls = [-1, 1].map((side) => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(0.6, WALL_HEIGHT, TUNNEL_LEN), shellMat);
@@ -318,10 +321,16 @@ export function applyLook(world, look, quality) {
   shell.visible = look.ceiling !== null;
   world.roof.visible = shell.visible;
   if (shell.visible) {
-    world.roof.position.y = look.ceiling;
+    // Sat so its *underside* is at the zone's ceiling. Placing the slab's centre
+    // there put its lower half below the stated ceiling, and a runner cleared to
+    // exactly that height ended up with their head inside the geometry — which
+    // is what "the head vanishes into the roof" was.
+    world.roof.position.y = look.ceiling + ROOF_THICKNESS / 2;
     // Hung from the roof rather than standing on the ground, so the seal holds
     // at every height the roof passes through.
-    world.walls.forEach((wall) => (wall.position.y = look.ceiling - WALL_HEIGHT / 2 + 0.4));
+    world.walls.forEach(
+      (wall) => (wall.position.y = look.ceiling - WALL_HEIGHT / 2 + ROOF_THICKNESS + 0.4),
+    );
     world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
     world.lamps.forEach((lamp) => (lamp.position.y = look.ceiling - 1.4));
   }

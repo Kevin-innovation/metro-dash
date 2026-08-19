@@ -481,6 +481,7 @@ export class Game {
     this.chaseWarned = false;
     this.chaseIntroduced = false;
     this.chasePushed = false;
+    this.sirenT = 0;
     this.deathReason = "crash";
     this.spawner.reset();
     this.spawner.seed(40, 5, 30, {
@@ -632,7 +633,10 @@ export class Game {
     // first change of scenery and then hangs back or closes in on its own.
     const show = playing && this.runTime >= CHASE_JOINS_AT;
     this.chaser.visible = show;
-    if (!show) return;
+    if (!show) {
+      this.screens.setChasePressure(0);
+      return;
+    }
 
     // Said once, when it turns up. A vehicle silently following the runner
     // teaches nothing; the player has to be told that their own near misses
@@ -679,14 +683,28 @@ export class Game {
     beacons[0].visible = heat > 0.05 && flash;
     beacons[1].visible = heat > 0.05 && !flash;
 
+    // Peripheral pressure. A gauge in the corner is information; this is the
+    // part that is actually *felt*, and without it the pursuer reads as scenery
+    // that happens to follow the runner around.
+    this.screens.setChasePressure(heat);
+    if (heat > 0.02) this.shake = Math.max(this.shake, heat * 0.35);
+
     if (isWarning(this.chase)) {
       if (!this.chaseWarned) {
         this.chaseWarned = true;
-        this.screens.showToast("따라잡힌다!");
+        this.screens.showToast("따라잡힌다! 아슬아슬하게 피해서 떼어내세요");
         this.audio.horn();
+        vibrate(28);
+      }
+      // Faster as it gets nearer, so the sound itself carries the distance.
+      this.sirenT -= dt;
+      if (this.sirenT <= 0) {
+        this.sirenT = 0.95 - heat * 0.5;
+        this.audio.siren();
       }
     } else {
       this.chaseWarned = false;
+      this.sirenT = 0;
     }
   }
 

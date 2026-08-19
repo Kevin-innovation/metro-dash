@@ -106,6 +106,12 @@ export class AudioBus {
     setTimeout(() => this.beep(180, 0.22, "square", 0.22), 90);
   }
 
+  /** Two-tone siren, repeated while the pursuer is closing. */
+  siren() {
+    this.beep(740, 0.15, "square", 0.2);
+    setTimeout(() => this.beep(560, 0.17, "square", 0.2), 150);
+  }
+
   speedup() {
     this.beep(660, 0.08, "square", 0.45);
     setTimeout(() => this.beep(880, 0.1, "square", 0.4), 70);

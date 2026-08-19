@@ -381,6 +381,14 @@ export class Screens {
     this.chaseGainTimer = setTimeout(() => el.classList.add("hidden"), 700);
   }
 
+  /** How hard the pursuer is pressing, 0..1, as a closing red vignette. */
+  setChasePressure(heat) {
+    const el = $("chase-vignette");
+    if (!el) return;
+    el.style.opacity = heat <= 0.02 ? "0" : Math.min(1, heat * 0.9).toFixed(3);
+    el.classList.toggle("beat", heat > 0.35);
+  }
+
   showReportNote(message) {
     const note = $("report-note");
     if (!note) return;
