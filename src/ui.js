@@ -142,6 +142,9 @@ export function renderHud(state) {
 
   if (el.boardWrap) {
     el.boardWrap.classList.toggle("riding", state.boarding);
+    // Greyed once this run's board has been used, so the button is not offering
+    // something it will refuse.
+    el.boardWrap.classList.toggle("spent", Boolean(state.boardUsed) && !state.boarding);
     if (el.boardFill) el.boardFill.style.transform = `scaleX(${state.boardT / HOVERBOARD_TIME})`;
     if (el.boardCount && state.hoverboards !== last.boards) {
       el.boardCount.textContent = String(state.hoverboards);

@@ -24,7 +24,7 @@ import { lookAt } from "./zones.js";
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
-import { missionTier } from "./progression.js";
+import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import { SaveStore, describeSave, hasProgress, normalizeSave } from "./save.js";
 import { GENERAL } from "./school.js";
@@ -506,6 +506,7 @@ export class Game {
     this.nearMissFx = 0;
     this.boardT = 0;
     this.boardGrace = 0;
+    this.boardUsed = false;
     this.airborne = false;
   }
 
@@ -548,9 +549,12 @@ export class Game {
     this.interactions.magnetScale = perk.magnetRange ?? 1;
     if (perk.startBoard) {
       // Free, and outside the shop economy: the board bought with coins is
-      // still spent from the inventory, this one comes with the character.
+      // still spent from the inventory, this one comes with the character. It
+      // is also the run's one board rather than a second one — the perk saves
+      // 350 coins a run, it does not buy an extra life.
       this.player.boarding = true;
       this.boardT = HOVERBOARD_TIME;
+      this.boardUsed = true;
     }
 
     this.cam = { x: 0, y: 3.6, z: -7.4 };
@@ -610,9 +614,47 @@ export class Game {
   start() {
     const loop = () => {
       requestAnimationFrame(loop);
-      this.tick();
+      try {
+        this.tick();
+      } catch (error) {
+        this.onFrameError(error);
+      }
     };
     loop();
+  }
+
+  /**
+   * A frame that threw must not take the game with it.
+   *
+   * The next frame is already scheduled above, so the loop itself survives —
+   * but a throw before the render call means nothing is drawn, and a throw that
+   * happens every frame leaves the player staring at the last good image with a
+   * dead game underneath. That is exactly what a bad line in the game-over path
+   * did: the run ended, the card never opened, and there was no way back to the
+   * title screen.
+   *
+   * So: keep drawing, and if the run is over, force the card open by hand. The
+   * player always ends up somewhere with a button on it.
+   */
+  onFrameError(error) {
+    this.frameErrors = (this.frameErrors ?? 0) + 1;
+    // Logged a few times rather than every frame; a stuck loop would otherwise
+    // bury the first and most useful report under thousands of copies.
+    if (this.frameErrors <= 3) console.error("[metro-dash] frame failed", error);
+
+    if (this.state === "dead" && !this.screens.gameOverVisible()) {
+      try {
+        this.screens.setOverlay("dead");
+      } catch {
+        /* the DOM is beyond help; the render below is still worth trying */
+      }
+    }
+
+    try {
+      this.renderer.render(this.scene, this.camera);
+    } catch {
+      /* nothing further to do — the next frame will try again */
+    }
   }
 
   /**
@@ -872,11 +914,21 @@ export class Game {
 
   deployBoard() {
     if (this.state !== "playing" || this.player.boarding) return;
+    // One per run, however many are in the bank. Each board absorbs a crash, so
+    // an unlimited supply turned coins directly into score — the richest player
+    // simply never died, and the leaderboard measured the shop rather than the
+    // running.
+    if (this.boardUsed) {
+      this.audio.denied();
+      this.screens.showToast("호버보드는 한 판에 한 번만 쓸 수 있어요");
+      return;
+    }
     if (this.store.data.hoverboards <= 0) {
       this.audio.denied();
       return;
     }
     this.store.set("hoverboards", this.store.data.hoverboards - 1);
+    this.boardUsed = true;
     this.run.addBoard();
     this.player.boarding = true;
     this.boardT = HOVERBOARD_TIME;

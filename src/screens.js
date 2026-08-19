@@ -712,6 +712,7 @@ export class Screens {
       durations,
       boarding: game.player.boarding,
       boardT: game.boardT,
+      boardUsed: game.boardUsed,
       hoverboards: game.store.data.hoverboards,
       phaseName: game.phaseName(),
       speed: game.speed,

@@ -1629,6 +1629,11 @@ button.report-flag:disabled {
   white-space: normal;
 }
 
+/* This run's board is gone; the button stays put so the layout does not jump. */
+.board-wrap.spent {
+  opacity: 0.35;
+}
+
 /* Days in a row, sitting beside the coin bank on the title card. Warm against
    the gold so the two numbers do not read as one. */
 .streak-chip {
