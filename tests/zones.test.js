@@ -66,14 +66,40 @@ describe("보간", () => {
     }
   });
 
-  it("천장은 양쪽이 모두 실내일 때만 생긴다", () => {
-    // Half a roof sliding down through the runner is worse than no roof.
-    const tunnel = ZONES.find((zone) => zone.id === "tunnel");
-    expect(lookAt(tunnel.from - ZONE_FADE / 2).ceiling).toBeNull();
-    expect(lookAt(tunnel.from).ceiling).toBe(tunnel.ceiling);
+  it("벽이 서 있는 동안에는 반드시 천장이 있다", () => {
+    // The bug this replaces: for the four seconds of a surface→tunnel fade the
+    // walls rose with no roof above them, so a jump went up past the wall tops
+    // into open sky — and with no ceiling there was nothing to stop it either.
+    for (let t = 0; t <= 260; t += 0.1) {
+      const look = lookAt(t);
+      if (look.wall > 0.02) {
+        expect(look.ceiling, `t=${t.toFixed(1)} 벽=${look.wall.toFixed(2)}`).not.toBeNull();
+      }
+    }
+  });
 
+  it("천장이 열린 하늘에서 내려와 자리를 잡는다", () => {
+    const tunnel = ZONES.find((zone) => zone.id === "tunnel");
+    const early = lookAt(tunnel.from - ZONE_FADE * 0.75).ceiling;
+    const mid = lookAt(tunnel.from - ZONE_FADE * 0.4).ceiling;
+
+    // Descending, not appearing.
+    expect(early).toBeGreaterThan(mid);
+    expect(mid).toBeGreaterThan(tunnel.ceiling);
+    expect(lookAt(tunnel.from).ceiling).toBeCloseTo(tunnel.ceiling, 5);
+  });
+
+  it("트인 구간에서는 천장이 없다", () => {
+    for (const zone of ZONES) {
+      if (zone.ceiling !== null) continue;
+      // Well clear of the fades on either side.
+      expect(lookAt(zone.from + ZONE_FADE).ceiling).toBeNull();
+    }
+  });
+
+  it("실내에서 실내로 갈 때는 천장 높이만 바뀐다", () => {
+    const tunnel = ZONES.find((zone) => zone.id === "tunnel");
     const station = ZONES.find((zone) => zone.id === "station");
-    // Tunnel → station is indoors on both sides, so the roof just rises.
     const mid = lookAt(station.from - ZONE_FADE / 2).ceiling;
     expect(mid).toBeGreaterThan(tunnel.ceiling);
     expect(mid).toBeLessThan(station.ceiling);

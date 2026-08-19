@@ -19,7 +19,7 @@ import { Interactions } from "./interactions.js";
 import { MISSION_TIERS, ensureMissions } from "./missions.js";
 import { phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { lookAt } from "./zones.js";
-import { createChase, evade, isWarning, stepChase, stumble, threat } from "./chase.js";
+import { GAP_MAX, createChase, evade, isWarning, stepChase, stumble, threat } from "./chase.js";
 
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
@@ -48,6 +48,14 @@ const CHASE_SIDE_X = 5.4;
 
 /** Gap kept between the camera and a roof overhead. */
 const CAMERA_HEADROOM = 0.5;
+
+/**
+ * Seconds before the pursuer joins the run.
+ *
+ * Long enough that the opening is calm and the tutorial patterns are not
+ * competing with it, short enough that every run meets it.
+ */
+const CHASE_JOINS_AT = 14;
 
 const $ = (id) => document.getElementById(id);
 
@@ -614,11 +622,13 @@ export class Game {
       }
     }
 
-    // Only once it is genuinely close. A pursuer permanently in shot stops
-    // meaning anything, and there is nowhere to draw a distant one anyway: the
-    // camera sits eight metres behind the runner, so everything further back
-    // than that is behind the lens.
-    const show = playing && isWarning(this.chase);
+    // On screen for the whole run once it has joined.
+    //
+    // It was hidden until the gap fell under fourteen metres, which almost no
+    // run reached — the feature shipped and nobody ever saw it. A pursuer you
+    // are told about but never meet is worse than none. It arrives with the
+    // first change of scenery and then hangs back or closes in on its own.
+    const show = playing && this.runTime >= CHASE_JOINS_AT;
     this.chaser.visible = show;
     if (!show) return;
 
@@ -637,7 +647,10 @@ export class Game {
     // Both the camera and the pursuer are behind the runner, so closing the gap
     // moves it *away* from the lens and up the frame towards the runner. That
     // is the reading that matters: it is visibly gaining on them, not on us.
-    const drawGap = CHASE_NEAR + (1 - heat) * (CHASE_FAR - CHASE_NEAR);
+    // Mapped across the whole range rather than only the warning band, so the
+    // distance on screen tracks the real gap the entire time.
+    const near = Math.min(1, Math.max(0, 1 - this.chase.gap / GAP_MAX));
+    const drawGap = CHASE_FAR - near * (CHASE_FAR - CHASE_NEAR);
     this.chaser.position.set(
       this.chaseSide * CHASE_SIDE_X,
       0.3 + Math.sin(this.player.runT * 7) * 0.06,

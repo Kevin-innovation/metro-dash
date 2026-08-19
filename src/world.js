@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { BUILDING_COLORS, FOG_COLOR, LANES, SEGMENT_COUNT, SEGMENT_LEN } from "./config.js";
 import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
+import { OPEN_CEILING } from "./zones.js";
 
 function hexOf(n) {
   return `#${n.toString(16).padStart(6, "0")}`;
@@ -308,13 +309,14 @@ export function applyLook(world, look, quality) {
 
   const shell = world.shell;
   shell.visible = look.ceiling !== null || look.wall > 0.02;
-  if (shell.visible) {
-    world.roof.visible = look.ceiling !== null;
-    if (look.ceiling !== null) world.roof.position.y = look.ceiling;
-    // Walls fade in by sinking, so the shell arrives rather than blinking on.
-    world.walls.forEach((wall) => (wall.position.y = 3.4 - (1 - look.wall) * 9));
-    world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
-  }
+  // Written every frame, visible or not. Skipping the update while hidden left
+  // stale positions behind, so the first frame the shell reappeared showed the
+  // roof and walls wherever they happened to be last time.
+  world.roof.visible = look.ceiling !== null;
+  world.roof.position.y = look.ceiling ?? OPEN_CEILING;
+  // Walls fade in by sinking, so the shell arrives rather than blinking on.
+  world.walls.forEach((wall) => (wall.position.y = 3.4 - (1 - look.wall) * 9));
+  world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
 }
 
 /**

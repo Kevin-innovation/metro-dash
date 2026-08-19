@@ -78,7 +78,7 @@ export const ZONES = [
     // where the slide gantries sit — so a super-sneaker jump grazes the roof
     // rather than passing through it, and the gates read as ceiling-mounted.
     ceiling: 5.6,
-    wall: 0.85,
+    wall: 1,
     // The ceiling has to mean something, so the tunnel leans on slide gates.
     slideBias: 0.5,
   },
@@ -196,9 +196,24 @@ export function mixColor(a, b, k) {
  * `ceiling` is null whenever either side of the blend is open sky, so the roof
  * mesh is simply hidden rather than sliding down through the runner.
  */
+/**
+ * Stand-in height for open sky.
+ *
+ * Above everything that can reach it — the jetpack at 6.2m, the slide gantries
+ * at 5.9m — so a ceiling sitting here restricts nothing. Having a number rather
+ * than `null` is what lets a roof *descend* into place instead of appearing.
+ */
+export const OPEN_CEILING = 11;
+
 export function lookAt(t) {
   const { from, to, k } = zoneBlend(t);
-  const both = from.ceiling !== null && to.ceiling !== null;
+  // Treating open sky as a very high ceiling rather than as no ceiling at all.
+  //
+  // The previous version only produced a ceiling when *both* zones had one, so
+  // for the four seconds of a surface→tunnel fade the walls were rising with no
+  // roof above them and nothing stopping the runner: a jump went straight up
+  // past the wall tops into open sky. Now the roof comes down to meet them.
+  const ceiling = mix(from.ceiling ?? OPEN_CEILING, to.ceiling ?? OPEN_CEILING, k);
 
   return {
     id: k > 0.5 ? to.id : from.id,
@@ -212,7 +227,7 @@ export function lookAt(t) {
     hemi: mix(from.hemi, to.hemi, k),
     sun: mix(from.sun, to.sun, k),
     ambient: mix(from.ambient, to.ambient, k),
-    ceiling: both ? mix(from.ceiling, to.ceiling, k) : null,
+    ceiling: ceiling >= OPEN_CEILING - 0.05 ? null : ceiling,
     // Faded in on its own so the walls arrive with the roof rather than after.
     wall: mix(from.wall, to.wall, k),
     slideBias: mix(from.slideBias, to.slideBias, k),
