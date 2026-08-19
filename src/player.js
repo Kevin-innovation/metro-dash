@@ -8,6 +8,7 @@ import {
   JUMP_V,
   LANE_LERP,
   LANES,
+  CEILING_CLEARANCE,
   MOUNT_TIME,
   PLAYER_HEIGHT,
   SLIDE_HEIGHT,
@@ -338,7 +339,7 @@ export function bestRoof(p, roofs, x = p.x) {
  * ceiling*, which on screen is indistinguishable from vanishing through it.
  * So the gap has to leave room for the camera to ride above the head too.
  */
-export const CEILING_CLEARANCE = PLAYER_HEIGHT + 0.65;
+export { CEILING_CLEARANCE };
 
 export function updatePlayer(p, dt, speed, ctx = {}) {
   const roofs = ctx.roofs || [];

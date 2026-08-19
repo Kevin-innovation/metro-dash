@@ -85,6 +85,21 @@ export const SIGN_BOARD_BOTTOM = 0.95;
 export const SIGN_BOARD_TOP = 3.3;
 export const SIGN_BAND_TOP = 5.6;
 
+/** Gap a roof must leave above the runner's feet: their own height, plus air. */
+export const CEILING_CLEARANCE = PLAYER_HEIGHT + 0.65;
+
+/**
+ * Lowest a tunnel roof may ever be.
+ *
+ * A roof pushes the runner down to `ceiling - CEILING_CLEARANCE`, and the
+ * jetpack is the one thing that reaches that high. Any lower than this and it
+ * cruises *below* JETPACK_ALTITUDE — and since that altitude is what clears
+ * SIGN_BAND_TOP, the power-up that is supposed to fly over everything flies
+ * straight into the gates instead. The tunnel is the zone that spawns the most
+ * of them, so the fault landed exactly where it hurt most.
+ */
+export const MIN_CEILING = JETPACK_ALTITUDE + CEILING_CLEARANCE;
+
 // --- Scoring / feel --------------------------------------------------------
 
 /** Lateral distance band that counts as a near miss rather than a clean pass. */

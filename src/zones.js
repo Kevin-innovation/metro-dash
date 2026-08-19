@@ -15,6 +15,8 @@
  * into lights and fog.
  */
 
+import { MIN_CEILING } from "./config.js";
+
 /** Seconds a zone takes to fade into the next one. */
 export const ZONE_FADE = 4;
 
@@ -74,11 +76,12 @@ export const ZONES = [
     hemi: 0.62,
     sun: 0.25,
     ambient: 0.44,
-    // Has to clear the *top of the runner* at their highest ordinary jump:
-    // 5.04m of super-sneaker apex plus 1.55m of runner. Only the jetpack is
-    // meant to be pushed down in here, and it still flies far above every
-    // obstacle.
-    ceiling: 7.6,
+    // Low enough to feel like a tunnel, and no lower: at 7.6 the roof pressed
+    // the jetpack down to 5.4, which is *inside* the gate band it is supposed
+    // to fly over — in the one zone that spawns the most gates. MIN_CEILING is
+    // exactly the height at which the jetpack keeps its normal altitude, so the
+    // rule cannot be broken again by picking a nicer-looking number.
+    ceiling: MIN_CEILING,
     wall: 1,
     // The ceiling has to mean something, so the tunnel leans on slide gates.
     slideBias: 0.5,

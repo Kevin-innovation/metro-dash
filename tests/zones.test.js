@@ -174,21 +174,29 @@ describe("터널이 실제로 슬라이드를 요구하는가", () => {
 
 describe("천장이 게임을 막지 않는가", () => {
   it("천장 아래 여유 높이가 모든 장애물 위에 있다", async () => {
-    const { CEILING_CLEARANCE } = await import("../src/player.js");
-    const { SIGN_BOARD_TOP } = await import("../src/config.js");
+    const { CEILING_CLEARANCE, JETPACK_ALTITUDE, SIGN_BAND_TOP } = await import("../src/config.js");
 
     // A jetpack clamped by the roof must still be over everything lethal, or
     // a power-up turns into a death sentence the moment a tunnel starts.
+    //
+    // Measured against SIGN_BAND_TOP, which is where the gate actually stops
+    // being passable. This used to compare against SIGN_BOARD_TOP — the top of
+    // the yellow warning board, 2.3m lower — so a tunnel roof that pressed the
+    // jetpack 0.2m *into* the band passed this test for months.
     for (const zone of ZONES) {
       if (zone.ceiling === null) continue;
       const flying = zone.ceiling - CEILING_CLEARANCE;
-      expect(flying, `${zone.name}`).toBeGreaterThan(SIGN_BOARD_TOP + 0.5);
+      expect(flying, `${zone.name} 게이트 위`).toBeGreaterThan(SIGN_BAND_TOP);
+      // And it keeps the altitude it flies at everywhere else, so a tunnel does
+      // not quietly turn the power-up into something weaker.
+      expect(flying, `${zone.name} 순항 고도`).toBeGreaterThanOrEqual(JETPACK_ALTITUDE);
     }
   });
 
   it("일반 점프와 스니커즈 점프는 천장에 막히지 않는다", async () => {
-    const { CEILING_CLEARANCE } = await import("../src/player.js");
-    const { GRAVITY, JUMP_V, SNEAKER_JUMP_MULT } = await import("../src/config.js");
+    const { CEILING_CLEARANCE, GRAVITY, JUMP_V, SNEAKER_JUMP_MULT } = await import(
+      "../src/config.js"
+    );
     const apex = (v) => (v * v) / (2 * -GRAVITY);
 
     // Ordinary movement has to feel the same everywhere. Only the jetpack,
@@ -202,8 +210,7 @@ describe("천장이 게임을 막지 않는가", () => {
   });
 
   it("어떤 높이에서도 러너의 머리가 천장을 뚫지 않는다", async () => {
-    const { CEILING_CLEARANCE } = await import("../src/player.js");
-    const { PLAYER_HEIGHT } = await import("../src/config.js");
+    const { CEILING_CLEARANCE, PLAYER_HEIGHT } = await import("../src/config.js");
 
     // `p.y` is the feet. Clamping those alone left the head a metre inside the
     // roof, which on screen looked like the runner being swallowed by it —
