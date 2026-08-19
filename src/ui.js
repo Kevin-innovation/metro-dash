@@ -136,7 +136,9 @@ export function renderHud(state) {
   const combo =
     state.combo >= 2 ? (tier.label ? `${tier.label}  x${tier.multiplier}` : `COMBO x${state.combo}`) : "";
   if (combo !== last.combo) {
-    el.combo.classList.toggle("hidden", !combo);
+    // Shown and hidden by visibility, not display: the line keeps its space
+    // either way so nothing below it moves.
+    el.combo.classList.toggle("on", Boolean(combo));
     if (combo) el.combo.textContent = combo;
     last.combo = combo;
   }

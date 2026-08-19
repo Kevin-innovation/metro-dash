@@ -680,7 +680,7 @@ export class Screens {
     $("pace-chip").textContent = "START";
     $("speed-toast").classList.add("hidden");
     $("coin-gain").classList.add("hidden");
-    $("combo").classList.add("hidden");
+    $("combo").classList.remove("on");
     // Nothing to say to a keyboard: the hint describes swipes.
     const touch = window.matchMedia?.("(pointer: coarse)").matches ?? false;
     const hint = $("touch-hint");

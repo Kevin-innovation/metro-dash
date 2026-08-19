@@ -54,19 +54,27 @@
           </div>
           <div class="score-stack">
             <div id="score">0</div>
-            <div id="combo" class="combo hidden">COMBO x2</div>
+            <!-- No `hidden` here: the combo line is shown and hidden by
+                 visibility so its space is always reserved. -->
+            <div id="combo" class="combo">COMBO x2</div>
             <div id="coin-gain" class="coin-gain hidden">+10</div>
           </div>
           <button id="btn-pause" type="button" aria-label="일시정지">II</button>
         </div>
 
-        <div id="event-chip" class="event-chip hidden">
-          <span id="event-name" class="event-name"></span>
-          <div class="event-track"><div id="event-fill" class="event-fill"></div></div>
+        <!-- Everything that lives under the score shares one column, in flow.
+             Each of these used to be pinned at its own hardcoded offset, and
+             since all three change height with the run state they took turns
+             covering each other. A column cannot overlap itself. -->
+        <div class="hud-centre">
+          <div id="event-chip" class="event-chip hidden">
+            <span id="event-name" class="event-name"></span>
+            <div class="event-track"><div id="event-fill" class="event-fill"></div></div>
+          </div>
+          <div id="powerup-stack" class="powerup-stack hidden"></div>
+          <div id="speed-toast" class="hidden"></div>
         </div>
-        <div id="powerup-stack" class="powerup-stack hidden"></div>
         <div id="near-miss" class="near-miss hidden">아슬아슬!</div>
-        <div id="speed-toast" class="hidden"></div>
 
         <div id="board-wrap" class="board-wrap">
           <button id="btn-board" type="button" aria-label="호버보드">
