@@ -363,8 +363,6 @@ export class Screens {
     if (confirm) confirm.disabled = busy;
   }
 
-
-
   showReportNote(message) {
     const note = $("report-note");
     if (!note) return;
@@ -610,6 +608,75 @@ export class Screens {
     });
   }
 
+  showToast(text) {
+    const el = $("speed-toast");
+    el.textContent = text;
+    el.classList.remove("hidden", "pop");
+    void el.offsetWidth;
+    el.classList.add("pop");
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => {
+      el.classList.add("hidden");
+      el.classList.remove("pop");
+    }, 1200);
+  }
+
+  flashCoinGain(gain) {
+    const gainEl = $("coin-gain");
+    gainEl.textContent = `+${gain}`;
+    gainEl.classList.remove("hidden", "pop");
+    void gainEl.offsetWidth;
+    gainEl.classList.add("pop");
+    clearTimeout(this.gainTimer);
+    this.gainTimer = setTimeout(() => gainEl.classList.add("hidden"), 520);
+
+    const scoreEl = $("score");
+    scoreEl.classList.remove("score-punch");
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add("score-punch");
+
+    const chip = $("coin-count").parentElement;
+    chip.classList.remove("coin-punch");
+    void chip.offsetWidth;
+    chip.classList.add("coin-punch");
+  }
+
+  flashNearMiss() {
+    const el = $("near-miss");
+    if (!el) return;
+    el.classList.remove("hidden", "pop");
+    void el.offsetWidth;
+    el.classList.add("pop");
+    clearTimeout(this.nearMissTimer);
+    this.nearMissTimer = setTimeout(() => el.classList.add("hidden"), 520);
+  }
+
+  // --- game over -----------------------------------------------------------
+
+  showGameOver(run, save, result) {
+    const rounded = Math.floor(run.score);
+
+    $("final-score").textContent = rounded.toLocaleString();
+    $("break-dist").textContent = Math.floor(run.scoreDist).toLocaleString();
+    $("break-coins").textContent = Math.floor(run.scoreCoins).toLocaleString();
+    $("break-bonus").textContent = Math.floor(run.scoreBonus).toLocaleString();
+    $("final-coins").textContent = String(run.coins);
+    $("final-dist").textContent = `${Math.floor(run.distance)}m`;
+    $("final-combo").textContent = String(run.comboMax);
+    $("over-best").textContent = save.best.toLocaleString();
+    $("new-best").classList.toggle("hidden", rounded < save.best || rounded === 0);
+
+    const nearEl = $("final-nearmiss");
+    if (nearEl) nearEl.textContent = String(run.metrics.nearMisses);
+    const mountEl = $("final-mounts");
+    if (mountEl) mountEl.textContent = String(run.metrics.mounts);
+    const xpEl = $("final-xp");
+    if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
+
+    const cleared = this.renderMissionResults(result);
+    this.setOverlay("dead");
+    return cleared;
+  }
 
   /** @returns {boolean} whether any mission was cleared, so the caller can cue audio */
   renderMissionResults(result) {

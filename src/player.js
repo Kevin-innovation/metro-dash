@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { bendX } from "./track.js";
 import { approach } from "./collision.js";
 import {
   FAST_FALL,
@@ -444,13 +445,17 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
   p.height = p.sliding ? SLIDE_HEIGHT : PLAYER_HEIGHT;
   p.runT += dt * (0.9 + speed * 0.08);
 
-  p.root.position.set(p.x, p.y, p.z);
+  // Simulated on a straight line, drawn on the curved one. Everything else in
+  // the world gets the same offset at the same Z, so the runner stays exactly
+  // where the collision maths thinks they are.
+  const bend = bendX(p.z);
+  p.root.position.set(p.x + bend, p.y, p.z);
   p.root.rotation.z = p.lean;
   p.root.rotation.x = 0;
   p.board.visible = p.boarding && p.alive;
 
   // Blob stays on the deck; height is read from how small and faint it gets.
-  p.shadow.position.set(p.x, 0.03, p.z);
+  p.shadow.position.set(p.x + bend, 0.03, p.z);
   p.shadow.material.opacity = Math.max(0.05, 0.3 - p.y * 0.045);
   p.shadow.visible = p.alive;
 

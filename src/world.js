@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { BUILDING_COLORS, FOG_COLOR, LANES, SEGMENT_COUNT, SEGMENT_LEN } from "./config.js";
 import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
 import { OPEN_CEILING } from "./zones.js";
+import { addRibbon, createRibbon, syncRibbon } from "./ribbon.js";
+import { bendX } from "./track.js";
 
 function hexOf(n) {
   return `#${n.toString(16).padStart(6, "0")}`;
@@ -33,6 +35,13 @@ const TUNNEL_LAMPS = 28;
 const LAMP_SPACING = TUNNEL_LEN / TUNNEL_LAMPS;
 /** How much of the shell sits behind the runner. */
 const TUNNEL_BEHIND = 60;
+
+/** How much track the ribbons span, and how much of it sits behind the runner. */
+const TRACK_LEN = SEGMENT_COUNT * SEGMENT_LEN;
+const TRACK_BEHIND = 40;
+/** Sleepers laid across the visible stretch, per lane. */
+const TIES_PER_LANE = 46;
+const TIE_SPACING = 2.6;
 
 /** Tall enough that the foot of the wall is always below the track. */
 const WALL_HEIGHT = 18;
@@ -89,13 +98,28 @@ export function createWorld(scene, quality) {
   const shell = new THREE.Group();
   const shellMat = new THREE.MeshLambertMaterial({ color: 0x39404a });
   const roofMat = new THREE.MeshLambertMaterial({ color: 0x4a525e, emissive: 0x1a1f26 });
-  // Wide enough to fill the view. A narrow roof reads as a dark bar hanging in
+  // Ribbons like the track itself, for the same reason: a straight tunnel over
+  // a curving line puts the track through the wall within a few seconds.
+  // Wide enough to fill the view — a narrow roof reads as a dark bar hanging in
   // front of the skyline rather than as a ceiling over the track.
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(26, ROOF_THICKNESS, TUNNEL_LEN), roofMat);
+  const roof = createRibbon(roofMat, {
+    width: 26,
+    height: ROOF_THICKNESS,
+    offsetX: 0,
+    y: 0,
+    length: TUNNEL_LEN,
+    behind: TUNNEL_BEHIND,
+  });
   shell.add(roof);
   const walls = [-1, 1].map((side) => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.6, WALL_HEIGHT, TUNNEL_LEN), shellMat);
-    wall.position.set(side * 7.2, 3.4, 0);
+    const wall = createRibbon(shellMat, {
+      width: 0.6,
+      height: WALL_HEIGHT,
+      offsetX: side * 7.2,
+      y: 3.4,
+      length: TUNNEL_LEN,
+      behind: TUNNEL_BEHIND,
+    });
     shell.add(wall);
     return wall;
   });
@@ -106,7 +130,7 @@ export function createWorld(scene, quality) {
   for (let i = 0; i < TUNNEL_LAMPS; i++) {
     const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 4.2), lampMat);
     lamp.position.set(i % 2 ? 6.7 : -6.7, 4.2, 0);
-    lamp.userData.slot = i;
+    lamp.userData = { slot: i, side: i % 2 ? 6.7 : -6.7 };
     shell.add(lamp);
     lamps.push(lamp);
   }
@@ -114,7 +138,8 @@ export function createWorld(scene, quality) {
   scene.add(shell);
 
   const ballastTex = makeBallast();
-  ballastTex.repeat.set(3, 8);
+  // Across only: the length repeat comes from the world-Z mapping in the ribbon.
+  ballastTex.repeat.set(3, 1);
   const woodTex = makeWood();
   const wallTex = makeWall();
   wallTex.repeat.set(4, 1);
@@ -144,47 +169,40 @@ export function createWorld(scene, quality) {
   const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
   const kerbMat = new THREE.MeshLambertMaterial({ color: 0x8a8f96 });
 
-  const segments = [];
-  for (let i = 0; i < SEGMENT_COUNT; i++) {
-    const g = new THREE.Group();
+  // The track, as continuous strips rather than a chain of blocks.
+  //
+  // Blocks cannot curve: bending one can only turn it as a whole, so the joints
+  // between them show as a kink every thirty metres. A ribbon spans the entire
+  // visible distance and has its vertices moved onto the line every frame, so
+  // it is genuinely curved — and it costs one draw call where the blocks cost
+  // more than five hundred.
+  const strip = (material, spec) =>
+    addRibbon(scene, createRibbon(material, { length: TRACK_LEN, behind: TRACK_BEHIND, ...spec }));
 
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.18, SEGMENT_LEN), trackMat);
-    floor.position.y = -0.08;
-    floor.receiveShadow = quality.shadows;
-    g.add(floor);
+  const ribbons = [strip(trackMat, { width: 8.4, offsetX: 0, y: 0.01, shadow: true, tile: 6 })];
+  for (const x of LANES) {
+    ribbons.push(strip(lineMat, { width: 0.09, offsetX: x, y: 0.03 }));
+    for (const ox of [-0.38, 0.38]) {
+      ribbons.push(strip(railMat, { width: 0.1, offsetX: x + ox, y: 0.09 }));
+    }
+  }
+  for (const side of [-1, 1]) {
+    ribbons.push(strip(kerbMat, { width: 0.5, height: 0.3, offsetX: side * 4.5, y: 0.15, shadow: true }));
+    ribbons.push(strip(wallMat, { width: 0.4, height: 2.4, offsetX: side * 5.5, y: 1.2, shadow: true }));
+  }
+  for (const ribbon of ribbons) ribbon.receiveShadow = ribbon.userData.spec.shadow && quality.shadows;
 
-    LANES.forEach((x) => {
-      const line = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, SEGMENT_LEN), lineMat);
-      line.position.set(x, 0.02, 0);
-      g.add(line);
-      [-0.38, 0.38].forEach((ox) => {
-        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, SEGMENT_LEN), railMat);
-        rail.position.set(x + ox, 0.05, 0);
-        g.add(rail);
-      });
-      const ties = 10;
-      for (let t = 0; t < ties; t++) {
-        const tie = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.28), woodMat);
-        tie.position.set(x, 0.01, -SEGMENT_LEN / 2 + 1.4 + t * (SEGMENT_LEN / ties));
-        tie.receiveShadow = quality.shadows;
-        g.add(tie);
-      }
-    });
-
-    [-1, 1].forEach((side) => {
-      const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, SEGMENT_LEN), kerbMat);
-      kerb.position.set(side * 4.5, 0.05, 0);
-      kerb.receiveShadow = quality.shadows;
-      g.add(kerb);
-
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 2.4, SEGMENT_LEN), wallMat);
-      wall.position.set(side * 5.5, 1.2, 0);
-      wall.receiveShadow = quality.shadows;
-      g.add(wall);
-    });
-
-    scene.add(g);
-    segments.push({ group: g, index: i });
+  // Sleepers stay individual: each is under a third of a metre long, so placing
+  // them one by one costs nothing in smoothness.
+  const ties = [];
+  for (const x of LANES) {
+    for (let i = 0; i < TIES_PER_LANE; i++) {
+      const tie = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.28), woodMat);
+      tie.receiveShadow = quality.shadows;
+      tie.userData = { lane: x, slot: i };
+      scene.add(tie);
+      ties.push(tie);
+    }
   }
 
   // Skyline: paired towers per slot, with height and depth variety so the
@@ -207,7 +225,14 @@ export function createWorld(scene, quality) {
     scene.add(mesh);
     // Each building owns a persistent Z and is recycled a whole cycle at a
     // time, rather than being re-derived from the current segment index.
-    buildings.push({ mesh, side, h, depth, z: slot * SEGMENT_LEN + ((i * 11) % 5) * 4 });
+    buildings.push({
+      mesh,
+      side,
+      h,
+      depth,
+      baseX: mesh.position.x,
+      z: slot * SEGMENT_LEN + ((i * 11) % 5) * 4,
+    });
   }
 
   const poles = [];
@@ -234,13 +259,13 @@ export function createWorld(scene, quality) {
     pole.add(arm);
     pole.position.x = (i % 2 === 0 ? -1 : 1) * 4.7;
     scene.add(pole);
-    poles.push({ group: pole, z: i * POLE_SPACING });
+    poles.push({ group: pole, baseX: pole.position.x, z: i * POLE_SPACING });
   }
 
   return {
     scene, sky, sunBall, sun, hemi, ambient, ground, clouds,
     shell, roof, walls, lamps,
-    segments, buildings, poles, quality,
+    ribbons, ties, buildings, poles, quality,
   };
 }
 
@@ -325,14 +350,15 @@ export function applyLook(world, look, quality) {
     // there put its lower half below the stated ceiling, and a runner cleared to
     // exactly that height ended up with their head inside the geometry — which
     // is what "the head vanishes into the roof" was.
-    world.roof.position.y = look.ceiling + ROOF_THICKNESS / 2;
+    world.roof.userData.spec.y = look.ceiling + ROOF_THICKNESS / 2;
     // Hung from the roof rather than standing on the ground, so the seal holds
     // at every height the roof passes through.
-    world.walls.forEach(
-      (wall) => (wall.position.y = look.ceiling - WALL_HEIGHT / 2 + ROOF_THICKNESS + 0.4),
-    );
+    world.walls.forEach((wall) => {
+      wall.userData.spec.y = look.ceiling - WALL_HEIGHT / 2 + ROOF_THICKNESS + 0.4;
+    });
     world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
     world.lamps.forEach((lamp) => (lamp.position.y = look.ceiling - 1.4));
+    world.lampSide = 6.7;
   }
 }
 
@@ -354,25 +380,35 @@ function skyFor(world, colors) {
 }
 
 export function syncWorld(world, playerZ) {
-  const start = Math.floor(playerZ / SEGMENT_LEN) - 2;
+  for (const ribbon of world.ribbons) syncRibbon(ribbon, playerZ);
 
-  world.segments.forEach((seg, i) => {
-    const idx = start + i;
-    seg.index = idx;
-    seg.group.position.z = idx * SEGMENT_LEN + SEGMENT_LEN / 2;
-  });
+  // Sleepers march backwards through their span so they read as passing by.
+  const tieSpan = TIES_PER_LANE * TIE_SPACING;
+  for (const tie of world.ties) {
+    const base = tie.userData.slot * TIE_SPACING - playerZ;
+    const z = playerZ + (((base % tieSpan) + tieSpan) % tieSpan) - TRACK_BEHIND;
+    tie.position.set(tie.userData.lane + bendX(z), 0.01, z);
+  }
 
   for (const building of world.buildings) {
-    building.mesh.position.z = recycle(building, BUILDING_CYCLE, playerZ);
+    const z = recycle(building, BUILDING_CYCLE, playerZ);
+    building.mesh.position.z = z;
+    // Scenery follows the line too, or the track walks out through the city.
+    building.mesh.position.x = building.baseX + bendX(z);
   }
 
   for (const pole of world.poles) {
-    pole.group.position.z = recycle(pole, POLE_CYCLE, playerZ);
+    const z = recycle(pole, POLE_CYCLE, playerZ);
+    pole.group.position.z = z;
+    pole.group.position.x = pole.baseX + bendX(z);
   }
 
   world.sky.position.z = playerZ;
   world.ground.position.z = playerZ;
-  world.shell.position.z = playerZ + TUNNEL_LEN / 2 - TUNNEL_BEHIND;
+  if (world.shell.visible) {
+    syncRibbon(world.roof, playerZ);
+    for (const wall of world.walls) syncRibbon(wall, playerZ);
+  }
   // Lamps slide backwards through the shell so they read as passing by rather
   // than travelling along with the runner.
   for (const lamp of world.lamps) {
@@ -380,7 +416,9 @@ export function syncWorld(world, playerZ) {
     // again at the front. Anything else and they march off past the fog and the
     // tunnel goes dark.
     const base = lamp.userData.slot * LAMP_SPACING - playerZ;
-    lamp.position.z = ((base % TUNNEL_LEN) + TUNNEL_LEN) % TUNNEL_LEN - TUNNEL_LEN / 2;
+    const z = playerZ + ((base % TUNNEL_LEN) + TUNNEL_LEN) % TUNNEL_LEN - TUNNEL_BEHIND;
+    lamp.position.z = z;
+    lamp.position.x = lamp.userData.side + bendX(z);
   }
   world.sunBall.position.copy(SUN_DIR).multiplyScalar(SUN_DISTANCE).setZ(playerZ + SUN_DISTANCE * 0.5);
 
