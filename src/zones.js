@@ -199,11 +199,16 @@ export function mixColor(a, b, k) {
 /**
  * Stand-in height for open sky.
  *
- * Above everything that can reach it — the jetpack at 6.2m, the slide gantries
- * at 5.9m — so a ceiling sitting here restricts nothing. Having a number rather
- * than `null` is what lets a roof *descend* into place instead of appearing.
+ * Two constraints pin this number. It has to clear everything that can reach
+ * it — the jetpack cruises at 6.2m and needs its headroom — so it cannot be
+ * lower. And it wants to be as low as that allows: every metre above the roof's
+ * resting height is a metre of empty box the runner passes through on the way
+ * in, and a tall enough one reads as a cathedral rather than as a tunnel.
+ *
+ * Having a number rather than `null` is what lets a roof *descend* into place
+ * instead of appearing from nothing.
  */
-export const OPEN_CEILING = 11;
+export const OPEN_CEILING = 7.2;
 
 export function lookAt(t) {
   const { from, to, k } = zoneBlend(t);
@@ -213,7 +218,17 @@ export function lookAt(t) {
   // for the four seconds of a surface→tunnel fade the walls were rising with no
   // roof above them and nothing stopping the runner: a jump went straight up
   // past the wall tops into open sky. Now the roof comes down to meet them.
-  const ceiling = mix(from.ceiling ?? OPEN_CEILING, to.ceiling ?? OPEN_CEILING, k);
+  // Eased so the shell arrives early in the transition rather than hanging back
+  // until the last moment — the point is that it closes in on the runner. Roof
+  // and walls share the curve, or one finishes while the other is still moving
+  // and the sky shows through the gap between them.
+  const shellK = Math.sqrt(k);
+  const ceiling = mix(from.ceiling ?? OPEN_CEILING, to.ceiling ?? OPEN_CEILING, shellK);
+  const wall = mix(from.wall, to.wall, shellK);
+  // The roof is only reported gone once the walls are too. Deciding it from the
+  // height alone let the ceiling vanish while a sliver of wall was still
+  // standing, which is exactly the gap the sky was showing through.
+  const open = ceiling >= OPEN_CEILING - 0.05 && wall <= 0.02;
 
   return {
     id: k > 0.5 ? to.id : from.id,
@@ -227,9 +242,8 @@ export function lookAt(t) {
     hemi: mix(from.hemi, to.hemi, k),
     sun: mix(from.sun, to.sun, k),
     ambient: mix(from.ambient, to.ambient, k),
-    ceiling: ceiling >= OPEN_CEILING - 0.05 ? null : ceiling,
-    // Faded in on its own so the walls arrive with the roof rather than after.
-    wall: mix(from.wall, to.wall, k),
+    ceiling: open ? null : ceiling,
+    wall,
     slideBias: mix(from.slideBias, to.slideBias, k),
   };
 }

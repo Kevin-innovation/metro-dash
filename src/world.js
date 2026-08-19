@@ -34,6 +34,9 @@ const LAMP_SPACING = TUNNEL_LEN / TUNNEL_LAMPS;
 /** How much of the shell sits behind the runner. */
 const TUNNEL_BEHIND = 60;
 
+/** Tall enough that the foot of the wall is always below the track. */
+const WALL_HEIGHT = 18;
+
 function recycle(item, cycle, playerZ) {
   const floor = playerZ - RECYCLE_BEHIND;
   // Loops rather than a single add so a reset back to the start of the track
@@ -88,7 +91,7 @@ export function createWorld(scene, quality) {
   const roof = new THREE.Mesh(new THREE.BoxGeometry(26, 0.6, TUNNEL_LEN), roofMat);
   shell.add(roof);
   const walls = [-1, 1].map((side) => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 9, TUNNEL_LEN), shellMat);
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.6, WALL_HEIGHT, TUNNEL_LEN), shellMat);
     wall.position.set(side * 7.2, 3.4, 0);
     shell.add(wall);
     return wall;
@@ -308,15 +311,20 @@ export function applyLook(world, look, quality) {
   world.clouds.forEach((cloud) => (cloud.mesh.visible = look.ceiling === null));
 
   const shell = world.shell;
-  shell.visible = look.ceiling !== null || look.wall > 0.02;
-  // Written every frame, visible or not. Skipping the update while hidden left
-  // stale positions behind, so the first frame the shell reappeared showed the
-  // roof and walls wherever they happened to be last time.
-  world.roof.visible = look.ceiling !== null;
-  world.roof.position.y = look.ceiling ?? OPEN_CEILING;
-  // Walls fade in by sinking, so the shell arrives rather than blinking on.
-  world.walls.forEach((wall) => (wall.position.y = 3.4 - (1 - look.wall) * 9));
-  world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
+  // The whole shell lives or dies with the roof. Fading the walls in separately
+  // meant they rose out of the ground while the roof was already overhead, and
+  // the sky poured in through the gap between the two — which is what made a
+  // jump inside a tunnel look like leaving it.
+  shell.visible = look.ceiling !== null;
+  world.roof.visible = shell.visible;
+  if (shell.visible) {
+    world.roof.position.y = look.ceiling;
+    // Hung from the roof rather than standing on the ground, so the seal holds
+    // at every height the roof passes through.
+    world.walls.forEach((wall) => (wall.position.y = look.ceiling - WALL_HEIGHT / 2 + 0.4));
+    world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
+    world.lamps.forEach((lamp) => (lamp.position.y = look.ceiling - 1.4));
+  }
 }
 
 /**

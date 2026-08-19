@@ -607,16 +607,29 @@ export class Screens {
       phaseName: game.phaseName(),
       speed: game.speed,
     });
-    this.syncChase(game.chase);
+    this.syncChase(game.chase, game.chaser.visible);
   }
 
-  /** The pursuer gauge. Absent until it is close enough to matter. */
-  syncChase(chase) {
+  /**
+   * The pursuer gauge.
+   *
+   * On screen the whole time the pursuer is, not only when it is close. It is
+   * the only readout of what the thing behind the runner is *doing* — hidden
+   * until the last moment, the player sees a vehicle following them and never
+   * learns that their own near misses are pushing it back.
+   */
+  syncChase(chase, visible) {
     const meter = $("chase-meter");
     if (!meter) return;
-    const show = isWarning(chase) && !chase.caught;
+    const show = visible && !chase.caught;
     meter.classList.toggle("hidden", !show);
-    if (show) $("chase-fill").style.transform = `scaleX(${threat(chase).toFixed(3)})`;
+    if (!show) return;
+
+    const heat = threat(chase);
+    $("chase-fill").style.transform = `scaleX(${Math.max(0.04, heat).toFixed(3)})`;
+    // Only alarms once it is genuinely near; before that it is information.
+    meter.classList.toggle("close", isWarning(chase));
+    $("chase-gap").textContent = `${Math.round(chase.gap)}m`;
   }
 
   showToast(text) {

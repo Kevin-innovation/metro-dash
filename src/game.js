@@ -479,6 +479,8 @@ export class Game {
     this.particles.clear();
     this.chase = createChase();
     this.chaseWarned = false;
+    this.chaseIntroduced = false;
+    this.chasePushed = false;
     this.deathReason = "crash";
     this.spawner.reset();
     this.spawner.seed(40, 5, 30, {
@@ -631,6 +633,15 @@ export class Game {
     const show = playing && this.runTime >= CHASE_JOINS_AT;
     this.chaser.visible = show;
     if (!show) return;
+
+    // Said once, when it turns up. A vehicle silently following the runner
+    // teaches nothing; the player has to be told that their own near misses
+    // are what pushes it back, or the gauge is just decoration.
+    if (!this.chaseIntroduced) {
+      this.chaseIntroduced = true;
+      this.screens.showToast("추격자 등장! 아슬아슬하게 피하면 멀어져요");
+      this.audio.horn();
+    }
 
     const p = this.player;
     const heat = threat(this.chase);
@@ -969,7 +980,16 @@ export class Game {
     }
     // Cutting it fine used to buy points only. Now it buys ground, which is
     // what turns the risk/reward system into a survival mechanic.
-    if (cleared.nearMisses) evade(this.chase, cleared.nearMisses);
+    if (cleared.nearMisses) {
+      const before = this.chase.gap;
+      evade(this.chase, cleared.nearMisses);
+      // Shown the first time it actually works, so the connection between the
+      // near miss and the gauge moving is made once and explicitly.
+      if (!this.chasePushed && this.chaser.visible && this.chase.gap > before + 0.1) {
+        this.chasePushed = true;
+        this.screens.showToast("추격자를 밀어냈다!");
+      }
+    }
 
     // A hoverboard eats the first hit; grace covers the recovery.
     if (this.boardGrace <= 0 && this.interactions.detectCrash(this.player)) {

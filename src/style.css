@@ -272,12 +272,31 @@ h3,
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px 6px 8px;
+  padding: 6px 10px 6px 8px;
   border-radius: 999px;
-  background: rgba(28, 8, 8, 0.62);
-  border: 1px solid rgba(255, 61, 90, 0.5);
+  /* Calm while the pursuer is merely present; the alarm is saved for `.close`,
+     so it still means something when it arrives. */
+  background: rgba(10, 16, 24, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(8px);
+}
+
+.chase-meter.close {
+  background: rgba(28, 8, 8, 0.62);
+  border-color: rgba(255, 61, 90, 0.5);
   animation: chasePulse 0.9s ease-in-out infinite;
+}
+
+.chase-gap {
+  min-width: 30px;
+  font-family: var(--font-numeric);
+  font-size: 13px;
+  color: #9ec2d8;
+  text-align: right;
+}
+
+.chase-meter.close .chase-gap {
+  color: #ffb4a0;
 }
 
 .chase-icon {
