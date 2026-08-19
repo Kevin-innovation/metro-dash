@@ -22,8 +22,15 @@
 export const FIRST_EVENT_AT = 42;
 /** Seconds from the start of one section to the start of the next. */
 export const EVENT_PERIOD = 52;
-/** How long a section lasts. */
-export const EVENT_SECONDS = 15;
+/**
+ * How long a section lasts, when it does not say otherwise.
+ *
+ * Each one is only as long as it stays interesting. The coin rush is the short
+ * one on purpose: nothing in it can kill you, and fifteen seconds of that is
+ * three quarters of a kilometre of empty track — which reads as the game having
+ * broken rather than as a reward.
+ */
+export const EVENT_SECONDS = 14;
 
 export const EVENTS = [
   {
@@ -31,6 +38,7 @@ export const EVENTS = [
     name: "코인 러시",
     /** Nothing lethal at all: the reward for surviving to it is a rest. */
     patterns: ["rush-coins"],
+    seconds: 8,
     scoreMultiplier: 2,
     colour: "#ffd24a",
   },
@@ -39,6 +47,7 @@ export const EVENTS = [
     name: "게이트 회랑",
     /** Slide, stand, slide. One verb, over and over, until it is a rhythm. */
     patterns: ["triple-sign", "gate-run"],
+    seconds: 11,
     scoreMultiplier: 1.5,
     colour: "#7dfcd4",
   },
@@ -65,10 +74,13 @@ export function eventAt(t) {
   if (!(t >= FIRST_EVENT_AT)) return null;
   const since = t - FIRST_EVENT_AT;
   const elapsed = since % EVENT_PERIOD;
-  if (elapsed >= EVENT_SECONDS) return null;
 
   const index = Math.floor(since / EVENT_PERIOD) % EVENTS.length;
-  return { event: EVENTS[index], elapsed, remaining: EVENT_SECONDS - elapsed };
+  const event = EVENTS[index];
+  const seconds = event.seconds ?? EVENT_SECONDS;
+  if (elapsed >= seconds) return null;
+
+  return { event, elapsed, remaining: seconds - elapsed };
 }
 
 /** Score multiplier from the section alone, 1 when none is running. */

@@ -716,6 +716,13 @@ export class Screens {
       hoverboards: game.store.data.hoverboards,
       phaseName: game.phaseName(),
       speed: game.speed,
+      event: game.section
+        ? {
+            name: game.section.event.name,
+            multiplier: game.section.event.scoreMultiplier,
+            remaining: game.section.remaining,
+          }
+        : null,
     });
   }
 
@@ -724,10 +731,8 @@ export class Screens {
     const el = $("event-chip");
     if (!el) return;
     el.style.setProperty("--event", event.colour ?? "var(--gold)");
-    el.textContent =
-      event.scoreMultiplier > 1
-        ? `${event.name} · 점수 ×${event.scoreMultiplier}`
-        : event.name;
+    // The text itself is written by the HUD sync, which has the countdown.
+    el.textContent = event.name;
     el.classList.remove("hidden");
   }
 

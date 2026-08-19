@@ -109,8 +109,9 @@ function hudNodes() {
     boardFill: boardWrap?.querySelector(".board-fill") ?? null,
     boardCount: $("board-count"),
     pace: $("pace-chip"),
+    event: $("event-chip"),
     /** Last value written, so an unchanged string is not written again. */
-    last: { score: null, coins: null, combo: null, boards: null, pace: null },
+    last: { score: null, coins: null, combo: null, boards: null, pace: null, event: null },
   };
   return hud;
 }
@@ -150,6 +151,19 @@ export function renderHud(state) {
       el.boardCount.textContent = String(state.hoverboards);
       last.boards = state.hoverboards;
     }
+  }
+
+  // The section banner counts down, which is what makes it read as a timed
+  // event rather than as the obstacles having stopped for no reason.
+  if (el.event && state.event) {
+    const bonus = state.event.multiplier > 1 ? ` ×${state.event.multiplier}` : "";
+    const text = `${state.event.name}${bonus} · ${Math.max(1, Math.ceil(state.event.remaining))}초`;
+    if (text !== last.event) {
+      el.event.textContent = text;
+      last.event = text;
+    }
+  } else {
+    last.event = null;
   }
 
   const pace = `${state.phaseName}  ${Math.round(state.speed)}`;

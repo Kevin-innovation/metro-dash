@@ -132,7 +132,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 1,
     weight: 3,
-    late: 2,
+    late: 1,
     build: ({ z, lane }) => [
       { type: "sign", lane, z },
       { type: "coin", lane, z, y: 0.42 },
@@ -196,7 +196,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 2,
     weight: 2,
-    late: 3,
+    late: 2,
     build: ({ z }) => [
       ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
       ...ALL_LANES.map((lane) => ({ type: "coin", lane, z, y: 0.42 })),
@@ -262,7 +262,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 3,
     weight: 2,
-    late: 3,
+    late: 2,
     // The gate wall has to sit beyond the runner's airtime, and super sneakers
     // stretch that to ~0.96s — so this gap is sized for the boosted jump and is
     // deliberately left out of the pressure compression. Compressing it would
@@ -281,7 +281,7 @@ export const PATTERNS = [
     slide: true,
     minPhase: 3,
     weight: 2,
-    late: 3,
+    late: 2,
     build: ({ z, gap }) => {
       const step = gap(0.75, 14, 0.52);
       return [
@@ -349,8 +349,8 @@ export const PATTERNS = [
     id: "gate-run",
     slide: true,
     minPhase: 5,
-    weight: 2,
-    late: 4,
+    weight: 1,
+    late: 2,
     // A slide lasts SLIDE_TIME (0.7s) and cannot be renewed until it ends, so
     // the gap between two gates has to be longer than that plus a moment to
     // react — otherwise clearing the third gate means hitting the key inside a

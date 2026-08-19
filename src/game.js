@@ -510,6 +510,7 @@ export class Game {
     this.boardUsed = false;
     this.airborne = false;
     this.sectionId = null;
+    this.section = null;
     // Optional call: the constructor resets the run state before the Screens
     // layer exists, and a throw there would stop the game booting at all.
     this.screens?.hideEvent();
@@ -859,13 +860,20 @@ export class Game {
       this.sectionId = sectionId;
       if (section) {
         this.screens.showEvent(section.event);
-        this.screens.showToast(`${section.event.name}!`);
+        // Spelled out, because a stretch of track with no obstacles in it reads
+        // as a broken game unless something says otherwise. The chip then
+        // counts down, which is the part that makes it obviously deliberate.
+        const bonus = section.event.scoreMultiplier > 1 ? ` · 점수 ×${section.event.scoreMultiplier}` : "";
+        this.screens.showToast(`${section.event.name} 구간 시작!${bonus}`);
         this.audio.powerup();
         this.fovPunch = Math.max(this.fovPunch, 0.7);
       } else {
+        const ended = this.section?.event;
         this.screens.hideEvent();
+        if (ended) this.screens.showToast(`${ended.name} 구간 끝`);
       }
     }
+    this.section = section;
     this.run.eventMultiplier = section?.event.scoreMultiplier ?? 1;
 
     const expired = this.run.advance(dt, {
