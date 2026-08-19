@@ -1325,6 +1325,11 @@ kbd {
 }
 
 .my-standing {
+  /* One height for both, so the column that only has an explanation to give
+     still starts its list on the same line as the one that has a placing. */
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 12px;
@@ -1332,6 +1337,14 @@ kbd {
   border: 1px solid rgba(255, 210, 74, 0.35);
   color: var(--gold);
   font-size: 15px;
+}
+
+/* Not a placing — a reason there is none. Reads as a note, not as a result. */
+.my-standing.quiet {
+  background: rgba(127, 163, 186, 0.08);
+  border-color: rgba(127, 163, 186, 0.22);
+  color: #8fb0c4;
+  font-size: 14px;
 }
 
 .leaderboard-list {

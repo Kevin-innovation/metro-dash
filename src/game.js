@@ -27,6 +27,7 @@ import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from 
 import { missionTier } from "./progression.js";
 import { Run } from "./run.js";
 import { SaveStore, describeSave, hasProgress, normalizeSave } from "./save.js";
+import { GENERAL } from "./school.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
@@ -299,7 +300,22 @@ export class Game {
       this.cloud.schoolStanding(),
     ]);
     this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
-    this.screens.renderSchoolBoard(schools, schoolStanding);
+    this.screens.renderSchoolBoard(schools, schoolStanding, this.schoolStandingNote());
+  }
+
+  /**
+   * What to say in the school column when this player has no standing there.
+   *
+   * Three different reasons, and 「없음」 covers none of them well: no school
+   * chosen yet, 일반부 (which is not a school and never ranks), or a school with
+   * nothing scored yet.
+   */
+  schoolStandingNote() {
+    if (!this.cloud.signedIn) return "";
+    const label = this.cloud.schoolLabel;
+    if (!label) return "학교를 정하면 순위가 나와요";
+    if (label === GENERAL.label) return "일반부는 학교 랭킹에 오르지 않아요";
+    return "아직 학교 순위가 없어요";
   }
 
   /** Send the finished run up. Never blocks, never fails the local save. */

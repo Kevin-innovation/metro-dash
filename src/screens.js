@@ -30,6 +30,8 @@ export class Screens {
    */
   constructor(actions) {
     this.actions = actions;
+    /** Text for the two standing lines, kept together so they move together. */
+    this.standings = { mine: "", school: "", schoolNote: "" };
     this.toastTimer = 0;
     this.gainTimer = 0;
     this.nearMissTimer = 0;
@@ -473,14 +475,11 @@ export class Screens {
         .join("");
     }
 
-    const mine = $("my-standing");
-    if (mine) {
-      const show = standing?.rank != null;
-      mine.classList.toggle("hidden", !show);
-      if (show) {
-        mine.textContent = `내 순위 ${standing.rank}위 · ${standing.best.toLocaleString()}점`;
-      }
-    }
+    this.standings.mine =
+      standing?.rank != null
+        ? `내 순위 ${standing.rank}위 · ${standing.best.toLocaleString()}점`
+        : "";
+    this.applyStandings();
   }
 
   /**
@@ -490,7 +489,7 @@ export class Screens {
    * count is shown alongside it — without that, a big school's lead looks like
    * skill rather than headcount.
    */
-  renderSchoolBoard(rows, standing) {
+  renderSchoolBoard(rows, standing, note = "") {
     const list = $("school-list");
     if (!list) return;
 
@@ -513,13 +512,37 @@ export class Screens {
         .join("");
     }
 
-    const mine = $("my-school-standing");
-    if (mine) {
-      const show = standing?.rank != null;
-      mine.classList.toggle("hidden", !show);
-      if (show) {
-        mine.textContent = `${standing.label} · ${standing.rank}위 · ${standing.total.toLocaleString()}점`;
-      }
+    this.standings.school =
+      standing?.rank != null
+        ? `${standing.label} · ${standing.rank}위 · ${standing.total.toLocaleString()}점`
+        : "";
+    this.standings.schoolNote = note;
+    this.applyStandings();
+  }
+
+  /**
+   * The two 「내 순위」 lines, shown and hidden as a pair.
+   *
+   * Each sits above its own column, so one appearing alone pushes that list
+   * down and the two boards stop lining up — which is all a reader sees. The
+   * side with nothing to report keeps its slot and says why instead, which is
+   * more use than a blank strip anyway: 일반부 players kept looking for a school
+   * rank that is never going to be there.
+   */
+  applyStandings() {
+    const { mine, school, schoolNote } = this.standings;
+    const any = Boolean(mine || school);
+    const slots = [
+      ["my-standing", mine, "아직 내 기록이 없어요"],
+      ["my-school-standing", school, schoolNote || "학교를 정하면 순위가 나와요"],
+    ];
+    for (const [id, text, fallback] of slots) {
+      const el = $(id);
+      if (!el) continue;
+      el.classList.toggle("hidden", !any);
+      // Muted, so an explanation never reads as a placing.
+      el.classList.toggle("quiet", any && !text);
+      if (any) el.textContent = text || fallback;
     }
   }
 
