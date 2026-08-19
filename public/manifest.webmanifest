@@ -1,6 +1,6 @@
 {
-  "name": "메트로 대시",
-  "short_name": "메트로 대시",
+  "name": "MetDash",
+  "short_name": "MetDash",
   "description": "3레인 엔들리스 러너. 개인 랭킹과 학교 랭킹으로 겨뤄 보세요.",
   "start_url": "/",
   "scope": "/",

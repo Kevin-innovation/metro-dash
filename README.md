@@ -1,4 +1,4 @@
-# METRO DASH
+# MetDash
 
 Subway Surfers 느낌의 3레인 엔들리스 러너 웹 게임.
 

@@ -110,7 +110,11 @@ export class Cloud {
   constructor(url = import.meta.env?.VITE_CONVEX_URL) {
     this.url = url || null;
     this.client = null;
-    this.session = null;
+    // Read here rather than in connect(), which cannot run until the Convex
+    // client has been fetched and parsed. Waiting for that meant the title
+    // screen painted 「로그인」 first and swapped to the signed-in row a moment
+    // later — a flash on every reload for someone who never signed out.
+    this.session = readSession();
     this.ready = false;
     this.listeners = new Set();
   }
@@ -156,7 +160,7 @@ export class Cloud {
       const { ConvexClient } = await import("convex/browser");
       this.client = new ConvexClient(this.url);
       this.ready = true;
-      const saved = readSession();
+      const saved = this.session ?? readSession();
       if (saved) {
         this.session = saved;
         // Confirm the token is still good before trusting it — but only throw it
