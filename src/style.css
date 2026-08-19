@@ -34,7 +34,13 @@ body {
   color: var(--paper);
   font-family: "Jua", "Black Han Sans", sans-serif;
   user-select: none;
-  touch-action: none;
+  /* Pull-to-refresh and rubber-banding are what `touch-action: none` used to be
+     here for — and it also blocked every scroll inside the dialogs, because the
+     effective touch behaviour is the intersection with every ancestor. A child
+     cannot re-enable panning its parent forbade, so the overlays' own
+     `touch-action: pan-y` did nothing on a phone. This does the one job without
+     the collateral damage. */
+  overscroll-behavior: none;
 
   /* Korean wraps mid-word by default, which strands a syllable on its own line
      (「... 최고 점수가 모 / 두 더해져요」). keep-all breaks at spaces instead, the
@@ -64,6 +70,13 @@ h3,
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+/* The play surface, where a swipe is a control and never a scroll. Scoped to
+   the game itself so the menus above it can still be panned. */
+#game-canvas,
+#hud {
+  touch-action: none;
 }
 
 #game-canvas {
@@ -504,6 +517,7 @@ h3,
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sky-wash {
@@ -1603,6 +1617,16 @@ button.report-flag:disabled {
   .board-split {
     grid-template-columns: 1fr;
     gap: 18px;
+  }
+
+  /* Stacked, the two lists become one long page rather than two little scroll
+     boxes inside a scrolling dialog. Nested scroll areas on a phone fight each
+     other: a swipe moves whichever one it happened to start on, and the list
+     you wanted stays put. */
+  .leaderboard-list,
+  .shop-list {
+    max-height: none;
+    overflow: visible;
   }
 }
 
