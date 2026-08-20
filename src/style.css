@@ -17,6 +17,9 @@
   /* Shared by both columns so a row is the same height on either side. */
   --board-name-lh: 1.3;
   --board-sub-lh: 1.3;
+
+  /* One gap between every section of the title card. */
+  --title-gap: 16px;
 }
 
 * {
@@ -589,6 +592,34 @@ body.running #game-canvas {
   font-size: 13px;
 }
 
+/**
+ * The title card, spaced by the layout rather than by each block's own margin.
+ *
+ * Every section used to carry its own: the profile bar 18px, the account bar
+ * 14, the ghost buttons 10, the missions 20, the controls 18, the best line 16.
+ * Six numbers nobody had ever put side by side, and on screen it read as a
+ * stack of things that did not belong together. A column with one gap cannot
+ * disagree with itself.
+ */
+.title-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--title-gap);
+}
+
+/* The class is doubled to outweigh each block's own margin, which is written
+   with a single class and would otherwise win on source order alone. */
+.title-card.title-card > *,
+.title-card .title-actions .ghost {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* The eyebrow and the wordmark are one thing, so they keep their own spacing. */
+.title-head {
+  text-align: center;
+}
+
 h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -646,16 +677,26 @@ button {
   box-shadow: 0 3px 0 #c47a00;
 }
 
+/**
+ * Secondary buttons.
+ *
+ * A dark base rather than a wash of white, because the title screen has the
+ * game running behind it: 8% white reads as a button over a tunnel and as
+ * nothing at all over a bright sky, so the shop and settings would appear and
+ * disappear as the preview cycled through its zones. This is the same surface
+ * the profile and account rows use, which holds against either.
+ */
 .ghost {
   margin-top: 10px;
   width: 100%;
-  border: 0;
   padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(7, 16, 24, 0.55);
   color: white;
   font-size: 18px;
   cursor: pointer;
+  backdrop-filter: blur(6px);
 }
 
 .howto {
