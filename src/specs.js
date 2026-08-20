@@ -1,4 +1,11 @@
-import { BUS_ROOF, SIGN_BAND_TOP, SIGN_BOARD_BOTTOM, TRAIN_ROOF } from "./config.js";
+import {
+  BUS_ROOF,
+  JETPACK_ALTITUDE,
+  PLAYER_HEIGHT,
+  SIGN_BAND_TOP,
+  SIGN_BOARD_BOTTOM,
+  TRAIN_ROOF,
+} from "./config.js";
 
 /**
  * Physical description of every spawnable entity, kept free of Three.js so the
@@ -39,7 +46,12 @@ export const SPEC = {
     clear: "slide",
   },
   crate: { length: 1.4, depth: 0.77, minY: 0, maxY: 1.2, lethal: true, clear: "jump" },
-  coin: { length: 0.5, depth: 0.25, minY: 0, maxY: 3.6, lethal: false },
+  // The band is the coarse filter — how high a runner can be and still be
+  // considered for this pickup — and the reach check in interactions.js is the
+  // precise one. It has to clear the jetpack's cruising altitude, or a coin
+  // placed up there is never even looked at, which is exactly what happened to
+  // the sky trail: thirty-eight coins in the air and none of them collectable.
+  coin: { length: 0.5, depth: 0.25, minY: 0, maxY: JETPACK_ALTITUDE + PLAYER_HEIGHT + 1, lethal: false },
   magnet: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "magnet" },
   jetpack: { length: 0.7, depth: 0.32, minY: 0, maxY: 3.2, lethal: false, powerup: "jetpack" },
   double: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "double" },

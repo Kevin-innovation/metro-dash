@@ -48,9 +48,12 @@ export const PATTERNS = [
     minPhase: 0,
     weight: 2,
     late: 1,
+    // Two lines: a short one in the clear lane for anyone who just wants
+    // through, and a long one on the roof for anyone willing to get up there.
     build: ({ z, lane, others }) => [
       { type: "train", lane, z },
-      ...coinLine(others[0], z - 4, 5),
+      ...roofLine("train", lane, z - 4, 6),
+      ...coinLine(others[0], z - 3, 2),
     ],
   },
   {
@@ -94,7 +97,8 @@ export const PATTERNS = [
     build: ({ z, lanes, gap }) => [
       { type: "barrier", lane: lanes[0], z },
       { type: "crate", lane: lanes[1], z: z + gap(0.55, 11, 0.42) },
-      ...coinLine(lanes[2], z - 1, 4),
+      ...jumpArc(lanes[0], z, 5),
+      ...coinLine(lanes[2], z - 1, 2),
     ],
   },
   {
@@ -106,7 +110,8 @@ export const PATTERNS = [
     build: ({ z, lanes, gap }) => [
       { type: "train", lane: lanes[0], z },
       { type: "barrier", lane: lanes[1], z: z + gap(0.75, 16, 0.55) },
-      ...coinLine(lanes[2], z - 2, 5),
+      ...roofLine("train", lanes[0], z - 3, 5),
+      ...coinLine(lanes[2], z - 2, 2),
     ],
   },
   {
@@ -146,7 +151,8 @@ export const PATTERNS = [
     build: ({ z, lanes }) => [
       { type: "train", lane: lanes[0], z },
       { type: "train", lane: lanes[1], z },
-      ...coinLine(lanes[2], z - 2, 4),
+      ...roofLine("train", lanes[0], z - 3, 5),
+      ...coinLine(lanes[2], z - 2, 2),
     ],
   },
   {
@@ -167,7 +173,8 @@ export const PATTERNS = [
     build: ({ z, lanes, gap }) => [
       { type: "bus", lane: lanes[0], z },
       { type: "barrier", lane: lanes[1], z: z + gap(0.2, 4) },
-      ...coinLine(lanes[2], z - 1, 6),
+      ...roofLine("bus", lanes[0], z - 3, 5),
+      ...coinLine(lanes[2], z - 1, 2),
     ],
   },
   {
@@ -177,7 +184,7 @@ export const PATTERNS = [
     late: 3,
     build: ({ z, lane, others, gap }) => [
       { type: "bus", lane, z: z + gap(0.6, 16), oncoming: true },
-      ...coinLine(others[0], z - 2, 5),
+      ...coinLine(others[0], z - 2, 4),
     ],
   },
   {
@@ -238,7 +245,7 @@ export const PATTERNS = [
       return [
         { type: "bus", lane: lanes[0], z: z + lead, oncoming: true },
         { type: "bus", lane: lanes[1], z: z + lead + gap(0.5, 10, 0.36), oncoming: true },
-        ...coinLine(lanes[2], z - 1, 5),
+        ...coinLine(lanes[2], z - 1, 3),
       ];
     },
   },
@@ -309,7 +316,7 @@ export const PATTERNS = [
     build: ({ z, lanes, gap }) => [
       { type: "bus", lane: lanes[0], z },
       { type: "bus", lane: lanes[1], z: z + gap(0.8, 20, 0.58), oncoming: true },
-      ...coinLine(lanes[2], z - 2, 5),
+      ...coinLine(lanes[2], z - 2, 4),
     ],
   },
   {
@@ -426,6 +433,34 @@ export const POWERUP_PATTERNS = {
 
 function coinLine(lane, z, count, step = 1.5, y = 0.7) {
   return Array.from({ length: count }, (_, i) => ({ type: "coin", lane, z: z + i * step, y }));
+}
+
+/**
+ * Coins along a vehicle roof.
+ *
+ * The point of these is that they cannot be taken from the ground: getting them
+ * means timing a jump onto something lethal and riding it. Most of the coins in
+ * this table used to sit in whichever lane the pattern had left empty — the
+ * lane a player was going to pick anyway — so collecting them was not a choice
+ * and taking the safe line cost nothing.
+ */
+function roofLine(type, lane, z, count, step = 1.35) {
+  return coinLine(lane, z, count, step, type === "train" ? 2.8 : 2.55);
+}
+
+/**
+ * Coins on the arc of a jump, so clearing an obstacle pays rather than merely
+ * surviving it. Sits low enough at both ends to be met on the way up and again
+ * on the way down.
+ */
+function jumpArc(lane, z, count = 5, spread = 0.85) {
+  const mid = (count - 1) / 2;
+  return Array.from({ length: count }, (_, i) => ({
+    type: "coin",
+    lane,
+    z: z + (i - mid) * spread,
+    y: 1.35 + Math.cos(((i - mid) / Math.max(1, mid)) * (Math.PI / 2)) * 0.85,
+  }));
 }
 
 /**

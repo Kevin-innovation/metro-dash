@@ -5,15 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "node scripts/check-names.mjs && vite build",
     "preview": "vite preview --host",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build:vercel": "convex deploy --cmd 'vite build'",
+    "build:vercel": "node scripts/check-names.mjs && convex deploy --cmd 'vite build'",
     "check:ui": "node scripts/ui-check.mjs",
     "test:e2e": "playwright test",
-    "audit": "node scripts/fairness-audit.mjs 40 420"
+    "audit": "node scripts/fairness-audit.mjs 40 420",
+    "check": "node scripts/check-names.mjs"
   },
   "dependencies": {
     "convex": "^1.44.0",

@@ -7,6 +7,7 @@ import {
   FIXED_DT,
   HOVERBOARD_GRACE,
   HOVERBOARD_TIME,
+  JETPACK_ALTITUDE,
   MAX_FRAME_DT,
   MAX_SIM_STEPS,
   ONCOMING_SPEED,
@@ -48,10 +49,23 @@ const $ = (id) => document.getElementById(id);
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
 
-/** Metres between two coins in the jetpack's sky trail. */
-const SKY_COIN_SPACING = 2.6;
-/** Metres the trail stays in one lane before drifting to the next. */
-const SKY_LANE_RUN = 26;
+/**
+ * Metres between two coins in the jetpack's sky trail.
+ *
+ * At cruising speed this is about twelve a second — generous next to the ground,
+ * which is the point of getting up there, but not so dense that a single flight
+ * out-earns a whole run and turns the shop into a jetpack lottery.
+ */
+const SKY_COIN_SPACING = 4.2;
+/**
+ * Metres the trail stays in one lane before drifting to the next.
+ *
+ * About a second and a half of flight. Shorter than that and it is not a
+ * decision: a lane change takes a fifth of a second to settle, so a trail that
+ * switched every half second could not be followed by anyone and simply read as
+ * coins scattered at random.
+ */
+const SKY_LANE_RUN = 70;
 /** The lanes it visits, in order. Back through the middle, never a jump across. */
 const SKY_WEAVE = [0, 1, 0, -1];
 

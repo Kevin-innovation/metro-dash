@@ -13,6 +13,17 @@ import { POWERUPS } from "./powerups.js";
 const MAGNET_GRAB = 1.35;
 /** How far the runner's midpoint may sit from a pickup and still take it. */
 const PICKUP_REACH = 1.35;
+/**
+ * Reach while the jetpack is running.
+ *
+ * Wider, because flying is not a precise instrument and the trail should not
+ * demand pixel-perfect altitude — but still finite. It used to be unlimited,
+ * which was fine when the trail was the only thing up there and simply meant
+ * "collect it"; now that the sky has its own coin line, an unlimited reach
+ * would also hoover the ground six metres below and hand the flier every coin
+ * in the lane for free.
+ */
+const FLYING_PICKUP_REACH = 2.2;
 
 /**
  * Resolves everything the runner touches during one simulation step: pickups,
@@ -50,7 +61,7 @@ export class Interactions {
     const events = [];
     const [prev, cur] = Interactions.sweep(player);
     const magnetOn = this.run.powerupActive("magnet");
-    // The jetpack hoovers up its coin trail without demanding pixel-perfect flying.
+    // The jetpack collects with a wider reach; see FLYING_PICKUP_REACH.
     const flying = this.run.powerupActive("jetpack");
 
     for (const item of this.pool.live) {
@@ -80,10 +91,8 @@ export class Interactions {
           { laneTolerance: LANE_TOLERANCE },
         );
         if (!hit.hit) continue;
-        if (!flying) {
-          const midY = lerp(prev.y + prev.height * 0.5, cur.y + cur.height * 0.5, hit.t);
-          if (Math.abs(midY - itemY) > PICKUP_REACH) continue;
-        }
+        const midY = lerp(prev.y + prev.height * 0.5, cur.y + cur.height * 0.5, hit.t);
+        if (Math.abs(midY - itemY) > (flying ? FLYING_PICKUP_REACH : PICKUP_REACH)) continue;
       }
 
       item.taken = true;
