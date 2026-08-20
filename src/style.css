@@ -20,6 +20,8 @@
 
   /* One gap between every section of the title card. */
   --title-gap: 16px;
+  /* Height of the raised lip under the primary buttons. See #btn-play. */
+  --btn-lip: 6px;
 }
 
 * {
@@ -665,8 +667,12 @@ button {
   color: #3b2500;
   font-size: 26px;
   box-shadow:
-    0 6px 0 #c47a00,
+    0 var(--btn-lip) 0 #c47a00,
     var(--shadow);
+  /* The lip is painted, not laid out, so the gap under this button measured
+     the same as every other and looked six pixels tighter. Given back here, in
+     the same number that draws it, so the two cannot drift apart. */
+  margin-bottom: var(--btn-lip);
   cursor: pointer;
 }
 
@@ -674,7 +680,7 @@ button {
 #btn-retry:active,
 #btn-resume:active {
   transform: translateY(3px);
-  box-shadow: 0 3px 0 #c47a00;
+  box-shadow: 0 calc(var(--btn-lip) / 2) 0 #c47a00;
 }
 
 /**
