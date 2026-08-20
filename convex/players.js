@@ -234,6 +234,12 @@ export const save = mutation({
     await ctx.db.patch(player._id, {
       profile: sanitizeProfile(profile, player.best),
       coinLedger: ledger,
+      // Cleared on a save that passes. The flag means "this account is claiming
+      // more than it could have earned", which is a condition, not a permanent
+      // mark — left set it would still be accusing an account long after the
+      // save came back inside the ledger, and staff would have no way to tell
+      // an ongoing problem from a moment last month.
+      flagged: false,
       updatedAt: Date.now(),
     });
     return { ok: true };
