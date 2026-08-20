@@ -29,6 +29,7 @@ import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import { SaveStore, describeSave, hasProgress, normalizeSave } from "./save.js";
 import { GENERAL } from "./school.js";
+import { watchForUpdate } from "./version.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { Spawner } from "./spawner.js";
@@ -86,6 +87,9 @@ export class Game {
     this.boardRange = "week";
     /** Counter that lets a stale rank lookup recognise it has been overtaken. */
     this.rankRequest = 0;
+    /** Live leaderboard subscriptions, and a counter to retire stale ones. */
+    this.boardSubscriptions = [];
+    this.boardGeneration = 0;
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
     this.nearMissFx = 0;
@@ -161,6 +165,7 @@ export class Game {
       openAccount: () => this.openAccount(),
       submitAccount: (mode, handle, pin, remember) => this.submitAccount(mode, handle, pin, remember),
       openLeaderboard: () => this.openLeaderboard(),
+      closeLeaderboard: () => this.closeLeaderboard(),
       setBoardRange: (range) => this.setBoardRange(range),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
@@ -178,6 +183,29 @@ export class Game {
     this.screens.showAccountBar(this.cloud);
     // Reconnects an existing session in the background; guests never wait.
     this.cloud.connect();
+
+    // Offered rather than forced, and only where a reload costs nothing: a
+    // player mid-run would lose the run to a banner they did not ask for.
+    this.updateReady = false;
+    this.update = watchForUpdate(() => {
+      this.updateReady = true;
+      this.showUpdateBanner();
+    });
+    const banner = $("update-banner");
+    if (banner) banner.onclick = () => location.reload();
+  }
+
+  /**
+   * The banner is only put on screen between runs.
+   *
+   * Checked again every time the title screen comes back, which is the moment a
+   * player is most likely to have been away long enough for a deploy to have
+   * happened.
+   */
+  showUpdateBanner() {
+    const banner = $("update-banner");
+    if (!banner) return;
+    banner.classList.toggle("hidden", !this.updateReady || this.state === "playing");
   }
 
   // --- online ---------------------------------------------------------------
@@ -320,16 +348,63 @@ export class Game {
     this.screens.openLeaderboard(this.boardRange);
     this.screens.renderLeaderboard([], null, this.cloud.handle);
     this.screens.renderSchoolBoard([], null);
-    // Both columns are fetched together so the two halves of the screen fill in
-    // at the same time rather than one after the other.
-    const [rows, standing, schools, schoolStanding] = await Promise.all([
-      this.cloud.leaderboard(10, this.boardRange).catch(() => []),
-      this.cloud.standing(this.boardRange),
-      this.cloud.schoolLeaderboard(10).catch(() => []),
-      this.cloud.schoolStanding(),
+    await this.watchBoards();
+  }
+
+  closeLeaderboard() {
+    this.stopWatchingBoards();
+    this.screens.closeLeaderboard();
+  }
+
+  /**
+   * Keep both columns live for as long as the panel is open.
+   *
+   * The board used to be read once, when it opened. A class playing together
+   * would each see a snapshot from the moment they pressed the button, and a
+   * run that landed a second later was invisible until somebody closed the
+   * panel and opened it again — which reads as the board being broken. Convex
+   * pushes a new answer whenever the data behind a query changes, so this is
+   * four subscriptions rather than four fetches.
+   */
+  async watchBoards() {
+    this.stopWatchingBoards();
+    const generation = ++this.boardGeneration;
+    const view = { rows: [], standing: null, schools: [], schoolStanding: null };
+
+    const draw = () => {
+      this.screens.renderLeaderboard(view.rows ?? [], view.standing, this.cloud.handle);
+      this.screens.renderSchoolBoard(view.schools ?? [], view.schoolStanding, this.schoolStandingNote());
+    };
+
+    this.boardSubscriptions = [];
+    const watch = async (name, args, key) => {
+      const stop = await this.cloud.watch(name, args, (value) => {
+        if (generation !== this.boardGeneration) return;
+        view[key] = value;
+        draw();
+      });
+      // Closed, or the range switched, while this was still connecting.
+      if (generation !== this.boardGeneration) stop();
+      else this.boardSubscriptions.push(stop);
+    };
+
+    const token = this.cloud.session?.token;
+    await Promise.all([
+      watch("scores:top", { limit: 10, range: this.boardRange }, "rows"),
+      watch("schools:top", { limit: 10 }, "schools"),
+      ...(token
+        ? [
+            watch("scores:standing", { token, range: this.boardRange }, "standing"),
+            watch("schools:standing", { token }, "schoolStanding"),
+          ]
+        : []),
     ]);
-    this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
-    this.screens.renderSchoolBoard(schools, schoolStanding, this.schoolStandingNote());
+  }
+
+  stopWatchingBoards() {
+    this.boardGeneration = (this.boardGeneration ?? 0) + 1;
+    for (const stop of this.boardSubscriptions ?? []) stop();
+    this.boardSubscriptions = [];
   }
 
   /**
@@ -371,14 +446,10 @@ export class Game {
     this.boardRange = range;
     this.screens.setBoardTab(range);
     this.screens.renderLeaderboard([], null, this.cloud.handle);
-
-    const [rows, standing] = await Promise.all([
-      this.cloud.leaderboard(10, range).catch(() => []),
-      this.cloud.standing(range),
-    ]);
-    // Ignore a reply that arrived after the player moved on to the other tab.
-    if (this.boardRange !== range) return;
-    this.screens.renderLeaderboard(rows, standing, this.cloud.handle);
+    // Both columns are resubscribed: the school ranking has no weekly form, but
+    // dropping and remaking its subscription is cheaper than tracking which of
+    // the four belongs to which tab.
+    await this.watchBoards();
   }
 
   /**
@@ -619,6 +690,7 @@ export class Game {
     this.bgm.start(0);
 
     this.screens.setOverlay("hud");
+    this.showUpdateBanner();
     this.screens.resetHud();
     this.screens.refreshProfile(this.store.data);
     this.screens.syncHud(this);
@@ -639,6 +711,10 @@ export class Game {
     this.seedPreview();
     this.screens.setOverlay("title");
     this.screens.refreshProfile(this.store.data);
+    // Back at the title: safe to offer a reload, and worth asking again since
+    // a deploy may have landed during the run.
+    this.showUpdateBanner();
+    this.update?.poke();
   }
 
   pause() {

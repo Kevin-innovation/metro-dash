@@ -221,6 +221,31 @@ export class Cloud {
     return await this.client.query(name, args);
   }
 
+  /**
+   * Watch a query instead of asking it once.
+   *
+   * Convex pushes a new answer whenever anything the query read changes, which
+   * is what makes a leaderboard a leaderboard: a class playing together should
+   * see each other's runs land, not a snapshot from whenever they happened to
+   * open the panel. The one-shot `query` above stays for the places that really
+   * do want a single answer, like the rank on the game-over card.
+   *
+   * @returns {Promise<() => void>} stops the subscription
+   */
+  async watch(name, args, onValue) {
+    await this.connect();
+    if (!this.client) return () => {};
+    try {
+      return this.client.onUpdate(name, args, onValue, () => {
+        // A query that throws — an expired token, most likely — simply has no
+        // answer. Reported as nothing rather than tearing the panel down.
+        onValue(null);
+      });
+    } catch {
+      return () => {};
+    }
+  }
+
   // --- account ------------------------------------------------------------
 
   async checkHandle(handle) {

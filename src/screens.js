@@ -90,7 +90,9 @@ export class Screens {
     const boardBtn2 = $("btn-leaderboard");
     if (boardBtn2) boardBtn2.onclick = () => a.openLeaderboard();
     const boardClose = $("btn-leaderboard-close");
-    if (boardClose) boardClose.onclick = () => this.closeLeaderboard();
+    // Routed through the Game rather than closed directly: it owns the live
+    // subscriptions behind the panel and has to be told to drop them.
+    if (boardClose) boardClose.onclick = () => a.closeLeaderboard();
 
     for (const [id, range] of [["tab-board-week", "week"], ["tab-board-all", "all"]]) {
       const tab = $(id);
@@ -581,7 +583,7 @@ export class Screens {
     this.closeShop();
     this.closeSettings();
     this.closeAccount();
-    this.closeLeaderboard();
+    this.actions.closeLeaderboard?.();
     this.closeMerge();
     this.closeSchool();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
