@@ -7,7 +7,18 @@ export { CHARACTERS, characterById };
 export const UPGRADE_COSTS = [0, 0, 500, 1200, 2400, 4200];
 
 export const HOVERBOARD_COST = 350;
-export const HOVERBOARD_MAX = 9;
+/**
+ * How many boards may be held at once.
+ *
+ * One, because only one can be used per run. Holding nine bought nine runs of
+ * insurance in advance and made the shop look like it was selling lives; now it
+ * is a decision taken before each run, which is what it always was in play.
+ *
+ * Existing profiles keep whatever they already bought — they simply cannot buy
+ * more until they are spent. Clamping the stored number down would delete coins
+ * people paid.
+ */
+export const HOVERBOARD_MAX = 1;
 
 export function upgradeCost(level) {
   const next = level + 1;

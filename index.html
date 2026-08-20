@@ -361,6 +361,19 @@
           <div id="rank-up" class="rank-up hidden"></div>
           <div id="mission-cleared" class="mission-cleared hidden"></div>
 
+          <!-- Where that run put you. Filled in once the server has taken the
+               score, which is the only moment a rank means anything. -->
+          <div id="over-ranks" class="over-ranks hidden">
+            <div class="over-rank">
+              <span class="over-rank-label">개인</span>
+              <strong id="over-rank-me" class="over-rank-value">…</strong>
+            </div>
+            <div class="over-rank">
+              <span class="over-rank-label">학교</span>
+              <strong id="over-rank-school" class="over-rank-value">…</strong>
+            </div>
+          </div>
+
           <p class="best-line over-best">내 최고 점수 <strong id="over-best">0</strong></p>
           <p id="new-best" class="new-best hidden">새 최고 기록!</p>
 

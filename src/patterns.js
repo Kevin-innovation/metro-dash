@@ -409,7 +409,17 @@ export const PATTERNS = [
 /** Power-up patterns are dealt on a fixed cadence rather than by weight. */
 export const POWERUP_PATTERNS = {
   magnet: (z, lane) => [{ type: "magnet", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 8)],
-  jetpack: (z, lane) => [{ type: "jetpack", lane, z, y: 1.15 }, ...coinLine(lane, z + 4, 6, 1.5, 2.9)],
+  // The trail climbs, so where the power-up is about to take you is visible
+  // before you touch it.
+  jetpack: (z, lane) => [
+    { type: "jetpack", lane, z, y: 1.15 },
+    ...Array.from({ length: 7 }, (_, i) => ({
+      type: "coin",
+      lane,
+      z: z + 4 + i * 1.7,
+      y: 1.8 + i * 0.7,
+    })),
+  ],
   double: (z, lane) => [{ type: "double", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 6)],
   sneakers: (z, lane) => [{ type: "sneakers", lane, z, y: 1.05 }, ...coinLine(lane, z + 3, 6)],
 };

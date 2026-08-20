@@ -1,5 +1,5 @@
 import { HOVERBOARD_TIME } from "./config.js";
-import { BOARD_HINT_LONG } from "./input.js";
+import { BOARD_HINT_LONG, BOARD_LIMIT_NOTE } from "./input.js";
 import { isComplete, missionDef, missionLabel } from "./missions.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
@@ -253,7 +253,7 @@ export function renderShop(root, view) {
       <div class="shop-body">
         <div class="shop-title">호버보드 <em>${board.owned}/${board.max}</em></div>
         <div class="shop-blurb">${escapeHtml(BOARD_HINT_LONG)}</div>
-        <div class="shop-meta">보유한 만큼 계속 쓸 수 있습니다</div>
+        <div class="shop-meta">${escapeHtml(BOARD_LIMIT_NOTE)}</div>
       </div>
       <button type="button" class="shop-buy" data-buy="hoverboard" data-id="hoverboard"
         ${board.affordable ? "" : "disabled"}>🪙 ${money(board.cost)}</button>

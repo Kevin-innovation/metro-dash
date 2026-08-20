@@ -48,6 +48,13 @@ const $ = (id) => document.getElementById(id);
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
 
+/** Metres between two coins in the jetpack's sky trail. */
+const SKY_COIN_SPACING = 2.6;
+/** Metres the trail stays in one lane before drifting to the next. */
+const SKY_LANE_RUN = 26;
+/** The lanes it visits, in order. Back through the middle, never a jump across. */
+const SKY_WEAVE = [0, 1, 0, -1];
+
 /** Least time between two near-miss flourishes, so they cannot stack up. */
 const NEAR_MISS_FX_COOLDOWN = 0.28;
 
@@ -63,6 +70,8 @@ export class Game {
     this.hitstop = 0;
     /** Which leaderboard the individual column is showing. */
     this.boardRange = "week";
+    /** Counter that lets a stale rank lookup recognise it has been overtaken. */
+    this.rankRequest = 0;
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
     this.nearMissFx = 0;
@@ -310,6 +319,33 @@ export class Game {
   }
 
   /**
+   * Where that run left the player, on both boards.
+   *
+   * Waits for the submission first: asking before the score is recorded returns
+   * the standing from *before* the run, which is worse than showing nothing —
+   * a player who just beat their record would be told they had not moved.
+   *
+   * @param {Promise|null} submitted the in-flight run submission, if any
+   */
+  async showRunRanks(submitted) {
+    if (!this.cloud.signedIn) {
+      this.screens.showRanks(null);
+      return;
+    }
+    this.screens.showRanks({ pending: true });
+
+    const token = ++this.rankRequest;
+    await submitted?.catch(() => null);
+    const [me, school] = await Promise.all([
+      this.cloud.standing(this.boardRange),
+      this.cloud.schoolStanding(),
+    ]);
+    // A newer run finished while this was in flight; its answer is the right one.
+    if (token !== this.rankRequest || !this.screens.gameOverVisible()) return;
+    this.screens.showRanks({ me, school, schoolNote: this.schoolStandingNote() });
+  }
+
+  /**
    * Switch the individual column between this week and all time.
    *
    * Only that column is refetched: the school ranking is cumulative and has no
@@ -348,8 +384,8 @@ export class Game {
 
   /** Send the finished run up. Never blocks, never fails the local save. */
   syncRun() {
-    if (!this.cloud.signedIn) return;
-    this.cloud.submitRun({
+    if (!this.cloud.signedIn) return null;
+    const submitted = this.cloud.submitRun({
       score: Math.floor(this.run.score),
       distance: Math.floor(this.run.distance),
       coins: this.run.coins,
@@ -364,6 +400,7 @@ export class Game {
       this.warnedLedger = true;
       this.screens.showToast("클라우드 저장이 거절됐어요 · 선생님께 문의해 주세요");
     });
+    return submitted;
   }
 
   // --- quality ------------------------------------------------------------
@@ -477,8 +514,9 @@ export class Game {
     const promotion = after > before ? rankUpBetween(before, after) : null;
     if (promotion?.coins) this.store.addCoins(promotion.coins);
 
-    this.syncRun();
+    const submitted = this.syncRun();
     const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion);
+    this.showRunRanks(submitted);
     if (promotion) this.audio.purchase();
     else if (cleared) this.audio.mission();
     this.screens.refreshProfile(this.store.data);
@@ -509,6 +547,7 @@ export class Game {
     this.boardGrace = 0;
     this.boardUsed = false;
     this.airborne = false;
+    this.skyCoinZ = 0;
     this.sectionId = null;
     this.section = null;
     // Optional call: the constructor resets the run state before the Screens
@@ -553,16 +592,6 @@ export class Game {
     const perk = perkFor(this.store.data.character);
     this.player.slideScale = perk.slideTime ?? 1;
     this.interactions.magnetScale = perk.magnetRange ?? 1;
-    if (perk.startBoard) {
-      // Free, and outside the shop economy: the board bought with coins is
-      // still spent from the inventory, this one comes with the character. It
-      // is also the run's one board rather than a second one — the perk saves
-      // 350 coins a run, it does not buy an extra life.
-      this.player.boarding = true;
-      this.boardT = HOVERBOARD_TIME;
-      this.boardUsed = true;
-    }
-
     this.cam = { x: 0, y: 3.6, z: -7.4 };
     this.pool.clear();
     this.particles.clear();
@@ -734,6 +763,43 @@ export class Game {
     if (changed) this.applyQuality(changed);
   }
 
+  /**
+   * Coins in the sky, for as long as the jetpack is running.
+   *
+   * The jetpack cruises above every obstacle, which made it the one power-up
+   * that took things away: no danger, and nothing up there to collect either.
+   * Six to twelve seconds of empty sky is a pause in the run, not a reward.
+   *
+   * So the sky gets its own coin line while the flight lasts. It weaves between
+   * lanes, which is the one control still live in the air — the flight becomes
+   * something to fly well rather than something to sit through.
+   *
+   * Spawned here rather than in the pattern table because it depends on a
+   * power-up the spawner knows nothing about, and it has to follow the runner
+   * wherever they are when they pick it up.
+   */
+  emitSkyCoins() {
+    if (this.state !== "playing" || !this.run.powerupActive("jetpack")) {
+      this.skyCoinZ = 0;
+      return;
+    }
+
+    const p = this.player;
+    // Restarted rather than continued if the last flight ended long ago, so a
+    // second jetpack does not lay its coins from where the first stopped.
+    if (!this.skyCoinZ || this.skyCoinZ < p.z) this.skyCoinZ = p.z + 26;
+
+    const ahead = p.z + 80;
+    while (this.skyCoinZ < ahead) {
+      // A slow weave, keyed off distance so it is the same for everyone at the
+      // same point of a flight. Long enough per lane to be flown to, not
+      // reacted to.
+      const lane = SKY_WEAVE[Math.floor(this.skyCoinZ / SKY_LANE_RUN) % SKY_WEAVE.length];
+      this.pool.spawn("coin", lane, this.skyCoinZ, JETPACK_ALTITUDE + 0.9);
+      this.skyCoinZ += SKY_COIN_SPACING;
+    }
+  }
+
   /** Continuous effects that belong to presentation, not simulation. */
   emitAmbientParticles(dt) {
     if (dt <= 0 || this.state !== "playing") return;
@@ -796,6 +862,7 @@ export class Game {
   /** A single fixed-size simulation step. */
   simulate(dt) {
     if (this.state === "playing") this.advanceRun(dt);
+    this.emitSkyCoins();
 
     // Snapshot every mover before anything shifts, so the swept collision test
     // has a valid start-of-step position for both player and obstacles.

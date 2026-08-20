@@ -587,6 +587,9 @@ export class Screens {
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
     if (mode !== "hud") $("touch-hint").classList.add("hidden");
+    // A pointer sitting in the middle of the track reads as something in the
+    // game. It comes back the moment there is a button to press.
+    document.body.classList.toggle("running", mode === "hud");
   }
 
   showPause(visible) {
@@ -809,6 +812,48 @@ export class Screens {
     const cleared = this.renderMissionResults(result);
     this.setOverlay("dead");
     return cleared;
+  }
+
+  /**
+   * The two standings on the game-over card.
+   *
+   * Called twice per run: once as the card opens, to show that a rank is on its
+   * way, and again when the server answers. A card that simply never mentioned
+   * the leaderboard left the run feeling like it happened in private.
+   *
+   * @param {{ pending?: boolean, me?: object|null, school?: object|null }|null} ranks
+   */
+  showRanks(ranks) {
+    const box = $("over-ranks");
+    if (!box) return;
+    if (!ranks) {
+      box.classList.add("hidden");
+      return;
+    }
+    box.classList.remove("hidden");
+
+    const write = (id, text, muted) => {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = text;
+      el.classList.toggle("quiet", Boolean(muted));
+    };
+
+    if (ranks.pending) {
+      write("over-rank-me", "…", true);
+      write("over-rank-school", "…", true);
+      return;
+    }
+    write(
+      "over-rank-me",
+      ranks.me?.rank != null ? `${ranks.me.rank}위` : "기록 없음",
+      ranks.me?.rank == null,
+    );
+    write(
+      "over-rank-school",
+      ranks.school?.rank != null ? `${ranks.school.rank}위` : ranks.schoolNote || "—",
+      ranks.school?.rank == null,
+    );
   }
 
   /** The rank climbed by this run, when there was one. */

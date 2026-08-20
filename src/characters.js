@@ -8,9 +8,14 @@ export const DEFAULT_CHARACTER = "runner";
  *
  * `perk` is what makes the choice a choice. Four identical runners in different
  * colours gave nobody a reason to spend nine thousand coins, so each one now
- * changes one number — and only one, kept small enough that the board still
- * ranks players rather than purchases. The default runner keeps none of them,
- * which is what the others are measured against.
+ * changes one number — and only one.
+ *
+ * None of them buys survival. 모노 used to hand out a free hoverboard every
+ * run: nine thousand coins for a three-hundred-and-fifty coin item, forever,
+ * which paid for itself in twenty-six runs and was an extra life every run
+ * after that. On a board where classes are compared, the top of the table would
+ * have measured who had saved up. The hoverboard stays a thing you buy for the
+ * run you are about to play, and the perks move coins around instead.
  */
 export const CHARACTERS = [
   {
@@ -41,8 +46,8 @@ export const CHARACTERS = [
     id: "mono",
     name: "모노",
     cost: 9000,
-    blurb: "경비를 따돌린 그림자 · 매 판 호버보드 1개",
-    perk: { startBoard: true },
+    blurb: "경비를 따돌린 그림자 · 코인 획득 +20%",
+    perk: { coinBonus: 1.2 },
     palette: { shirt: 0x263238, trim: 0x000000, pack: 0xeceff1, hair: 0x000000, streak: 0xffffff },
   },
 ];

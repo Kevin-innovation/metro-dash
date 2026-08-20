@@ -79,6 +79,12 @@ h3,
   touch-action: none;
 }
 
+/* Hidden for the length of a run. Pause, death and every dialog put it back. */
+body.running,
+body.running #game-canvas {
+  cursor: none;
+}
+
 #game-canvas {
   display: block;
   width: 100%;
@@ -1750,6 +1756,43 @@ button.report-flag:disabled {
   color: #ffb08a;
   font-size: 12.5px;
   white-space: nowrap;
+}
+
+/* Where the run landed on each board. Two equal halves: the school ranking is
+   the one a class actually talks about, so it is not a footnote. */
+.over-ranks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+
+.over-rank {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(7, 16, 24, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.over-rank-label {
+  display: block;
+  font-size: 12px;
+  color: #8fb0c4;
+}
+
+.over-rank-value {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-numeric);
+  font-size: 22px;
+  color: var(--gold);
+}
+
+/* Not a placing: a reason there is none, or an answer still on its way. */
+.over-rank-value.quiet {
+  font-family: inherit;
+  font-size: 13px;
+  color: #8fb0c4;
 }
 
 /* The one moment the rank ladder pays off, so it gets the whole width of the

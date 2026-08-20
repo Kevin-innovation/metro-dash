@@ -8,7 +8,10 @@ export const DOUBLE_TAP_MS = 280;
  * places at once and went stale in two of them the moment the control changed.
  */
 export const BOARD_HINT = "점프를 두 번 빠르게";
-export const BOARD_HINT_LONG = "달리는 중 점프를 두 번 빠르게 누르면 꺼내지고, 충돌 1회를 막아줍니다";
+export const BOARD_HINT_LONG =
+  "달리는 중 점프를 두 번 빠르게 누르면 꺼내지고, 충돌 1회를 막아줍니다";
+/** The rule the shop has to state, since the button is there before the run. */
+export const BOARD_LIMIT_NOTE = "한 판에 한 번만 쓸 수 있어요";
 
 /** Fields the player types into, where a key means a character and nothing else. */
 const TYPING_TARGETS = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";

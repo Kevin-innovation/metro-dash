@@ -293,10 +293,17 @@ export function applyAction(p, action, audio, opts = {}) {
       p.diving = true;
       p.vy = -8;
       audio?.slam();
-    } else if (!p.sliding) {
+    } else {
+      // Pressing slide while already sliding restarts it rather than being
+      // ignored. Without this a longer slide is a *worse* slide: 노을's +30%
+      // pushes the moment the runner can act again out past the spacing the
+      // spawner guarantees, so a gate pair that everyone else clears would kill
+      // only the player who paid for the perk. It is also simply what a runner
+      // should do when you press the button again.
+      const already = p.sliding;
       p.sliding = true;
       p.slideT = SLIDE_TIME * (p.slideScale ?? 1);
-      audio?.slide();
+      if (!already) audio?.slide();
     }
   }
 }

@@ -8,6 +8,7 @@ import {
   tickPowerups,
 } from "./powerups.js";
 import { missionTier, runXp } from "./progression.js";
+import { perkFor } from "./characters.js";
 import {
   COMBO_WINDOW,
   NEAR_MISS_BONUS,
@@ -178,7 +179,11 @@ export class Run {
     // run-scoped "coins this run" reading.
     deltas.coinsTotal = coinsDelta;
 
-    if (coinsDelta > 0) this.store.addCoins(coinsDelta);
+    // The character's coin perk lands here rather than on `addCoin`: the score
+    // and the missions count coins picked up, and a runner who earns more per
+    // coin must not also score more for the same run.
+    const bonus = perkFor(save.character).coinBonus ?? 1;
+    if (coinsDelta > 0) this.store.addCoins(Math.round(coinsDelta * bonus));
     if (xpDelta > 0) this.store.addXp(xpDelta);
     this.store.recordBest(score);
     save.totalDistance += Math.max(0, Math.floor(distanceDelta));
