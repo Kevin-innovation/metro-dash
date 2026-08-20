@@ -1,4 +1,5 @@
-import { MISSION_TIERS, applyMetrics, missionReward, rollMissions } from "./missions.js";
+import { DAILY_BONUS, allCleared, applyMetrics, missionReward } from "./missions.js";
+import { dayKey } from "./daily.js";
 import {
   activatePowerup,
   clearPowerups,
@@ -7,7 +8,7 @@ import {
   powerupScoreMultiplier,
   tickPowerups,
 } from "./powerups.js";
-import { missionTier, runXp } from "./progression.js";
+import { runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
   COMBO_WINDOW,
@@ -219,25 +220,29 @@ export class Run {
     const reward = missionReward(completed);
     if (completed.length) {
       save.missionsDone += completed.length;
+      // The character's mission perk applies to the mission payout only, not to
+      // the coins picked up during the run — those have their own multiplier.
+      const missionBonus = perkFor(save.character).missionBonus ?? 1;
+      reward.coins = Math.round(reward.coins * missionBonus);
       this.store.addCoins(reward.coins);
       this.store.addXp(reward.xp);
     }
 
-    // Replacements are dealt only once the run is genuinely over. Handing them
-    // out any earlier would let this run's totals retroactively complete a
-    // mission that was never played for.
-    if (final) this.dealReplacements();
+    // Clearing the whole day's set pays on top. Guarded by the day it was paid
+    // for rather than by a flag, so it cannot be collected twice and comes back
+    // by itself tomorrow.
+    const today = dayKey(Date.now());
+    if (allCleared(save.missions) && save.missionBonusDay !== today) {
+      save.missionBonusDay = today;
+      this.store.addCoins(DAILY_BONUS.coins);
+      this.store.addXp(DAILY_BONUS.xp);
+      reward.coins += DAILY_BONUS.coins;
+      reward.xp += DAILY_BONUS.xp;
+      reward.dailyBonus = true;
+    }
 
     this.store.flush();
     return { completed, reward };
   }
 
-  dealReplacements() {
-    const save = this.store.data;
-    const cleared = save.missions.filter((m) => m.progress >= m.target);
-    if (!cleared.length) return;
-    const keep = save.missions.filter((m) => m.progress < m.target);
-    const tier = missionTier(save.xp, MISSION_TIERS);
-    save.missions = [...keep, ...rollMissions(keep.map((m) => m.id), cleared.length, tier)];
-  }
 }

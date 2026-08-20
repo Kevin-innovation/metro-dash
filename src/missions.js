@@ -1,7 +1,12 @@
 /**
- * Rolling missions. Three are active at any time; finishing one banks its
- * reward and immediately deals a replacement, so there is always something to
- * chase beyond the score itself.
+ * The day's missions. Three, dealt at midnight, gone at the next midnight.
+ *
+ * They used to be replaced the instant one was finished, which meant there was
+ * never a set to finish — just an endless queue, and no answer to "what am I
+ * doing today". The title screen has always called them 「오늘의 미션」; this is
+ * that promise kept. Clearing all three pays a bonus, so a day has a shape:
+ * open the game, see three things, do them, and the run counter looks after
+ * itself.
  *
  * `metric` names a counter the run reports (see Game#trackMission).
  */
@@ -65,6 +70,25 @@ export const MISSION_DEFS = [
 ];
 
 export const MISSION_SLOTS = 3;
+
+/**
+ * Paid for clearing all three in a day.
+ *
+ * Worth more than any single mission on purpose: the third one is the one
+ * people give up on, and it should be the one they come back for.
+ */
+export const DAILY_BONUS = { coins: 400, xp: 300 };
+
+/** True once every mission in the day's set is done. */
+export function allCleared(missions) {
+  const list = missions ?? [];
+  return list.length >= MISSION_SLOTS && list.every(isComplete);
+}
+
+/** How many of the day's set are finished, for the counter on the title card. */
+export function clearedCount(missions) {
+  return (missions ?? []).filter(isComplete).length;
+}
 
 export function missionDef(id) {
   return MISSION_DEFS.find((def) => def.id === id) ?? null;

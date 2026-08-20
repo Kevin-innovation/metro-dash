@@ -18,7 +18,7 @@ import {
 import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
-import { MISSION_TIERS, ensureMissions } from "./missions.js";
+import { MISSION_SLOTS, MISSION_TIERS, ensureMissions, rollMissions } from "./missions.js";
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { lookAt } from "./zones.js";
 
@@ -623,8 +623,9 @@ export class Game {
     }
     this.store.data.streak = visit.streak;
     this.store.data.bestStreak = Math.max(this.store.data.bestStreak ?? 0, visit.streak);
-    this.store.addCoins(visit.reward);
-    this.screens.showToast(`${visit.streak}일 연속 출석 · 🪙 +${visit.reward}`);
+    const reward = Math.round(visit.reward * (perkFor(this.store.data.character).streakBonus ?? 1));
+    this.store.addCoins(reward);
+    this.screens.showToast(`${visit.streak}일 연속 출석 · 🪙 +${reward}`);
     this.audio.purchase();
   }
 
@@ -648,10 +649,24 @@ export class Game {
     this.screens.refreshProfile(this.store.data);
   }
 
-  /** Keep a full hand of missions dealt, scaled to the player's rank. */
+  /**
+   * Make sure today's set is dealt.
+   *
+   * A new set every midnight, and the same three all day however many are
+   * finished — that is what makes them a day's work rather than a queue. A save
+   * from before this existed keeps the missions it was in the middle of and
+   * simply adopts them as today's, so nobody loses progress to the change.
+   */
   syncMissions() {
-    const tier = missionTier(this.store.data.xp, MISSION_TIERS);
-    this.store.data.missions = ensureMissions(this.store.data.missions, tier);
+    const save = this.store.data;
+    const today = dayKey(Date.now());
+    const tier = missionTier(save.xp, MISSION_TIERS);
+
+    if (save.missionDay !== today) {
+      save.missions = save.missionDay ? rollMissions([], MISSION_SLOTS, tier) : save.missions;
+      save.missionDay = today;
+    }
+    save.missions = ensureMissions(save.missions, tier);
     this.store.flush();
   }
 
@@ -741,6 +756,8 @@ export class Game {
     if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
       this.bankProgress(true);
     }
+    // A tab left open overnight has to get the new day's set without a reload.
+    this.syncMissions();
     this.input.clear();
     this.state = "title";
     this.speed = TITLE_SPEED;

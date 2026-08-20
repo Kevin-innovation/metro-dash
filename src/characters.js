@@ -50,6 +50,30 @@ export const CHARACTERS = [
     perk: { coinBonus: 1.2 },
     palette: { shirt: 0x263238, trim: 0x000000, pack: 0xeceff1, hair: 0x000000, streak: 0xffffff },
   },
+  {
+    id: "driver",
+    name: "기관사",
+    cost: 14000,
+    blurb: "막차를 몰던 사람 · 연속 출석 보상 2배",
+    perk: { streakBonus: 2 },
+    palette: { shirt: 0x1e3a5f, trim: 0x0d1b2a, pack: 0xffc107, hair: 0x2b2b2b, streak: 0xffd54f },
+  },
+  {
+    id: "nightshift",
+    name: "야근러",
+    cost: 20000,
+    blurb: "아직 퇴근 못 한 사람 · 미션 보상 +30%",
+    perk: { missionBonus: 1.3 },
+    palette: { shirt: 0x37474f, trim: 0x1c262b, pack: 0xaeea00, hair: 0x263238, streak: 0xc6ff00 },
+  },
+  {
+    id: "legend",
+    name: "전설",
+    cost: 30000,
+    blurb: "이름만 남은 러너 · 코인 획득 +35%",
+    perk: { coinBonus: 1.35 },
+    palette: { shirt: 0x1a1a1a, trim: 0x000000, pack: 0xd50000, hair: 0x000000, streak: 0xff1744 },
+  },
 ];
 
 export const CHARACTER_IDS = CHARACTERS.map((character) => character.id);

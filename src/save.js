@@ -28,6 +28,13 @@ export function defaultSave() {
     missions: [],
     missionsDone: 0,
     /**
+     * The day the current set was dealt, and the day its all-clear bonus was
+     * paid. Separate, because a set can be cleared long before midnight and the
+     * bonus must not be payable twice.
+     */
+    missionDay: 0,
+    missionBonusDay: 0,
+    /**
      * The balance the server last confirmed.
      *
      * The difference between this and `coins` is what has been earned or spent
@@ -71,6 +78,8 @@ export function normalizeSave(raw) {
     xp: clampInt(raw.xp),
     hoverboards: clampInt(raw.hoverboards, 0, 99),
     missionsDone: clampInt(raw.missionsDone),
+    missionDay: clampInt(raw.missionDay),
+    missionBonusDay: clampInt(raw.missionBonusDay),
     streak: clampInt(raw.streak),
     lastDay: clampInt(raw.lastDay),
     bestStreak: clampInt(raw.bestStreak),

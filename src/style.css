@@ -1741,6 +1741,39 @@ button.report-flag:disabled {
   }
 }
 
+/* How much of today's set is done, beside the heading. */
+.mission-count {
+  font-style: normal;
+  font-size: 12.5px;
+  color: #8fb0c4;
+}
+
+.mission-count.done {
+  color: var(--gold);
+}
+
+/* The reason to finish the third one, next to the third one. */
+.mission-bonus {
+  margin-top: 2px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 210, 74, 0.4);
+  color: #d9c98f;
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.mission-bonus.done {
+  border-style: solid;
+  border-color: var(--gold);
+  background: rgba(255, 210, 74, 0.12);
+  color: var(--gold);
+}
+
+.mission-cleared-row.daily {
+  color: var(--gold);
+}
+
 /* Sits above everything, including the title card, because the whole point is
    that it is seen. Bottom centre, clear of the hoverboard button. */
 .update-banner {

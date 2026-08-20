@@ -890,6 +890,7 @@ export class Screens {
       ${result.completed
         .map((entry) => `<p class="mission-cleared-row">✓ ${missionLabel(entry)}</p>`)
         .join("")}
+      ${result.reward.dailyBonus ? `<p class="mission-cleared-row daily">★ 오늘의 미션 3개 모두 달성!</p>` : ""}
       <p class="mission-cleared-reward">🪙 +${result.reward.coins} · XP +${result.reward.xp}</p>`;
     return true;
   }

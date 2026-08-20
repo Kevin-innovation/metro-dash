@@ -1,6 +1,6 @@
 import { HOVERBOARD_TIME } from "./config.js";
 import { BOARD_HINT_LONG, BOARD_LIMIT_NOTE } from "./input.js";
-import { isComplete, missionDef, missionLabel } from "./missions.js";
+import { DAILY_BONUS, allCleared, clearedCount, isComplete, missionDef, missionLabel } from "./missions.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
@@ -14,6 +14,14 @@ export const escapeHtml = (value) =>
 const money = (n) => Math.floor(n).toLocaleString();
 
 export function renderMissions(el, missions) {
+  const counter = $("mission-count");
+  if (counter) {
+    const done = clearedCount(missions);
+    counter.textContent = missions?.length ? `${done}/${missions.length}` : "";
+    // Gold once the set is finished, so the day's job reads as done at a glance.
+    counter.classList.toggle("done", allCleared(missions));
+  }
+
   if (!el) return;
   if (!missions.length) {
     el.innerHTML = `<li class="mission empty">미션을 불러오는 중…</li>`;
@@ -37,6 +45,15 @@ export function renderMissions(el, missions) {
         </li>`;
     })
     .join("");
+
+  // Stated where the missions are, so the reason to finish the third one is
+  // visible while looking at the third one.
+  el.insertAdjacentHTML(
+    "beforeend",
+    `<li class="mission-bonus${allCleared(missions) ? " done" : ""}">
+       3개 모두 달성 시 🪙 ${money(DAILY_BONUS.coins)} · XP ${money(DAILY_BONUS.xp)}
+     </li>`,
+  );
 }
 
 export function renderRank(nameEl, barEl, xpEl, xp) {
