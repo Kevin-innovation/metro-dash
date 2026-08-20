@@ -182,7 +182,7 @@ export class Game {
     this.screens.refreshProfile(this.store.data);
     this.screens.showAccountBar(this.cloud);
     // Reconnects an existing session in the background; guests never wait.
-    this.cloud.connect();
+    this.cloud.connect().then(() => this.claimPendingCoins());
 
     // Offered rather than forced, and only where a reload costs nothing: a
     // player mid-run would lose the run to a banner they did not ask for.
@@ -243,6 +243,7 @@ export class Game {
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
+      this.claimPendingCoins();
       // Asked once, at the moment the account is created, and skippable — the
       // school can still be set later from the title screen.
       if (justSignedUp && !this.cloud.schoolLabel) this.screens.openSchool();
@@ -405,6 +406,28 @@ export class Game {
     this.boardGeneration = (this.boardGeneration ?? 0) + 1;
     for (const stop of this.boardSubscriptions ?? []) stop();
     this.boardSubscriptions = [];
+  }
+
+  /**
+   * Pick up coins staff have granted.
+   *
+   * Added to the local save rather than read from the server, because the local
+   * save is the one the game plays from and the one that gets pushed back up.
+   * Pushed immediately so the two agree even if the browser is closed before
+   * the next run finishes.
+   */
+  async claimPendingCoins() {
+    if (!this.cloud.signedIn || !this.cloud.pendingCoins) return;
+    const coins = await this.cloud.claimCoins();
+    if (!coins) return;
+
+    this.store.addCoins(coins);
+    this.screens.refreshProfile(this.store.data);
+    this.screens.showToast(
+      coins > 0 ? `선생님이 코인 ${coins.toLocaleString()}개를 주셨어요!` : `코인 ${(-coins).toLocaleString()}개가 회수됐어요`,
+    );
+    if (coins > 0) this.audio.purchase();
+    this.cloud.save(this.store.data);
   }
 
   /**

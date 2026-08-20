@@ -292,6 +292,7 @@ export class Cloud {
       schoolLabel: result.schoolLabel ?? "",
       staff: Boolean(result.staff),
     };
+    this.pendingCoins = result.pendingCoins ?? 0;
     writeSession(this.session);
     this.emit();
     return result;
@@ -344,6 +345,23 @@ export class Cloud {
     writeSession(this.session);
     this.emit();
     return result;
+  }
+
+  /**
+   * Take any coins staff have queued for this account.
+   *
+   * @returns {Promise<number>} the amount, or 0 when there was nothing
+   */
+  async claimCoins() {
+    if (!this.signedIn) return 0;
+    try {
+      const result = await this.mutation("players:claimCoins", { token: this.session.token });
+      this.pendingCoins = 0;
+      return result?.coins ?? 0;
+    } catch {
+      // Offline or the token has gone. The grant stays queued for next time.
+      return 0;
+    }
   }
 
   async report(handle) {

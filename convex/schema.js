@@ -47,6 +47,17 @@ export default defineSchema({
     flagged: v.optional(v.boolean()),
 
     /**
+     * Coins granted by staff that the player has not picked up yet.
+     *
+     * Held here rather than written straight into `profile` because the browser
+     * owns that blob: it plays from its own copy and pushes the whole thing up
+     * after every run, so a number edited on the server is overwritten within
+     * one game. A pending amount survives that — the client claims it, adds it
+     * to the save it is actually using, and tells the server it is done.
+     */
+    pendingCoins: v.optional(v.number()),
+
+    /**
      * School, chosen at most once by the player and thereafter only by staff.
      * Absent on every account created before schools existed, and on anyone who
      * has not picked one — those players simply sit outside the school ranking.

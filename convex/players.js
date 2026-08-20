@@ -54,6 +54,8 @@ function publicProfile(player) {
     best: player.best,
     school: player.school ?? null,
     schoolLabel: player.school ? schoolLabel(player.school) : "",
+    /** Waiting to be claimed; see `claimCoins`. */
+    pendingCoins: player.pendingCoins ?? 0,
     staff: player.role === "admin",
   };
 }
@@ -259,6 +261,25 @@ export const setSchool = mutation({
 
     await joinSchool(ctx, player, check.school);
     return { ok: true, school: check.school, schoolLabel: check.label };
+  },
+});
+
+/**
+ * Take the coins staff queued for this account.
+ *
+ * The client adds the amount to the save it is playing from and pushes that up
+ * as normal, so the grant lands in the copy that actually decides what the
+ * player has. Zeroed here in the same transaction, which is what stops a
+ * refresh being worth another handful.
+ */
+export const claimCoins = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const player = await requirePlayer(ctx, token);
+    const coins = player.pendingCoins ?? 0;
+    if (!coins) return { ok: true, coins: 0 };
+    await ctx.db.patch(player._id, { pendingCoins: 0, updatedAt: Date.now() });
+    return { ok: true, coins };
   },
 });
 

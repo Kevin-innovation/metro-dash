@@ -116,11 +116,13 @@ function renderPlayers() {
           <span class="admin-handle">${escapeHtml(row.handle)}${
             locked ? ' <em class="locked">잠김</em>' : ""
           }</span>
-          <span class="admin-meta">최고 ${row.best.toLocaleString()}점 · ${
+          <span class="admin-meta">최고 ${row.best.toLocaleString()}점 · 코인 ${(row.coins ?? 0).toLocaleString()}${
+            row.pendingCoins ? ` (대기 ${row.pendingCoins > 0 ? "+" : ""}${row.pendingCoins.toLocaleString()})` : ""
+          } · ${
             row.school ? escapeHtml(row.school) : "학교 없음"
           } · 가입 ${when(row.createdAt)}${
             row.failedAttempts ? ` · 실패 ${row.failedAttempts}회` : ""
-          }</span>
+          }${row.flagged ? ' · <em class="locked">저장 거절됨</em>' : ""}</span>
         </div>
         <div class="admin-actions">
           <button data-act="school" data-handle="${escapeHtml(row.handle)}">학교 ${
@@ -131,6 +133,7 @@ function renderPlayers() {
               ? `<button data-act="unschool" data-handle="${escapeHtml(row.handle)}">학교 지우기</button>`
               : ""
           }
+          <button data-act="coins" data-handle="${escapeHtml(row.handle)}">코인</button>
           <button data-act="pin" data-handle="${escapeHtml(row.handle)}">비번 초기화</button>
           ${locked ? `<button data-act="unlock" data-handle="${escapeHtml(row.handle)}">잠금 해제</button>` : ""}
           <button data-act="rename" data-handle="${escapeHtml(row.handle)}">개명</button>
@@ -187,6 +190,20 @@ async function act(kind, handle) {
       if (!newPin) return;
       await call("mutation", "admin:resetPin", { handle, newPin });
       toast(`${handle} 비밀번호를 ${newPin} 로 바꿨습니다`);
+    } else if (kind === "coins") {
+      // A delta rather than a total: 「+500」 and 「-200」 are what a teacher
+      // actually wants to say, and an absolute number would need them to know
+      // what the student is holding right now.
+      const typed = prompt(`${handle} 님에게 줄 코인 (회수하려면 음수, 예: -200)`, "500");
+      if (!typed) return;
+      const coins = Number(typed);
+      if (!Number.isFinite(coins) || coins === 0) return toast("숫자를 입력하세요", "bad");
+      await call("mutation", "admin:grantCoins", { handle, coins });
+      toast(
+        coins > 0
+          ? `${handle} 에게 ${coins.toLocaleString()} 코인을 예약했습니다 · 접속하면 지급됩니다`
+          : `${handle} 에게서 ${(-coins).toLocaleString()} 코인 회수를 예약했습니다`,
+      );
     } else if (kind === "unlock") {
       await call("mutation", "admin:unlock", { handle });
       toast(`${handle} 잠금을 풀었습니다`);

@@ -52,6 +52,8 @@ export const list = query({
     return players.map((player) => ({
       handle: player.handle,
       best: player.best,
+      coins: Math.max(0, Math.floor(player.profile?.coins ?? 0)),
+      pendingCoins: player.pendingCoins ?? 0,
       /** True once a save was refused for claiming more than it could earn. */
       flagged: Boolean(player.flagged),
       school: player.school ? schoolLabel(player.school) : "",
@@ -140,6 +142,35 @@ export const resetPin = mutation({
     // case is not helped by leaving those sessions open.
     await endAllSessions(ctx, player._id);
     return { ok: true, handle: player.handle };
+  },
+});
+
+/**
+ * Give or take coins.
+ *
+ * Queued rather than applied: see the note on `pendingCoins`. The ledger — the
+ * ceiling on what a save may be worth before it is refused as impossible — is
+ * raised alongside a grant, or the player's next save would be rejected for
+ * holding coins staff had just handed them.
+ */
+export const grantCoins = mutation({
+  args: { adminKey: v.string(), handle: v.string(), coins: v.number() },
+  handler: async (ctx, { adminKey, handle, coins }) => {
+    requireAdmin(adminKey);
+    const amount = Math.trunc(coins);
+    if (!Number.isFinite(amount) || amount === 0) throw new ConvexError("0이 아닌 정수를 입력하세요");
+    if (Math.abs(amount) > 1_000_000) throw new ConvexError("한 번에 1,000,000 코인까지만 가능합니다");
+
+    const player = await byHandle(ctx, handle);
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
+
+    const pending = (player.pendingCoins ?? 0) + amount;
+    await ctx.db.patch(player._id, {
+      pendingCoins: pending,
+      coinLedger: (player.coinLedger ?? 0) + Math.max(0, amount),
+      updatedAt: Date.now(),
+    });
+    return { ok: true, handle: player.handle, pending };
   },
 });
 
