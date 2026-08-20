@@ -292,7 +292,6 @@ export class Cloud {
       schoolLabel: result.schoolLabel ?? "",
       staff: Boolean(result.staff),
     };
-    this.pendingCoins = result.pendingCoins ?? 0;
     writeSession(this.session);
     this.emit();
     return result;
@@ -304,17 +303,33 @@ export class Cloud {
    * Push the save up. Failures are swallowed on purpose: a run that finished
    * offline still counts locally, and the next sync carries it.
    */
-  async save(profile) {
+  /**
+   * @param {object} profile
+   * @param {{ absolute?: boolean }} [options] state the balance rather than the
+   *   change to it — only right after a sign-in merge, where the player has
+   *   just chosen which of two saves to keep.
+   */
+  async save(profile, options = {}) {
     if (!this.signedIn) return { ok: false, reason: "offline" };
     try {
       // No score here on purpose: the server owns `best`, and it only moves
-      // when a submitted run passes validation.
-      const result = await this.mutation("players:save", { token: this.session.token, profile });
+      // when a submitted run passes validation. Coins work the same way now:
+      // what goes up is the change since the last sync, never a total.
+      const coinsDelta = Math.round((profile?.coins ?? 0) - (profile?.syncedCoins ?? 0));
+      const result = await this.mutation("players:save", {
+        token: this.session.token,
+        profile,
+        coinsDelta,
+        coinsAbsolute: options.absolute === true,
+      });
       // The server refuses a save worth more coins than the account could have
       // earned. Reported rather than swallowed: a cloud copy that quietly
       // stopped updating is the kind of fault nobody notices until they sign in
       // on a new phone and find last month's save.
-      return result?.ok === false ? result : { ok: true };
+      // The balance comes back with it, and it is the answer — a correction
+      // typed in by staff arrives this way, and so does anything earned on
+      // another device since this one last synced.
+      return result?.ok === false ? result : { ok: true, coins: result?.coins };
     } catch {
       return { ok: false, reason: "offline" };
     }
@@ -345,23 +360,6 @@ export class Cloud {
     writeSession(this.session);
     this.emit();
     return result;
-  }
-
-  /**
-   * Take any coins staff have queued for this account.
-   *
-   * @returns {Promise<number>} the amount, or 0 when there was nothing
-   */
-  async claimCoins() {
-    if (!this.signedIn) return 0;
-    try {
-      const result = await this.mutation("players:claimCoins", { token: this.session.token });
-      this.pendingCoins = 0;
-      return result?.coins ?? 0;
-    } catch {
-      // Offline or the token has gone. The grant stays queued for next time.
-      return 0;
-    }
   }
 
   async report(handle) {

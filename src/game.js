@@ -182,7 +182,8 @@ export class Game {
     this.screens.refreshProfile(this.store.data);
     this.screens.showAccountBar(this.cloud);
     // Reconnects an existing session in the background; guests never wait.
-    this.cloud.connect().then(() => this.claimPendingCoins());
+    // The sync that follows is what brings down a balance changed elsewhere.
+    this.cloud.connect().then(() => this.syncCoins());
 
     // Offered rather than forced, and only where a reload costs nothing: a
     // player mid-run would lose the run to a banner they did not ask for.
@@ -243,7 +244,6 @@ export class Game {
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
-      this.claimPendingCoins();
       // Asked once, at the moment the account is created, and skippable — the
       // school can still be set later from the title screen.
       if (justSignedUp && !this.cloud.schoolLabel) this.screens.openSchool();
@@ -266,8 +266,10 @@ export class Game {
     const local = this.store.data;
 
     if (!cloud || !hasProgress(cloud)) {
-      // Nothing on the server worth keeping: push this browser's save up.
-      this.cloud.save(local);
+      // Nothing on the server worth keeping: push this browser's save up, and
+      // state the balance rather than a change to it — this is the moment the
+      // account's coins are being decided, not adjusted.
+      this.syncCoins({ absolute: true });
       return;
     }
     if (!hasProgress(local)) {
@@ -289,8 +291,9 @@ export class Game {
       this.adoptProfile(pending.cloud);
     } else {
       // Keeping this browser's save means the server has to be told about it,
-      // or the next sign-in would offer the same choice again.
-      this.cloud.save(pending.local);
+      // or the next sign-in would offer the same choice again. Absolute for the
+      // same reason as above: the player has just chosen a balance.
+      this.syncCoins({ absolute: true });
     }
     this.screens.refreshProfile(this.store.data);
   }
@@ -337,6 +340,10 @@ export class Game {
   /** Replace the local profile with one pulled from the server. */
   adoptProfile(profile) {
     this.store.data = normalizeSave(profile);
+    // Taken wholesale from the server, so it is already in step with it. Left
+    // at zero, the next sync would read the whole balance as newly earned and
+    // hand it out a second time.
+    this.store.data.syncedCoins = this.store.data.coins;
     this.store.flush();
     this.settings = this.store.data.settings;
     this.syncMissions();
@@ -409,25 +416,42 @@ export class Game {
   }
 
   /**
-   * Pick up coins staff have granted.
+   * Settle the balance with the server.
    *
-   * Added to the local save rather than read from the server, because the local
-   * save is the one the game plays from and the one that gets pushed back up.
-   * Pushed immediately so the two agree even if the browser is closed before
-   * the next run finishes.
+   * Sends what this browser has earned or spent since it last synced and takes
+   * back the total. That total is the answer: it carries a correction made by
+   * staff, and anything earned on another device, without either side having to
+   * decide who wins.
+   *
+   * @param {{ absolute?: boolean }} [options] see Cloud#save
    */
-  async claimPendingCoins() {
-    if (!this.cloud.signedIn || !this.cloud.pendingCoins) return;
-    const coins = await this.cloud.claimCoins();
-    if (!coins) return;
+  async syncCoins(options = {}) {
+    if (!this.cloud.signedIn) return;
+    const result = await this.cloud.save(this.store.data, options);
 
-    this.store.addCoins(coins);
+    if (result?.reason === "ledger") {
+      // Once per session: it is a standing condition, not an event, and a toast
+      // after every run would be nagging rather than informing.
+      if (this.warnedLedger) return;
+      this.warnedLedger = true;
+      this.screens.showToast("클라우드 저장이 거절됐어요 · 선생님께 문의해 주세요");
+      return;
+    }
+    if (!result?.ok || typeof result.coins !== "number") return;
+
+    const before = this.store.data.coins;
+    this.store.set("syncedCoins", result.coins);
+    if (result.coins === before) return;
+
+    this.store.set("coins", result.coins);
     this.screens.refreshProfile(this.store.data);
+    const change = result.coins - before;
     this.screens.showToast(
-      coins > 0 ? `선생님이 코인 ${coins.toLocaleString()}개를 주셨어요!` : `코인 ${(-coins).toLocaleString()}개가 회수됐어요`,
+      change > 0
+        ? `코인 ${change.toLocaleString()}개가 들어왔어요`
+        : `코인 ${(-change).toLocaleString()}개가 빠졌어요`,
     );
-    if (coins > 0) this.audio.purchase();
-    this.cloud.save(this.store.data);
+    if (change > 0) this.audio.purchase();
   }
 
   /**
@@ -501,13 +525,7 @@ export class Game {
       seconds: Math.floor(this.run.seconds),
       character: this.store.data.character,
     });
-    this.cloud.save(this.store.data).then((result) => {
-      // Once per session: it is a standing condition, not an event, and a toast
-      // after every run would be nagging rather than informing.
-      if (result?.reason !== "ledger" || this.warnedLedger) return;
-      this.warnedLedger = true;
-      this.screens.showToast("클라우드 저장이 거절됐어요 · 선생님께 문의해 주세요");
-    });
+    this.syncCoins();
     return submitted;
   }
 

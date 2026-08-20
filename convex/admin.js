@@ -30,6 +30,13 @@ function requireAdmin(adminKey) {
   if (same !== 0) throw new ConvexError("관리자 키가 올바르지 않습니다");
 }
 
+/** Reads the balance the same way players.js does, old accounts included. */
+function coinsOf(player) {
+  if (typeof player.coins === "number") return Math.max(0, Math.floor(player.coins));
+  const stored = Math.max(0, Math.floor(player.profile?.coins ?? 0));
+  return stored + Math.max(0, Math.floor(player.pendingCoins ?? 0));
+}
+
 async function byHandle(ctx, handle) {
   return await ctx.db
     .query("players")
@@ -52,8 +59,7 @@ export const list = query({
     return players.map((player) => ({
       handle: player.handle,
       best: player.best,
-      coins: Math.max(0, Math.floor(player.profile?.coins ?? 0)),
-      pendingCoins: player.pendingCoins ?? 0,
+      coins: coinsOf(player),
       /** True once a save was refused for claiming more than it could earn. */
       flagged: Boolean(player.flagged),
       school: player.school ? schoolLabel(player.school) : "",
@@ -148,10 +154,11 @@ export const resetPin = mutation({
 /**
  * Give or take coins.
  *
- * Queued rather than applied: see the note on `pendingCoins`. The ledger — the
- * ceiling on what a save may be worth before it is refused as impossible — is
- * raised alongside a grant, or the player's next save would be rejected for
- * holding coins staff had just handed them.
+ * Applied straight to the balance the server owns, so it is in effect the
+ * moment it is run — the same thing as typing a number into the `coins` column
+ * in the dashboard, which is now also a working way to do this. The ledger is
+ * raised alongside, or the player's next save would be refused for holding
+ * things staff had just paid for.
  */
 export const grantCoins = mutation({
   args: { adminKey: v.string(), handle: v.string(), coins: v.number() },
@@ -164,13 +171,16 @@ export const grantCoins = mutation({
     const player = await byHandle(ctx, handle);
     if (!player) throw new ConvexError("그런 닉네임이 없습니다");
 
-    const pending = (player.pendingCoins ?? 0) + amount;
+    // Exactly what typing a number into the dashboard's `coins` column does.
+    // One mechanism, so the two cannot disagree.
+    const balance = Math.max(0, coinsOf(player) + amount);
     await ctx.db.patch(player._id, {
-      pendingCoins: pending,
+      coins: balance,
+      pendingCoins: 0,
       coinLedger: (player.coinLedger ?? 0) + Math.max(0, amount),
       updatedAt: Date.now(),
     });
-    return { ok: true, handle: player.handle, pending };
+    return { ok: true, handle: player.handle, coins: balance };
   },
 });
 

@@ -47,14 +47,24 @@ export default defineSchema({
     flagged: v.optional(v.boolean()),
 
     /**
-     * Coins granted by staff that the player has not picked up yet.
+     * The coin balance, owned by the server.
      *
-     * Held here rather than written straight into `profile` because the browser
-     * owns that blob: it plays from its own copy and pushes the whole thing up
-     * after every run, so a number edited on the server is overwritten within
-     * one game. A pending amount survives that — the client claims it, adds it
-     * to the save it is actually using, and tells the server it is done.
+     * It used to live inside `profile`, which the browser owns and rewrites in
+     * full after every run — so a number changed on the server was gone within
+     * one game, and staff had no way to correct a balance at all. Out here it
+     * is a field like any other: readable in the dashboard, editable in the
+     * dashboard, and what the client is told to use.
+     *
+     * The client no longer sends a balance. It sends what changed since its
+     * last sync and is handed the new total back, so a value typed in here
+     * survives, two devices cannot overwrite each other's earnings, and a
+     * browser that was offline all afternoon still lands its coins correctly.
+     *
+     * Absent on accounts that have not synced since; the first sync fills it
+     * from the profile they already had.
      */
+    coins: v.optional(v.number()),
+    /** Superseded by `coins`; folded in and cleared on the next sync. */
     pendingCoins: v.optional(v.number()),
 
     /**

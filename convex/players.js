@@ -54,11 +54,27 @@ function publicProfile(player) {
     best: player.best,
     school: player.school ?? null,
     schoolLabel: player.school ? schoolLabel(player.school) : "",
-    /** Waiting to be claimed; see `claimCoins`. */
-    pendingCoins: player.pendingCoins ?? 0,
+    /** The balance the server holds; see the note in schema.js. */
+    coins: coinsOf(player),
     staff: player.role === "admin",
   };
 }
+
+/**
+ * The account's balance.
+ *
+ * Accounts that predate the column are read from the profile they already had,
+ * plus anything staff queued under the old pending-grant mechanism, so nobody
+ * loses coins to the move.
+ */
+function coinsOf(player) {
+  if (typeof player.coins === "number") return Math.max(0, Math.floor(player.coins));
+  const stored = Math.max(0, Math.floor(player.profile?.coins ?? 0));
+  return stored + Math.max(0, Math.floor(player.pendingCoins ?? 0));
+}
+
+/** Most a single sync may add. A run pays tens of coins; this is a wall. */
+const MAX_COIN_GAIN_PER_SYNC = 5000;
 
 function newToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
@@ -120,6 +136,7 @@ export const register = mutation({
       pin,
       token: newToken(),
       profile: sanitizeProfile(profile, 0),
+      coins: Math.max(0, Math.floor(profile?.coins ?? 0)),
       // A guest who played offline arrives with coins they really did earn, so
       // the ledger opens where they are rather than at zero.
       coinLedger: profileWorth(profile),
@@ -213,17 +230,30 @@ export const load = query({
  * `scores:submit` has approved a run.
  */
 export const save = mutation({
-  args: { token: v.string(), profile: v.any() },
-  handler: async (ctx, { token, profile }) => {
+  args: {
+    token: v.string(),
+    profile: v.any(),
+    /** Coins earned minus coins spent since this browser last synced. */
+    coinsDelta: v.optional(v.number()),
+    /**
+     * Take the profile's balance as the truth instead of applying a delta.
+     *
+     * Sent once, right after signing in, when the player has chosen which of
+     * two saves to keep. That is the one moment a browser is allowed to state a
+     * balance rather than a change to one.
+     */
+    coinsAbsolute: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { token, profile, coinsDelta, coinsAbsolute }) => {
     const player = await requirePlayer(ctx, token);
-    const worth = profileWorth(profile);
 
-    // First save under the ledger takes the account as it stands. Anything else
-    // would wipe coins people earned before the rule existed, which is a worse
-    // outcome than letting an old profile in unexamined once.
-    const ledger = player.coinLedger ?? Math.max(worth, profileWorth(player.profile));
+    // The ledger no longer has to police the balance — the server owns that
+    // now, and a client can only report what changed. What it still catches is
+    // upgrades and characters appearing without having been paid for.
+    const spent = profileWorth(profile) - Math.max(0, Math.floor(profile?.coins ?? 0));
+    const ledger = player.coinLedger ?? Math.max(spent, profileWorth(player.profile));
 
-    if (worth > ledger) {
+    if (spent > ledger) {
       // Kept out of the cloud copy rather than argued with: the browser goes on
       // playing from its own save, and staff get a name to look at. Whatever is
       // stored here is what a new device restores, and that stays honest.
@@ -231,8 +261,19 @@ export const save = mutation({
       return { ok: false, reason: "ledger" };
     }
 
+    const held = coinsOf(player);
+    const delta = Math.trunc(coinsDelta ?? 0);
+    const coins = coinsAbsolute
+      ? Math.max(0, Math.floor(profile?.coins ?? 0))
+      : Math.max(0, held + Math.min(delta, MAX_COIN_GAIN_PER_SYNC));
+
     await ctx.db.patch(player._id, {
-      profile: sanitizeProfile(profile, player.best),
+      // The blob keeps a copy so a fresh device restoring it starts correct,
+      // but the column above is what decides.
+      profile: { ...sanitizeProfile(profile, player.best), coins },
+      coins,
+      // Folded into `coins` by coinsOf; nothing left to hold.
+      pendingCoins: 0,
       coinLedger: ledger,
       // Cleared on a save that passes. The flag means "this account is claiming
       // more than it could have earned", which is a condition, not a permanent
@@ -242,7 +283,7 @@ export const save = mutation({
       flagged: false,
       updatedAt: Date.now(),
     });
-    return { ok: true };
+    return { ok: true, coins };
   },
 });
 
@@ -267,25 +308,6 @@ export const setSchool = mutation({
 
     await joinSchool(ctx, player, check.school);
     return { ok: true, school: check.school, schoolLabel: check.label };
-  },
-});
-
-/**
- * Take the coins staff queued for this account.
- *
- * The client adds the amount to the save it is playing from and pushes that up
- * as normal, so the grant lands in the copy that actually decides what the
- * player has. Zeroed here in the same transaction, which is what stops a
- * refresh being worth another handful.
- */
-export const claimCoins = mutation({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
-    const player = await requirePlayer(ctx, token);
-    const coins = player.pendingCoins ?? 0;
-    if (!coins) return { ok: true, coins: 0 };
-    await ctx.db.patch(player._id, { pendingCoins: 0, updatedAt: Date.now() });
-    return { ok: true, coins };
   },
 });
 
