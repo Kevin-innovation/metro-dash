@@ -89,16 +89,32 @@ export async function leaveSchool(ctx, player) {
 
 // --- reads ------------------------------------------------------------------
 
+/**
+ * Rows read beyond the ones asked for, so the excluded ones do not eat the page.
+ *
+ * 일반부 sits near the top of `by_total` — its members are real players with
+ * real scores — and dropping it after taking ten left nine schools on a board
+ * with ten places. Anything filtered has to be filtered before the page is
+ * cut, which means fetching past it first. The table has a row per school, so
+ * reading a few extra costs nothing.
+ */
+const FILTER_MARGIN = 16;
+
 export const top = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
     const take = Math.min(SCHOOL_LIMIT, Math.max(1, Math.floor(limit ?? 10)));
-    const rows = await ctx.db.query("schools").withIndex("by_total").order("desc").take(take);
+    const rows = await ctx.db
+      .query("schools")
+      .withIndex("by_total")
+      .order("desc")
+      .take(take + FILTER_MARGIN);
 
     return rows
       // 일반부 is an affiliation, not a school: it belongs under a player's name
       // on the individual board, not in a ranking of schools.
       .filter((row) => row.total > 0 && !isGeneral(row))
+      .slice(0, take)
       .map((row, index) => ({
         rank: index + 1,
         key: row.key,

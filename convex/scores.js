@@ -25,6 +25,9 @@ export const LEADERBOARD_LIMIT = 50;
  */
 export const CLIENT_COINS_PER_RUN = 3000;
 
+/** Rows read beyond the page, so filtered-out accounts do not shorten it. */
+const FILTER_MARGIN = 16;
+
 export const submit = mutation({
   args: {
     token: v.string(),
@@ -99,18 +102,23 @@ export const top = query({
     const take = Math.min(LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit ?? 20)));
     const weekly = range === "week";
     const week = weekKey(Date.now());
+    // Read past the page: the staff account and anyone yet to score are dropped
+    // below, and dropping them after the cut would hand back a short page — a
+    // board with ten places and nine names on it.
+    const window = take + FILTER_MARGIN;
     const players = weekly
       ? await ctx.db
           .query("players")
           .withIndex("by_week_best", (q) => q.eq("weekKey", week))
           .order("desc")
-          .take(take)
-      : await ctx.db.query("players").withIndex("by_best").order("desc").take(take);
+          .take(window)
+      : await ctx.db.query("players").withIndex("by_best").order("desc").take(window);
 
     return players
       // Staff never play, so this is belt and braces — but a 0-point 「admin」
       // row appearing on a class leaderboard would be its own problem.
       .filter((player) => scoreOf(player, weekly) > 0 && player.role !== "admin")
+      .slice(0, take)
       .map((player, index) => ({
         rank: index + 1,
         handle: player.handle,
