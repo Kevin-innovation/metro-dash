@@ -51,7 +51,22 @@ export class Screens {
     const hint = $("touch-hint");
     if (hint) hint.textContent = `스와이프로 피하기 · 위로 두 번은 호버보드`;
     const howto = $("howto-board");
-    if (howto) howto.textContent = `${BOARD_HINT} · 호버보드 (충돌 1회 방어)`;
+    if (howto) howto.textContent = `${BOARD_HINT} — 충돌을 한 번 막아 줍니다`;
+  }
+
+  /**
+   * Whether the control list starts open.
+   *
+   * A phone gets a disclosure, because vertical space is the scarce thing
+   * there. A wide screen gets it open: the column beside the buttons had room
+   * going spare — the whole bottom-right corner of the card was empty — and
+   * opening it used to grow the card and shift everything that was already on
+   * screen. Something that only ever moves the layout on a click is better off
+   * not being a click.
+   */
+  openHowto(wide) {
+    const el = $("howto-wrap");
+    if (el) el.open = wide;
   }
 
   bind() {

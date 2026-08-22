@@ -166,21 +166,53 @@
                 <p class="block-title">오늘의 미션 <em id="mission-count" class="mission-count"></em></p>
                 <ul id="mission-list" class="mission-list"></ul>
               </div>
-
-              <details class="howto-wrap">
-                <summary>조작 방법</summary>
-                <ul class="howto">
-                  <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
-                  <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
-                  <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
-                  <li id="howto-board"></li>
-                  <li>노란 게이트 · 점프로 못 넘습니다 · 슬라이드 필수</li>
-                  <li>헤드라이트 버스 · 마주 오면 레인 변경</li>
-                  <li>장애물을 아슬아슬하게 스치면 콤보와 보너스가 오릅니다</li>
-                </ul>
-              </details>
             </div>
           </div>
+
+          <!--
+            Below both columns rather than inside one of them. The two are never
+            the same height — the buttons run past the missions — and whichever
+            came up short left a hole in a corner of the card. A full-width
+            footer squares the bottom off instead, and gives the list room to
+            sit in two columns.
+
+            Each line leads with what it is, so it can be scanned for 「점프」
+            rather than read for it. Open from the start on a screen with room
+            for it; see openHowto.
+          -->
+          <details id="howto-wrap" class="howto-wrap">
+            <summary>조작 방법</summary>
+            <ul class="howto">
+              <li>
+                <span class="howto-icon" aria-hidden="true">↔️</span>
+                <span><b>레인 바꾸기</b> <kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프</span>
+              </li>
+              <li>
+                <span class="howto-icon" aria-hidden="true">⬆️</span>
+                <span><b>점프</b> <kbd>↑</kbd> · 스페이스 · 위로 스와이프 — 버스 위로 올라탑니다</span>
+              </li>
+              <li>
+                <span class="howto-icon" aria-hidden="true">⬇️</span>
+                <span><b>슬라이드</b> <kbd>↓</kbd> · 아래로 스와이프 — 점프 중이면 캔슬</span>
+              </li>
+              <li>
+                <span class="howto-icon" aria-hidden="true">🛹</span>
+                <span><b>호버보드</b> <span id="howto-board"></span></span>
+              </li>
+              <li>
+                <span class="howto-icon" aria-hidden="true">🚧</span>
+                <span><b>노란 게이트</b> 점프로는 못 넘어요 — 슬라이드 필수</span>
+              </li>
+              <li>
+                <span class="howto-icon" aria-hidden="true">🚌</span>
+                <span><b>헤드라이트 버스</b> 마주 오면 레인을 바꾸세요</span>
+              </li>
+              <li>
+                <span class="howto-icon" aria-hidden="true">✨</span>
+                <span><b>아슬아슬하게 스치면</b> 콤보와 보너스가 오릅니다</span>
+              </li>
+            </ul>
+          </details>
         </div>
       </div>
 

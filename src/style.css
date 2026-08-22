@@ -666,7 +666,10 @@ body.running #game-canvas {
 
   .title-body {
     flex-direction: row;
-    align-items: flex-start;
+    /* stretch, not flex-start: the missions column is the shorter of the two,
+       and letting it match the buttons beside it spreads the difference
+       through the list instead of leaving it in the corner. */
+    align-items: stretch;
   }
 
   /* Equal halves, and min-width:0 so a long rank or school name wraps instead
@@ -675,6 +678,34 @@ body.running #game-canvas {
   .title-side {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  /* The block and the list inside it both take the height they were given, so
+     the extra goes into the gaps between missions. */
+  .title-side .mission-block,
+  .title-side .mission-block .mission-list {
+    flex: 1;
+  }
+
+  .title-side .mission-block {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 0.85vh, 8px);
+  }
+
+  .title-side .mission-block .mission-list {
+    justify-content: space-between;
+  }
+
+  /* Seven lines across the full width read as two columns of three or four,
+     not as one long list with a ragged right edge. */
+  .howto {
+    columns: 2;
+    column-gap: 26px;
+  }
+
+  .howto li {
+    break-inside: avoid;
   }
 }
 
@@ -768,13 +799,40 @@ button {
   backdrop-filter: blur(6px);
 }
 
+/* Block rather than flex, because the wide layout below splits it into two
+   multi-column columns and a flex container has no columns to split. */
 .howto {
   list-style: none;
   margin: 18px 0 0;
   padding: 0;
   color: #c5d8e6;
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.55;
+}
+
+/* A fixed icon column, so the seven lines share one left edge and the list can
+   be scanned down rather than read across. */
+.howto li {
+  display: grid;
+  grid-template-columns: 1.5em 1fr;
+  gap: 8px;
+  text-align: left;
+}
+
+.howto li + li {
+  margin-top: 7px;
+}
+
+.howto-icon {
+  font-size: 15px;
+  line-height: inherit;
+  text-align: center;
+}
+
+/* The name of the thing, ahead of how to do it. */
+.howto b {
+  color: #eaf4fb;
+  font-weight: 700;
 }
 
 kbd {

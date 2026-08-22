@@ -198,6 +198,13 @@ export class Game {
     });
     this.resize();
     window.addEventListener("resize", () => this.resize());
+    // The width is the breakpoint the title card splits at, so the control list
+    // opens exactly when it has two columns to lay itself out in. The height is
+    // measured too: a short wide window has the width for it and not the room,
+    // and opening it there would only put the card into a scroll.
+    const roomy = matchMedia("(min-width: 820px) and (min-height: 680px)");
+    this.screens.openHowto(roomy.matches);
+    roomy.addEventListener("change", (event) => this.screens.openHowto(event.matches));
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && this.state === "playing") this.pause();
     });
