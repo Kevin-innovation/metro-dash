@@ -9,6 +9,7 @@ import {
 } from "../src/leaderboard-rules.js";
 import { handleKey, validateHandle } from "../src/nickname.js";
 import { schoolLabel, validateSchool } from "../src/school.js";
+import { rankAt } from "../src/progression.js";
 import { profileWorth } from "../src/shop.js";
 import { joinSchool } from "./schools.js";
 import { endSession, requirePlayer, startSession } from "./session.js";
@@ -52,6 +53,7 @@ function publicProfile(player) {
     handle: player.handle,
     profile: player.profile,
     best: player.best,
+    level: levelOf(player),
     school: player.school ?? null,
     schoolLabel: player.school ? schoolLabel(player.school) : "",
     /** The balance the server holds; see the note in schema.js. */
@@ -67,6 +69,17 @@ function publicProfile(player) {
  * plus anything staff queued under the old pending-grant mechanism, so nobody
  * loses coins to the move.
  */
+/** The experience the account has, from the column or the profile behind it. */
+export function xpOf(player) {
+  const raw = typeof player.xp === "number" ? player.xp : (player.profile?.xp ?? 0);
+  return Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : 0;
+}
+
+/** The rank that experience buys, as shown beside a name. */
+export function levelOf(player) {
+  return rankAt(xpOf(player)).level;
+}
+
 function coinsOf(player) {
   if (typeof player.coins === "number") return Math.max(0, Math.floor(player.coins));
   const stored = Math.max(0, Math.floor(player.profile?.coins ?? 0));
@@ -137,6 +150,7 @@ export const register = mutation({
       token: newToken(),
       profile: sanitizeProfile(profile, 0),
       coins: Math.max(0, Math.floor(profile?.coins ?? 0)),
+      xp: xpOf({ profile }),
       // A guest who played offline arrives with coins they really did earn, so
       // the ledger opens where they are rather than at zero.
       coinLedger: profileWorth(profile),
@@ -272,6 +286,7 @@ export const save = mutation({
       // but the column above is what decides.
       profile: { ...sanitizeProfile(profile, player.best), coins },
       coins,
+      xp: xpOf({ profile }),
       // Folded into `coins` by coinsOf; nothing left to hold.
       pendingCoins: 0,
       coinLedger: ledger,

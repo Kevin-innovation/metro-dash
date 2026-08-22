@@ -388,6 +388,42 @@ export class Game {
     this.stopWatchingBoards();
     const generation = ++this.boardGeneration;
 
+    // The ladder is one column, so it is two subscriptions rather than four.
+    if (this.boardRange === "level") {
+      const view = { rows: [], standing: null };
+      const paint = () => {
+        this.screens.renderLevelBoard(view.rows ?? [], view.standing, this.cloud.handle);
+        this.screens.setBoardPager("players", this.pagerState("players", (view.rows ?? []).length));
+        this.screens.setBoardPager("schools", { page: 0, size: BOARD_PAGE, hasMore: false });
+      };
+      const token = this.cloud.session?.token;
+      const stops = await Promise.all([
+        this.cloud.watch(
+          "scores:levelTop",
+          { limit: (this.boardPages.players + 1) * BOARD_PAGE },
+          (rows) => {
+            if (generation !== this.boardGeneration) return;
+            view.rows = rows;
+            paint();
+          },
+        ),
+        ...(token
+          ? [
+              this.cloud.watch("scores:levelStanding", { token }, (standing) => {
+                if (generation !== this.boardGeneration) return;
+                view.standing = standing;
+                paint();
+              }),
+            ]
+          : []),
+      ]);
+      for (const stop of stops) {
+        if (generation !== this.boardGeneration) stop();
+        else this.boardSubscriptions.push(stop);
+      }
+      return;
+    }
+
     // A closed week is not a ranking that moves, so the hall is one
     // subscription rather than four and has no pager or standing behind it.
     if (this.boardRange === "hall") {

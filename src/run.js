@@ -1,4 +1,4 @@
-import { DAILY_BONUS, allCleared, applyMetrics, missionReward } from "./missions.js";
+import { DAILY_BONUS, MISSION_TIERS, allCleared, applyMetrics, missionReward } from "./missions.js";
 import { dayKey } from "./daily.js";
 import {
   activatePowerup,
@@ -8,7 +8,7 @@ import {
   powerupScoreMultiplier,
   tickPowerups,
 } from "./powerups.js";
-import { runXp } from "./progression.js";
+import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
   COMBO_WINDOW,
@@ -217,7 +217,7 @@ export class Run {
     });
 
     save.missions = missions;
-    const reward = missionReward(completed);
+    const reward = missionReward(completed, missionTier(save.xp, MISSION_TIERS));
     if (completed.length) {
       save.missionsDone += completed.length;
       // The character's mission perk applies to the mission payout only, not to

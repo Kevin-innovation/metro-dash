@@ -1,6 +1,14 @@
 import { HOVERBOARD_TIME } from "./config.js";
 import { BOARD_HINT_LONG, BOARD_LIMIT_NOTE } from "./input.js";
-import { DAILY_BONUS, allCleared, clearedCount, isComplete, missionDef, missionLabel } from "./missions.js";
+import {
+  DAILY_BONUS,
+  allCleared,
+  clearedCount,
+  isComplete,
+  missionDef,
+  missionLabel,
+  missionPay,
+} from "./missions.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
@@ -32,6 +40,9 @@ export function renderMissions(el, missions) {
     .map((mission) => {
       const def = missionDef(mission.id);
       if (!def) return "";
+      // The step is read back from the target the mission was dealt at, so the
+      // payout shown is the one this mission will actually pay.
+      const pay = missionPay(def, def.targets.indexOf(mission.target));
       const done = isComplete(mission);
       const pct = Math.min(100, (mission.progress / mission.target) * 100);
       return `
@@ -41,7 +52,7 @@ export function renderMissions(el, missions) {
             <span class="mission-count">${money(mission.progress)} / ${money(mission.target)}</span>
           </div>
           <div class="mission-track"><div class="mission-fill" style="width:${pct}%"></div></div>
-          <div class="mission-reward">🪙 ${money(def.coins)} · XP ${money(def.xp)}</div>
+          <div class="mission-reward">🪙 ${money(pay.coins)} · XP ${money(pay.xp)}</div>
         </li>`;
     })
     .join("");

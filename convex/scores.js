@@ -4,6 +4,7 @@ import { validateRun } from "../src/leaderboard-rules.js";
 import { weekKey } from "../src/week.js";
 import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
+import { levelOf, xpOf } from "./players.js";
 
 /**
  * The leaderboard.
@@ -138,6 +139,7 @@ export const top = query({
         // Shown under the name. Already rendered on the player document, so the
         // board stays a single read.
         school: player.school?.label ?? "",
+        level: levelOf(player),
       }));
   },
 });
@@ -169,7 +171,59 @@ export const standing = query({
           .withIndex("by_best", (q) => q.gt("best", best))
           .collect();
 
-    return { rank: above.length + 1, best, handle: player.handle };
+    return { rank: above.length + 1, best, handle: player.handle, level: levelOf(player) };
+  },
+});
+
+/**
+ * The ladder, ranked by experience rather than by a single run.
+ *
+ * A different question from the score board: that one asks who had the best
+ * afternoon, this asks who has put the most in. Somebody who never tops a week
+ * can still be climbing here, which is the point of having both.
+ */
+export const levelTop = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const take = Math.min(LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit ?? 10)));
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_xp")
+      .order("desc")
+      .take(take + FILTER_MARGIN);
+
+    return players
+      .filter((player) => xpOf(player) > 0 && player.role !== "admin")
+      .slice(0, take)
+      .map((player, index) => ({
+        rank: index + 1,
+        handle: player.handle,
+        level: levelOf(player),
+        xp: xpOf(player),
+        school: player.school?.label ?? "",
+      }));
+  },
+});
+
+/** Where the signed-in player sits on the ladder. */
+export const levelStanding = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const player = await requirePlayer(ctx, token);
+    const xp = xpOf(player);
+    if (xp <= 0) return { rank: null, xp: 0, level: levelOf(player), handle: player.handle };
+
+    const above = await ctx.db
+      .query("players")
+      .withIndex("by_xp", (q) => q.gt("xp", xp))
+      .collect();
+
+    return {
+      rank: above.filter((other) => other.role !== "admin").length + 1,
+      xp,
+      level: levelOf(player),
+      handle: player.handle,
+    };
   },
 });
 

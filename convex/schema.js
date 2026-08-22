@@ -68,6 +68,16 @@ export default defineSchema({
     pendingCoins: v.optional(v.number()),
 
     /**
+     * A copy of the profile's experience, out here so it can be indexed.
+     *
+     * Mirrored on every save rather than owned like `coins`: it decides a rank
+     * badge and a ladder, not a balance anyone can spend, so the cost of a
+     * client overstating it is a wrong badge. Clamped on the way in so it
+     * cannot be a string or an infinity.
+     */
+    xp: v.optional(v.number()),
+
+    /**
      * School, chosen at most once by the player and thereafter only by staff.
      * Absent on every account created before schools existed, and on anyone who
      * has not picked one — those players simply sit outside the school ranking.
@@ -105,6 +115,7 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_device", ["deviceId"])
     .index("by_best", ["best"])
+    .index("by_xp", ["xp"])
     // Equality on the week first, so the weekly board is one indexed read and
     // last week's leaders are not merely filtered out but never looked at.
     .index("by_week_best", ["weekKey", "weekBest"])

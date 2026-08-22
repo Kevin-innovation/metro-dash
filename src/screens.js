@@ -104,6 +104,7 @@ export class Screens {
     for (const [id, range] of [
       ["tab-board-week", "week"],
       ["tab-board-all", "all"],
+      ["tab-board-level", "level"],
       ["tab-board-hall", "hall"],
     ]) {
       const tab = $(id);
@@ -314,10 +315,20 @@ export class Screens {
     for (const [id, value] of [
       ["tab-board-week", "week"],
       ["tab-board-all", "all"],
+      ["tab-board-level", "level"],
       ["tab-board-hall", "hall"],
     ]) {
       $(id)?.classList.toggle("on", range === value);
     }
+
+    // The ladder is about one person's whole history, so it has no school half
+    // to show and takes the width instead of leaving it blank.
+    const solo = range === "level";
+    $("leaderboard-screen")?.classList.toggle("solo", solo);
+    const schoolCol = $("school-list")?.closest(".board-col");
+    if (schoolCol) schoolCol.classList.toggle("hidden", solo);
+    const heading = $("player-title");
+    if (heading) heading.textContent = solo ? "레벨" : "개인";
 
     // Both columns follow the tabs now, so both captions are written here.
     const school = $("school-note");
@@ -335,9 +346,11 @@ export class Screens {
       note.textContent =
         range === "hall"
           ? "지난 주의 기록"
-          : range === "week"
-            ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
-            : "전체 기간 최고 기록";
+          : range === "level"
+            ? "누적 경험치 순위 · 미션과 점수로 오릅니다"
+            : range === "week"
+              ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
+              : "전체 기간 최고 기록";
     }
   }
 
@@ -555,10 +568,12 @@ export class Screens {
           const where = row.school
             ? `<em class="row-school">${escapeHtml(row.school)}</em>`
             : "";
+          // What the name has earned over everything, beside what it did once.
+          const level = row.level ? ` <em class="row-level">Lv.${row.level}</em>` : "";
           return `
             <li class="leaderboard-row${mine ? " me" : ""}">
               <span class="leaderboard-rank">${row.rank}</span>
-              <span class="leaderboard-handle">${escapeHtml(row.handle)}${where}</span>
+              <span class="leaderboard-handle">${escapeHtml(row.handle)}${level}${where}</span>
               <span class="leaderboard-score">${row.best.toLocaleString()}</span>
               ${flag}
             </li>`;
@@ -573,7 +588,9 @@ export class Screens {
           "beforeend",
           `<li class="leaderboard-row me pinned">
              <span class="leaderboard-rank">${standing.rank}</span>
-             <span class="leaderboard-handle">${escapeHtml(standing.handle ?? myHandle ?? "")}</span>
+             <span class="leaderboard-handle">${escapeHtml(standing.handle ?? myHandle ?? "")}${
+               standing.level ? ` <em class="row-level">Lv.${standing.level}</em>` : ""
+             }</span>
              <span class="leaderboard-score">${standing.best.toLocaleString()}</span>
              <span class="report-flag" aria-hidden="true"></span>
            </li>`,
@@ -653,7 +670,8 @@ export class Screens {
    */
   applyStandings() {
     const { mine, school, schoolNote } = this.standings;
-    const any = Boolean(mine || school);
+    const solo = $("leaderboard-screen")?.classList.contains("solo");
+    const any = Boolean(mine || (!solo && school));
     const slots = [
       ["my-standing", mine, "아직 내 기록이 없어요"],
       ["my-school-standing", school, schoolNote || "학교를 정하면 순위가 나와요"],
@@ -950,6 +968,57 @@ export class Screens {
       ranks.school?.rank != null ? `${ranks.school.rank}위` : ranks.schoolNote || "—",
       ranks.school?.rank == null,
     );
+  }
+
+  /**
+   * The experience ladder.
+   *
+   * Its own renderer rather than the score board's, because the number that
+   * matters is different: a rank and the experience behind it, not a run.
+   *
+   * @param {Array} rows
+   * @param {object|null} standing where the viewer sits, when off the page
+   */
+  renderLevelBoard(rows, standing, myHandle) {
+    const list = $("leaderboard-list");
+    if (!list) return;
+
+    const line = (row, mine) => `
+      <li class="leaderboard-row${mine ? " me" : ""}">
+        <span class="leaderboard-rank">${row.rank}</span>
+        <span class="leaderboard-handle">
+          ${escapeHtml(row.handle)}
+          <em class="row-school">Lv.${row.level}${row.school ? ` · ${escapeHtml(row.school)}` : ""}</em>
+        </span>
+        <span class="leaderboard-score">${row.xp.toLocaleString()}</span>
+        <span class="report-flag" aria-hidden="true"></span>
+      </li>`;
+
+    if (!rows?.length) {
+      list.innerHTML = `<li class="leaderboard-empty">아직 기록이 없어요.</li>`;
+    } else {
+      list.innerHTML = rows.map((row) => line(row, row.handle === myHandle)).join("");
+      if (standing?.rank != null && !rows.some((row) => row.handle === myHandle)) {
+        list.insertAdjacentHTML(
+          "beforeend",
+          `<li class="leaderboard-row me pinned">
+             <span class="leaderboard-rank">${standing.rank}</span>
+             <span class="leaderboard-handle">
+               ${escapeHtml(standing.handle ?? myHandle ?? "")}
+               <em class="row-school">Lv.${standing.level}</em>
+             </span>
+             <span class="leaderboard-score">${standing.xp.toLocaleString()}</span>
+             <span class="report-flag" aria-hidden="true"></span>
+           </li>`,
+        );
+      }
+    }
+
+    this.standings.mine =
+      standing?.rank != null ? `내 레벨 ${standing.rank}위 · Lv.${standing.level}` : "";
+    this.standings.school = "";
+    this.standings.schoolNote = "";
+    this.applyStandings();
   }
 
   /**

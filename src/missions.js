@@ -179,9 +179,25 @@ export function applyMetrics(missions, metrics) {
   return { missions: next, completed };
 }
 
-export function missionReward(completedList) {
+/**
+ * How much a mission pays at a given difficulty step.
+ *
+ * Levelling up used to be a straight penalty: the targets grew with the rank
+ * and the payout did not, so a Lv.7 player was asked for a 60 combo and paid
+ * exactly what a Lv.1 player got for an 8. The reward now grows with the step
+ * that set the target.
+ */
+export function missionPay(def, tier) {
+  const step = 1 + Math.max(0, Math.min(MISSION_TIERS - 1, tier)) * 0.28;
+  return { coins: Math.round(def.coins * step), xp: Math.round(def.xp * step) };
+}
+
+export function missionReward(completedList, tier = 0) {
   return completedList.reduce(
-    (acc, entry) => ({ coins: acc.coins + entry.def.coins, xp: acc.xp + entry.def.xp }),
+    (acc, entry) => {
+      const pay = missionPay(entry.def, tier);
+      return { coins: acc.coins + pay.coins, xp: acc.xp + pay.xp };
+    },
     { coins: 0, xp: 0 },
   );
 }

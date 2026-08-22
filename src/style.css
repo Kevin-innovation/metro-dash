@@ -1569,6 +1569,24 @@ kbd {
   backdrop-filter: blur(3px);
 }
 
+/* The rank a name has earned, beside the run it just did. Distinct from the
+   school under it, which is where they are rather than what they have done. */
+.row-level {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--gold);
+  opacity: 0.85;
+}
+
+/* One column: the ladder has no school half, so the width goes to the names. */
+#leaderboard-screen.solo .board-split {
+  grid-template-columns: 1fr;
+}
+
+#leaderboard-screen.solo .dialog.board {
+  width: min(560px, 100%);
+}
+
 /* --- hall of fame --------------------------------------------------------- */
 
 .hall-week {
