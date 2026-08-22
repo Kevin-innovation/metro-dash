@@ -46,6 +46,10 @@ const CAMERA_HEADROOM = 0.3;
 
 const $ = (id) => document.getElementById(id);
 
+/** Rows a leaderboard column shows at a time, and the most it will ever show. */
+const BOARD_PAGE = 10;
+const BOARD_MAX = 50;
+
 /** Seconds the whole frame freezes on a heavy impact, for weight. */
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
@@ -90,6 +94,8 @@ export class Game {
     /** Live leaderboard subscriptions, and a counter to retire stale ones. */
     this.boardSubscriptions = [];
     this.boardGeneration = 0;
+    /** How many rows each column is asking for; grows by 「더보기」. */
+    this.boardLimits = { players: BOARD_PAGE, schools: BOARD_PAGE };
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
     this.nearMissFx = 0;
@@ -167,6 +173,7 @@ export class Game {
       openLeaderboard: () => this.openLeaderboard(),
       closeLeaderboard: () => this.closeLeaderboard(),
       setBoardRange: (range) => this.setBoardRange(range),
+      showMoreBoard: (column) => this.showMoreBoard(column),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
       resolveMerge: (choice) => this.resolveMerge(choice),
@@ -353,6 +360,9 @@ export class Game {
 
   async openLeaderboard() {
     this.audio.resume();
+    // Opens compact every time. Someone who paged down to fiftieth place last
+    // night does not want to land there again tonight.
+    this.boardLimits = { players: BOARD_PAGE, schools: BOARD_PAGE };
     this.screens.openLeaderboard(this.boardRange);
     this.screens.renderLeaderboard([], null, this.cloud.handle);
     this.screens.renderSchoolBoard([], null);
@@ -380,8 +390,14 @@ export class Game {
     const view = { rows: [], standing: null, schools: [], schoolStanding: null };
 
     const draw = () => {
-      this.screens.renderLeaderboard(view.rows ?? [], view.standing, this.cloud.handle);
-      this.screens.renderSchoolBoard(view.schools ?? [], view.schoolStanding, this.schoolStandingNote());
+      const rows = view.rows ?? [];
+      const schools = view.schools ?? [];
+      this.screens.renderLeaderboard(rows, view.standing, this.cloud.handle);
+      this.screens.renderSchoolBoard(schools, view.schoolStanding, this.schoolStandingNote());
+      // A full page back means there is probably another one. The alternative
+      // is a count query per column on every update, for a button.
+      this.screens.setBoardMore("players", this.moreState("players", rows.length));
+      this.screens.setBoardMore("schools", this.moreState("schools", schools.length));
     };
 
     this.boardSubscriptions = [];
@@ -398,8 +414,8 @@ export class Game {
 
     const token = this.cloud.session?.token;
     await Promise.all([
-      watch("scores:top", { limit: 10, range: this.boardRange }, "rows"),
-      watch("schools:top", { limit: 10 }, "schools"),
+      watch("scores:top", { limit: this.boardLimits.players, range: this.boardRange }, "rows"),
+      watch("schools:top", { limit: this.boardLimits.schools }, "schools"),
       ...(token
         ? [
             watch("scores:standing", { token, range: this.boardRange }, "standing"),
@@ -407,6 +423,28 @@ export class Game {
           ]
         : []),
     ]);
+  }
+
+  /**
+   * Whether a column has more to show, and how far the next page reaches.
+   *
+   * @param {"players"|"schools"} column
+   * @param {number} shown rows currently on screen
+   */
+  moreState(column, shown) {
+    const limit = this.boardLimits[column];
+    const more = shown >= limit && limit < BOARD_MAX;
+    return { more, next: Math.min(BOARD_MAX, limit + BOARD_PAGE) };
+  }
+
+  /** Ask for another page of a column and resubscribe at the new size. */
+  async showMoreBoard(column) {
+    if (!(column in this.boardLimits)) return;
+    const grown = Math.min(BOARD_MAX, this.boardLimits[column] + BOARD_PAGE);
+    if (grown === this.boardLimits[column]) return;
+    this.boardLimits[column] = grown;
+    this.audio.resume();
+    await this.watchBoards();
   }
 
   stopWatchingBoards() {

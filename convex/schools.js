@@ -12,6 +12,7 @@ import { requirePlayer } from "./session.js";
  * with it, and all of those go through the helpers here.
  */
 
+/** Matches LEADERBOARD_LIMIT: both columns page ten at a time up to fifty. */
 export const SCHOOL_LIMIT = 50;
 
 /** Find a school row, creating it the first time someone joins. */

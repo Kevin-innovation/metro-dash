@@ -96,6 +96,11 @@ export class Screens {
     // subscriptions behind the panel and has to be told to drop them.
     if (boardClose) boardClose.onclick = () => a.closeLeaderboard();
 
+    for (const [id, column] of [["btn-more-players", "players"], ["btn-more-schools", "schools"]]) {
+      const button = $(id);
+      if (button) button.onclick = () => a.showMoreBoard(column);
+    }
+
     for (const [id, range] of [["tab-board-week", "week"], ["tab-board-all", "all"]]) {
       const tab = $(id);
       if (tab) tab.onclick = () => a.setBoardRange(range);
@@ -262,6 +267,19 @@ export class Screens {
   openLeaderboard(range = "week") {
     this.setBoardTab(range);
     $("leaderboard-screen").classList.remove("hidden");
+  }
+
+  /**
+   * The 「더보기」 button under a column.
+   *
+   * @param {"players"|"schools"} column
+   * @param {{ more: boolean, next: number }|null} state null hides it
+   */
+  setBoardMore(column, state) {
+    const button = $(column === "schools" ? "btn-more-schools" : "btn-more-players");
+    if (!button) return;
+    button.classList.toggle("hidden", !state?.more);
+    if (state?.more) button.textContent = `${state.next}위까지 더보기`;
   }
 
   /**

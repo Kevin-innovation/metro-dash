@@ -1551,6 +1551,44 @@ kbd {
   background: rgba(20, 212, 184, 0.12);
 }
 
+/**
+ * The board opens over whatever asked for it.
+ *
+ * It is the one panel reachable from another panel — the results card has a
+ * 리더보드 button — and both are dialogs anchored to the same place, so without
+ * this the card it was opened from sat straight on top of it. Hiding that card
+ * instead does not work: the frame loop reopens it for as long as the run is
+ * over, and the two would fight every frame.
+ *
+ * The backdrop is what makes it read as being in front rather than tangled
+ * with what is behind.
+ */
+#leaderboard-screen {
+  z-index: 20;
+  background: rgba(4, 10, 16, 0.74);
+  backdrop-filter: blur(3px);
+}
+
+/* One page more. Quiet, because it is an offer rather than the point of the
+   screen — the top of the board is. */
+.board-more {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  background: transparent;
+  color: #8fb0c4;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.board-more:hover {
+  border-color: rgba(255, 210, 74, 0.45);
+  color: var(--gold);
+}
+
 /* Appended below the top ten rather than being part of it, so the break in the
    ranking is visible instead of looking like eleventh place. */
 .leaderboard-row.pinned {
