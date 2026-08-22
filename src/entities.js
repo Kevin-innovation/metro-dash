@@ -12,68 +12,6 @@ import { makeContainerSkin } from "./textures.js";
 
 const BUS_COLORS = [0xffc107, 0x26c6da, 0xef5350, 0x66bb6a];
 
-const GENERATED_ASSET_URLS = {
-  train: new URL("../assets/generated/objects/train/train-rear-3q-v1.png", import.meta.url).href,
-  busOncoming: new URL("../assets/generated/objects/bus/bus-oncoming-front-3q-v1.png", import.meta.url).href,
-  barrier: new URL("../assets/generated/objects/obstacles/barrier-jump-v1.png", import.meta.url).href,
-  sign: new URL("../assets/generated/objects/obstacles/slide-gate-v1.png", import.meta.url).href,
-  crate: new URL("../assets/generated/objects/obstacles/crate-v1.png", import.meta.url).href,
-  coin: new URL("../assets/generated/objects/collectibles/coin-v1.png", import.meta.url).href,
-  magnet: new URL("../assets/generated/objects/powerups/magnet-v1.png", import.meta.url).href,
-  jetpack: new URL("../assets/generated/objects/powerups/jetpack-v1.png", import.meta.url).href,
-  double: new URL("../assets/generated/objects/powerups/double-v1.png", import.meta.url).href,
-  sneakers: new URL("../assets/generated/objects/powerups/sneakers-v1.png", import.meta.url).href,
-};
-
-const generatedTextures = new Map();
-const generatedLoader = typeof document !== "undefined" ? new THREE.TextureLoader() : null;
-
-function generatedTexture(id) {
-  if (generatedTextures.has(id)) return generatedTextures.get(id);
-
-  const texture = new THREE.Texture();
-  texture.colorSpace = THREE.SRGBColorSpace;
-  generatedTextures.set(id, texture);
-  if (generatedLoader) {
-    generatedLoader.load(GENERATED_ASSET_URLS[id], (loaded) => {
-      texture.image = loaded.image;
-      texture.needsUpdate = true;
-    });
-  }
-  return texture;
-}
-
-/**
- * Generated assets are billboard sprites so the fixed rear chase camera reads
- * their designed view consistently. The logical entity root remains the same
- * object that collision, pooling, and moving-bus code already operate on.
- */
-function generatedSprite(id, width, height, { bottom = false, depthWrite = true } = {}) {
-  const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: generatedTexture(id),
-      transparent: true,
-      alphaTest: 0.025,
-      depthWrite,
-      depthTest: true,
-      fog: true,
-    }),
-  );
-  sprite.scale.set(width, height, 1);
-  sprite.center.set(0.5, bottom ? 0 : 0.5);
-  sprite.userData.generatedAsset = id;
-  return sprite;
-}
-
-function replaceWithGeneratedSprite(group, id, width, height) {
-  const sprite = generatedSprite(id, width, height, { bottom: true });
-  const primitiveParts = group.children.slice();
-  primitiveParts.forEach((child) => (child.visible = false));
-  group.add(sprite);
-  group.userData.generatedVisual = sprite;
-  return group;
-}
-
 function lambert(color, extra = {}) {
   return new THREE.MeshLambertMaterial({ color, ...extra });
 }
@@ -135,7 +73,7 @@ export function makeTrain(color = 0xff5252) {
   const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.22, 0.16), lambert(0x263238));
   skirt.position.set(0, 0.32, -5.8);
   g.add(skirt);
-  return replaceWithGeneratedSprite(g, "train", 3.8, 2.55);
+  return g;
 }
 
 export function makeBus(color = 0xffc107) {
@@ -230,13 +168,6 @@ export function makeBus(color = 0xffc107) {
     wheel.position.set(x, 0.32, z);
     g.add(wheel);
   });
-
-  const primitiveParts = g.children.slice();
-  const oncoming = generatedSprite("busOncoming", 3.05, 2.75, { bottom: true });
-  oncoming.visible = false;
-  g.add(oncoming);
-  g.userData.generatedOncoming = oncoming;
-  g.userData.generatedPrimitiveParts = primitiveParts;
   return g;
 }
 
@@ -253,7 +184,7 @@ export function makeBarrier() {
     leg.position.set(x, 0.2, 0);
     g.add(leg);
   });
-  return replaceWithGeneratedSprite(g, "barrier", 2.25, 1.3);
+  return g;
 }
 
 /**
@@ -303,7 +234,7 @@ export function makeSign() {
   lip.position.y = SIGN_BOARD_BOTTOM + 0.07;
   g.add(lip);
 
-  return replaceWithGeneratedSprite(g, "sign", 2.8, 5.9);
+  return g;
 }
 
 /**
@@ -361,11 +292,20 @@ export function makeCrate() {
   const stripe = new THREE.Mesh(parts.stripe, parts.stripeMat);
   stripe.position.y = 1.175;
   g.add(stripe);
-  return replaceWithGeneratedSprite(g, "crate", 1.85, 1.55);
+  return g;
 }
 
 export function makeCoin() {
-  return generatedSprite("coin", 0.82, 0.82, { depthWrite: false });
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.36, 0.36, 0.09, 18),
+    new THREE.MeshLambertMaterial({
+      color: 0xffd54f,
+      emissive: 0xaa7700,
+      emissiveIntensity: 0.35,
+    }),
+  );
+  mesh.rotation.z = Math.PI / 2;
+  return mesh;
 }
 
 /** Shared shell for every power-up pickup: a glowing gem on a tinted disc. */
@@ -389,7 +329,7 @@ export function makeMagnet() {
   );
   gem.position.y = 0.2;
   g.add(gem);
-  return replacePowerupWithGeneratedSprite(g, "magnet", 1.25, 1.25);
+  return g;
 }
 
 export function makeJetpack() {
@@ -407,7 +347,7 @@ export function makeJetpack() {
   nozzle.rotation.x = Math.PI;
   nozzle.position.y = -0.1;
   g.add(nozzle);
-  return replacePowerupWithGeneratedSprite(g, "jetpack", 1.55, 1.65);
+  return g;
 }
 
 export function makeDouble() {
@@ -419,7 +359,7 @@ export function makeDouble() {
   star.position.y = 0.22;
   star.scale.set(1, 1.35, 1);
   g.add(star);
-  return replacePowerupWithGeneratedSprite(g, "double", 1.25, 1.25);
+  return g;
 }
 
 export function makeSneakers() {
@@ -436,15 +376,7 @@ export function makeSneakers() {
   );
   wing.position.set(0, 0.34, -0.1);
   g.add(wing);
-  return replacePowerupWithGeneratedSprite(g, "sneakers", 1.45, 1.45);
-}
-
-function replacePowerupWithGeneratedSprite(group, id, width, height) {
-  const sprite = generatedSprite(id, width, height, { depthWrite: false });
-  group.children.forEach((child) => (child.visible = false));
-  group.add(sprite);
-  group.userData.generatedVisual = sprite;
-  return group;
+  return g;
 }
 
 const FACTORIES = {
@@ -545,17 +477,7 @@ export class EntityPool {
 
 export function setBusFacing(item, oncoming) {
   if (!item?.mesh || item.type !== "bus") return;
-  const generatedOncoming = item.mesh.userData.generatedOncoming;
-  const primitiveParts = item.mesh.userData.generatedPrimitiveParts;
-  if (generatedOncoming && primitiveParts) {
-    generatedOncoming.visible = oncoming;
-    primitiveParts.forEach((child) => (child.visible = !oncoming));
-    // The generated front view is already camera-facing. Rotating the root
-    // would mirror/edge the billboard and erase the headlights cue.
-    item.mesh.rotation.y = 0;
-  } else {
-    item.mesh.rotation.y = oncoming ? Math.PI : 0;
-  }
+  item.mesh.rotation.y = oncoming ? Math.PI : 0;
   item.mesh.traverse((child) => {
     if (!child.userData?.headlight || !child.material) return;
     child.material.emissiveIntensity = oncoming ? 1.8 : 0.85;
