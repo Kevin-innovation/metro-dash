@@ -1569,11 +1569,16 @@ kbd {
   backdrop-filter: blur(3px);
 }
 
-/* One page more. Quiet, because it is an offer rather than the point of the
-   screen — the top of the board is. */
-.board-more {
-  width: 100%;
+/* Paging controls. Quiet, because they are an offer rather than the point of
+   the screen — the top of the board is. */
+.board-nav {
+  display: flex;
+  gap: 6px;
   margin-top: 8px;
+}
+
+.board-more {
+  flex: 1;
   padding: 7px;
   border: 1px dashed rgba(255, 255, 255, 0.18);
   border-radius: 10px;

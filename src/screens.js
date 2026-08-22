@@ -96,9 +96,9 @@ export class Screens {
     // subscriptions behind the panel and has to be told to drop them.
     if (boardClose) boardClose.onclick = () => a.closeLeaderboard();
 
-    for (const [id, column] of [["btn-more-players", "players"], ["btn-more-schools", "schools"]]) {
-      const button = $(id);
-      if (button) button.onclick = () => a.showMoreBoard(column);
+    for (const column of ["players", "schools"]) {
+      $(`btn-more-${column}`)?.addEventListener("click", () => a.turnBoardPage(column, 1));
+      $(`btn-prev-${column}`)?.addEventListener("click", () => a.turnBoardPage(column, -1));
     }
 
     for (const [id, range] of [["tab-board-week", "week"], ["tab-board-all", "all"]]) {
@@ -270,16 +270,33 @@ export class Screens {
   }
 
   /**
-   * The 「더보기」 button under a column.
+   * Paging controls under a column.
+   *
+   * The buttons say which places they lead to rather than 「다음」: a board is
+   * read by rank, so 「11–20위」 answers the question 「내 순위 근처가 어디냐」
+   * before it is pressed.
    *
    * @param {"players"|"schools"} column
-   * @param {{ more: boolean, next: number }|null} state null hides it
+   * @param {{ page: number, size: number, hasMore: boolean }} state
    */
-  setBoardMore(column, state) {
-    const button = $(column === "schools" ? "btn-more-schools" : "btn-more-players");
-    if (!button) return;
-    button.classList.toggle("hidden", !state?.more);
-    if (state?.more) button.textContent = `${state.next}위까지 더보기`;
+  setBoardPager(column, state) {
+    const nav = $(`nav-${column}`);
+    const next = $(`btn-more-${column}`);
+    const prev = $(`btn-prev-${column}`);
+    if (!nav) return;
+
+    const back = state.page > 0;
+    nav.classList.toggle("hidden", !state.hasMore && !back);
+    if (prev) {
+      prev.classList.toggle("hidden", !back);
+      const from = (state.page - 1) * state.size + 1;
+      prev.textContent = `${from}–${from + state.size - 1}위`;
+    }
+    if (next) {
+      next.classList.toggle("hidden", !state.hasMore);
+      const from = (state.page + 1) * state.size + 1;
+      next.textContent = `${from}–${from + state.size - 1}위`;
+    }
   }
 
   /**

@@ -94,8 +94,8 @@ export class Game {
     /** Live leaderboard subscriptions, and a counter to retire stale ones. */
     this.boardSubscriptions = [];
     this.boardGeneration = 0;
-    /** How many rows each column is asking for; grows by 「더보기」. */
-    this.boardLimits = { players: BOARD_PAGE, schools: BOARD_PAGE };
+    /** Which page of ten each column is showing, from zero. */
+    this.boardPages = { players: 0, schools: 0 };
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
     this.nearMissFx = 0;
@@ -173,7 +173,7 @@ export class Game {
       openLeaderboard: () => this.openLeaderboard(),
       closeLeaderboard: () => this.closeLeaderboard(),
       setBoardRange: (range) => this.setBoardRange(range),
-      showMoreBoard: (column) => this.showMoreBoard(column),
+      turnBoardPage: (column, direction) => this.turnBoardPage(column, direction),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
       resolveMerge: (choice) => this.resolveMerge(choice),
@@ -360,9 +360,9 @@ export class Game {
 
   async openLeaderboard() {
     this.audio.resume();
-    // Opens compact every time. Someone who paged down to fiftieth place last
-    // night does not want to land there again tonight.
-    this.boardLimits = { players: BOARD_PAGE, schools: BOARD_PAGE };
+    // Opens at the top every time. Someone who paged down to fiftieth place
+    // last night does not want to land there again tonight.
+    this.boardPages = { players: 0, schools: 0 };
     this.screens.openLeaderboard(this.boardRange);
     this.screens.renderLeaderboard([], null, this.cloud.handle);
     this.screens.renderSchoolBoard([], null);
@@ -390,14 +390,20 @@ export class Game {
     const view = { rows: [], standing: null, schools: [], schoolStanding: null };
 
     const draw = () => {
+      // The server hands back every rank up to the end of the current page and
+      // numbers them itself, so one page is a slice off the end and the numbers
+      // in it are already right.
+      const page = (rows, column) => rows.slice(this.boardPages[column] * BOARD_PAGE);
       const rows = view.rows ?? [];
       const schools = view.schools ?? [];
-      this.screens.renderLeaderboard(rows, view.standing, this.cloud.handle);
-      this.screens.renderSchoolBoard(schools, view.schoolStanding, this.schoolStandingNote());
-      // A full page back means there is probably another one. The alternative
-      // is a count query per column on every update, for a button.
-      this.screens.setBoardMore("players", this.moreState("players", rows.length));
-      this.screens.setBoardMore("schools", this.moreState("schools", schools.length));
+      this.screens.renderLeaderboard(page(rows, "players"), view.standing, this.cloud.handle);
+      this.screens.renderSchoolBoard(
+        page(schools, "schools"),
+        view.schoolStanding,
+        this.schoolStandingNote(),
+      );
+      this.screens.setBoardPager("players", this.pagerState("players", rows.length));
+      this.screens.setBoardPager("schools", this.pagerState("schools", schools.length));
     };
 
     this.boardSubscriptions = [];
@@ -414,8 +420,15 @@ export class Game {
 
     const token = this.cloud.session?.token;
     await Promise.all([
-      watch("scores:top", { limit: this.boardLimits.players, range: this.boardRange }, "rows"),
-      watch("schools:top", { limit: this.boardLimits.schools }, "schools"),
+      // Asked for everything up to the end of the visible page; the slice in
+      // `draw` decides what is shown. Convex has no offset, and fifty rows is
+      // nothing to fetch.
+      watch(
+        "scores:top",
+        { limit: (this.boardPages.players + 1) * BOARD_PAGE, range: this.boardRange },
+        "rows",
+      ),
+      watch("schools:top", { limit: (this.boardPages.schools + 1) * BOARD_PAGE }, "schools"),
       ...(token
         ? [
             watch("scores:standing", { token, range: this.boardRange }, "standing"),
@@ -426,23 +439,34 @@ export class Game {
   }
 
   /**
-   * Whether a column has more to show, and how far the next page reaches.
+   * What the pager under a column should offer.
+   *
+   * A page that came back full means the next one probably has something in it.
+   * The alternative is a counting query per column on every update, for a
+   * button — and the button being wrong once costs nothing, because pressing it
+   * simply shows an empty page.
    *
    * @param {"players"|"schools"} column
-   * @param {number} shown rows currently on screen
+   * @param {number} fetched rows the server returned, all pages included
    */
-  moreState(column, shown) {
-    const limit = this.boardLimits[column];
-    const more = shown >= limit && limit < BOARD_MAX;
-    return { more, next: Math.min(BOARD_MAX, limit + BOARD_PAGE) };
+  pagerState(column, fetched) {
+    const page = this.boardPages[column];
+    const wanted = (page + 1) * BOARD_PAGE;
+    return { page, size: BOARD_PAGE, hasMore: fetched >= wanted && wanted < BOARD_MAX };
   }
 
-  /** Ask for another page of a column and resubscribe at the new size. */
-  async showMoreBoard(column) {
-    if (!(column in this.boardLimits)) return;
-    const grown = Math.min(BOARD_MAX, this.boardLimits[column] + BOARD_PAGE);
-    if (grown === this.boardLimits[column]) return;
-    this.boardLimits[column] = grown;
+  /**
+   * Turn a column to the next or previous ten.
+   *
+   * @param {"players"|"schools"} column
+   * @param {number} direction 1 forward, -1 back
+   */
+  async turnBoardPage(column, direction) {
+    if (!(column in this.boardPages)) return;
+    const last = Math.floor(BOARD_MAX / BOARD_PAGE) - 1;
+    const next = Math.min(last, Math.max(0, this.boardPages[column] + direction));
+    if (next === this.boardPages[column]) return;
+    this.boardPages[column] = next;
     this.audio.resume();
     await this.watchBoards();
   }
