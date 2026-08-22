@@ -9,11 +9,24 @@ import {
 } from "./config.js";
 import { SPEC } from "./specs.js";
 import { makeContainerSkin } from "./textures.js";
+import {
+  addGeneratedPlane,
+  bindGeneratedLayer,
+  refreshGeneratedLayer,
+  setGeneratedFace,
+} from "./generated-assets.js";
 
 const BUS_COLORS = [0xffc107, 0x26c6da, 0xef5350, 0x66bb6a];
 
 function lambert(color, extra = {}) {
   return new THREE.MeshLambertMaterial({ color, ...extra });
+}
+
+function generatedObject(group, name, width, height, position) {
+  const fallback = [...group.children];
+  addGeneratedPlane(group, name, width, height, position, () => refreshGeneratedLayer(group));
+  bindGeneratedLayer(group, fallback, { default: group.children.at(-1) });
+  return group;
 }
 
 export function makeTrain(color = 0xff5252) {
@@ -73,6 +86,9 @@ export function makeTrain(color = 0xff5252) {
   const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.22, 0.16), lambert(0x263238));
   skirt.position.set(0, 0.32, -5.8);
   g.add(skirt);
+  const fallback = [...g.children];
+  const rear = addGeneratedPlane(g, "trainRear", 2.7, 3.9, [0, 1.75, 0.05], () => refreshGeneratedLayer(g));
+  bindGeneratedLayer(g, fallback, { rear });
   return g;
 }
 
@@ -168,6 +184,10 @@ export function makeBus(color = 0xffc107) {
     wheel.position.set(x, 0.32, z);
     g.add(wheel);
   });
+  const fallback = [...g.children];
+  const front = addGeneratedPlane(g, "busFront", 2.45, 3.45, [0, 1.65, 0.05], () => refreshGeneratedLayer(g));
+  const rear = addGeneratedPlane(g, "busRear", 2.45, 3.45, [0, 1.65, 0.05], () => refreshGeneratedLayer(g));
+  bindGeneratedLayer(g, fallback, { front, rear });
   return g;
 }
 
@@ -184,7 +204,7 @@ export function makeBarrier() {
     leg.position.set(x, 0.2, 0);
     g.add(leg);
   });
-  return g;
+  return generatedObject(g, "barrier", 2.3, 1.25, [0, 0.62, 0.04]);
 }
 
 /**
@@ -234,7 +254,7 @@ export function makeSign() {
   lip.position.y = SIGN_BOARD_BOTTOM + 0.07;
   g.add(lip);
 
-  return g;
+  return generatedObject(g, "gate", 2.55, 3.8, [0, 2.1, 0.04]);
 }
 
 /**
@@ -292,10 +312,11 @@ export function makeCrate() {
   const stripe = new THREE.Mesh(parts.stripe, parts.stripeMat);
   stripe.position.y = 1.175;
   g.add(stripe);
-  return g;
+  return generatedObject(g, "crate", 1.7, 1.45, [0, 0.72, 0.04]);
 }
 
 export function makeCoin() {
+  const g = new THREE.Group();
   const mesh = new THREE.Mesh(
     new THREE.CylinderGeometry(0.36, 0.36, 0.09, 18),
     new THREE.MeshLambertMaterial({
@@ -305,7 +326,8 @@ export function makeCoin() {
     }),
   );
   mesh.rotation.z = Math.PI / 2;
-  return mesh;
+  g.add(mesh);
+  return generatedObject(g, "coin", 0.9, 0.9, [0, 0, 0.04]);
 }
 
 /** Shared shell for every power-up pickup: a glowing gem on a tinted disc. */
@@ -329,7 +351,7 @@ export function makeMagnet() {
   );
   gem.position.y = 0.2;
   g.add(gem);
-  return g;
+  return generatedObject(g, "magnet", 1.2, 1.2, [0, 0.25, 0.04]);
 }
 
 export function makeJetpack() {
@@ -347,7 +369,7 @@ export function makeJetpack() {
   nozzle.rotation.x = Math.PI;
   nozzle.position.y = -0.1;
   g.add(nozzle);
-  return g;
+  return generatedObject(g, "jetpack", 1.15, 1.3, [0, 0.35, 0.04]);
 }
 
 export function makeDouble() {
@@ -359,7 +381,7 @@ export function makeDouble() {
   star.position.y = 0.22;
   star.scale.set(1, 1.35, 1);
   g.add(star);
-  return g;
+  return generatedObject(g, "double", 1.2, 1.35, [0, 0.25, 0.04]);
 }
 
 export function makeSneakers() {
@@ -376,7 +398,7 @@ export function makeSneakers() {
   );
   wing.position.set(0, 0.34, -0.1);
   g.add(wing);
-  return g;
+  return generatedObject(g, "sneakers", 1.25, 1.15, [0, 0.3, 0.04]);
 }
 
 const FACTORIES = {
@@ -478,6 +500,7 @@ export class EntityPool {
 export function setBusFacing(item, oncoming) {
   if (!item?.mesh || item.type !== "bus") return;
   item.mesh.rotation.y = oncoming ? Math.PI : 0;
+  setGeneratedFace(item.mesh, oncoming ? "front" : "rear");
   item.mesh.traverse((child) => {
     if (!child.userData?.headlight || !child.material) return;
     child.material.emissiveIntensity = oncoming ? 1.8 : 0.85;

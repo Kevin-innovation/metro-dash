@@ -14,6 +14,7 @@ import {
   SLIDE_HEIGHT,
   SLIDE_TIME,
 } from "./config.js";
+import { addGeneratedTilePlane } from "./generated-assets.js";
 
 function box(w, h, d, color, extra = {}) {
   const mesh = new THREE.Mesh(
@@ -22,6 +23,11 @@ function box(w, h, d, color, extra = {}) {
   );
   mesh.castShadow = false;
   return mesh;
+}
+
+function hideGeneratedFallback(mesh) {
+  mesh.material.transparent = true;
+  mesh.material.opacity = 0;
 }
 
 const DEFAULT_PALETTE = {
@@ -84,6 +90,31 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
   pack.position.set(0, 0.38, -0.26);
   hip.add(pack);
 
+  addGeneratedTilePlane(
+    hip,
+    "characterParts",
+    0,
+    0,
+    5,
+    2,
+    0.48,
+    0.52,
+    [0, 0.86, -0.23],
+    () => [head, hair, streak].forEach(hideGeneratedFallback),
+  );
+  addGeneratedTilePlane(
+    hip,
+    "characterParts",
+    1,
+    0,
+    5,
+    2,
+    0.62,
+    0.78,
+    [0, 0.42, -0.3],
+    () => [torso, pouch, hood, pack].forEach(hideGeneratedFallback),
+  );
+
   // Jetpack thruster, hidden until the power-up is running.
   const jets = new THREE.Group();
   jets.visible = false;
@@ -125,6 +156,33 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     const hand = box(0.12, 0.1, 0.12, 0xffdbb4);
     hand.position.y = -0.18;
     lower.add(hand);
+    addGeneratedTilePlane(
+      upper,
+      "characterParts",
+      side < 0 ? 2 : 3,
+      0,
+      5,
+      2,
+      0.18,
+      0.34,
+      [0, 0, -0.09],
+      () => hideGeneratedFallback(upper),
+    );
+    addGeneratedTilePlane(
+      lower,
+      "characterParts",
+      side < 0 ? 4 : 0,
+      side < 0 ? 0 : 1,
+      5,
+      2,
+      0.16,
+      0.34,
+      [0, -0.02, -0.09],
+      () => {
+        hideGeneratedFallback(lower);
+        hand.visible = false;
+      },
+    );
     arms.push(upper);
 
     const thigh = box(0.18, 0.34, 0.18, 0x1e293b);
@@ -139,6 +197,33 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     const stripe = tag(box(0.19, 0.04, 0.1, skin.streak), "streak");
     stripe.position.set(0, 0.02, 0.1);
     shoe.add(stripe);
+    addGeneratedTilePlane(
+      thigh,
+      "characterParts",
+      side < 0 ? 1 : 2,
+      1,
+      5,
+      2,
+      0.2,
+      0.38,
+      [0, 0, -0.1],
+      () => hideGeneratedFallback(thigh),
+    );
+    addGeneratedTilePlane(
+      shin,
+      "characterParts",
+      side < 0 ? 3 : 4,
+      1,
+      5,
+      2,
+      0.22,
+      0.48,
+      [0, -0.12, -0.1],
+      () => {
+        hideGeneratedFallback(shin);
+        shoe.visible = false;
+      },
+    );
     legs.push(thigh);
   });
 
