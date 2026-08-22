@@ -686,12 +686,6 @@ body.running #game-canvas {
     flex: 1;
   }
 
-  .title-side .mission-block {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(4px, 0.85vh, 8px);
-  }
-
   /**
    * The extra height goes into the cards, never into the gaps between them.
    *
@@ -1249,12 +1243,43 @@ kbd {
 
 /* --- missions ------------------------------------------------------------ */
 
+/**
+ * The two column headings, built as one thing so they cannot drift apart.
+ *
+ * They are the reason the first card in each column starts on the same line,
+ * which only holds while their heights match exactly. Both are flex rows of
+ * the same fixed height, spaced by their block's gap rather than by a margin
+ * of their own — a margin plus a gap on one side and a margin alone on the
+ * other is what put them seven pixels out to begin with.
+ */
+.record-block,
+.mission-block {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.9vh, 8px);
+}
+
 .block-title {
-  margin: 0 0 clamp(4px, 0.9vh, 8px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Fixed, not min: one heading carries a streak pill and the other a plain
+     count, and the pill is the taller of the two. Every day without a streak
+     would otherwise be a day the columns sat four pixels apart. */
+  height: 26px;
+  margin: 0;
   text-align: left;
   font-size: 14px;
   letter-spacing: 0.12em;
   color: var(--gold);
+}
+
+/* Kept inside the heading's height; the 🔥 alone makes a taller line box than
+   the text beside it. */
+.block-title .streak-chip {
+  padding: 2px 9px;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .mission-block {

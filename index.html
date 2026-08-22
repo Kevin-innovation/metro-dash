@@ -105,23 +105,40 @@
                exist only so the split has something to split; see .title-body. -->
           <div class="title-body">
             <div class="title-main">
-              <!-- Who you are. The name and school need an account; the rank and
-                   the bar under it are local, so a guest and a browser with no
-                   backend still get the lower half. -->
-              <div class="identity">
-                <div id="account-bar" class="identity-top hidden">
-                  <span id="account-state" class="account-state">게스트로 플레이 중</span>
-                  <span class="identity-actions">
-                    <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
-                    <button id="btn-account" type="button" class="account-action">로그인</button>
-                  </span>
-                </div>
-                <div class="identity-rank">
-                  <span id="rank-name" class="rank-name">Lv.1 신입 러너</span>
+              <!-- The pair to 「오늘의 미션」 across the gap. Both columns open
+                   with a heading of exactly the same height, which is the only
+                   way the first card on this side can start on the same line as
+                   the first card on that one. The streak sits here rather than
+                   crowding the rank row — a heading with something in it beats
+                   a heading that exists to take up space. -->
+              <!-- Heading plus one panel, which is the shape .mission-block has
+                   on the other side. The wrapper is what makes them the same
+                   shape: a direct child of the column has its margins zeroed
+                   and takes the column gap instead, so a bare heading here
+                   would be spaced by a different number than the one there. -->
+              <div class="record-block">
+                <p class="block-title">
+                  내 기록
                   <span id="streak-chip" class="streak-chip hidden">🔥 0일</span>
-                  <span id="rank-xp" class="rank-xp">0 XP</span>
+                </p>
+
+                <!-- Who you are. The name and school need an account; the rank
+                     and the bar under it are local, so a guest and a browser
+                     with no backend still get the lower half. -->
+                <div class="identity">
+                  <div id="account-bar" class="identity-top hidden">
+                    <span id="account-state" class="account-state">게스트로 플레이 중</span>
+                    <span class="identity-actions">
+                      <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
+                      <button id="btn-account" type="button" class="account-action">로그인</button>
+                    </span>
+                  </div>
+                  <div class="identity-rank">
+                    <span id="rank-name" class="rank-name">Lv.1 신입 러너</span>
+                    <span id="rank-xp" class="rank-xp">0 XP</span>
+                  </div>
+                  <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
                 </div>
-                <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
               </div>
 
               <!-- The number the whole game is about, and the only one at this
