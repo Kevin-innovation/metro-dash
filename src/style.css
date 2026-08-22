@@ -882,29 +882,61 @@ kbd {
   box-shadow: var(--shadow);
 }
 
-/* --- profile: rank, coin bank -------------------------------------------- */
+/* --- title: identity, record, supporting figures -------------------------- */
 
-.profile-bar {
+/**
+ * One panel for who you are: name and school on top, rank and experience under
+ * it. They used to be two stacked bars saying overlapping things — a rank in
+ * one, a nickname in the other — and between them they took the space the
+ * record needed.
+ */
+.identity {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 16px 0 18px;
-  padding: clamp(5px, 1.1vh, 10px) 14px;
+  flex-direction: column;
+  gap: clamp(5px, 0.9vh, 9px);
+  padding: clamp(7px, 1.2vh, 12px) 14px;
   border-radius: 16px;
   background: rgba(7, 16, 24, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.profile-rank {
-  flex: 1;
+.identity-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.identity-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+/* Baseline rather than centre: the rank, the streak and the XP are three
+   different sizes, and centring them made the small ones float. Wrapping,
+   because on a 320px phone all three will not fit on one line — and the row
+   dropping the XP to a second line is better than 「급행 / 열차」. */
+.identity-rank {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 8px;
   text-align: left;
   font-size: 14px;
   color: #d7e8f4;
 }
 
+/* nowrap so the rank title cannot be split mid-word; it takes the slack when
+   there is any, which puts the XP count hard against the right edge above the
+   end of the bar it belongs to. */
+.rank-name {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
 .rank-track {
   height: 7px;
-  margin: 5px 0 3px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.14);
   overflow: hidden;
@@ -919,10 +951,107 @@ kbd {
 }
 
 .rank-xp {
+  flex: none;
+  margin-left: auto;
   font-size: 12px;
   color: #8fb0c4;
 }
 
+/**
+ * The record.
+ *
+ * Deliberately the loudest thing under the wordmark: this is a score-attack
+ * game, and the first screen should say what there is to beat. The gold is the
+ * same one the coin bank used to own — moved rather than copied, so there is
+ * still only one number wearing it.
+ */
+.hero-score {
+  padding: clamp(6px, 1.4vh, 14px) 16px clamp(8px, 1.6vh, 16px);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(255, 210, 74, 0.16), transparent 70%),
+    rgba(7, 16, 24, 0.5);
+  border: 1px solid rgba(255, 210, 74, 0.28);
+}
+
+.hero-label {
+  margin: 0;
+  color: #cfe2ef;
+  font-size: clamp(12px, 1.7vh, 14px);
+  letter-spacing: 0.06em;
+}
+
+.hero-value {
+  display: block;
+  margin-top: clamp(1px, 0.4vh, 4px);
+  font-family: var(--font-display);
+  /* Capped against height as well as width — the wordmark above it learned the
+     same lesson, and a laptop is the screen with none to spare. */
+  font-size: min(clamp(30px, 8.6vw, 54px), 7vh);
+  line-height: 1.05;
+  color: var(--gold);
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 0 #3a2600;
+}
+
+/**
+ * The three figures that support it.
+ *
+ * auto-fit rather than three fixed columns: the two ranks are hidden without a
+ * backend, and the coin bank should widen to fill the row rather than sit in a
+ * third of it next to two holes.
+ */
+.stat-cells {
+  display: grid;
+  /* 84px keeps all three across even at 320px, where a wrap would leave the
+     coin bank alone on a row of its own. The labels take two lines at that
+     width, which is what the extra room in the cell is for. */
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+/* Label at the top, figure at the bottom. The grid stretches all three to the
+   same height, so the three figures line up even when one label has taken two
+   lines and the others one. */
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(5px, 1vh, 10px) 8px;
+  border-radius: 14px;
+  background: rgba(7, 16, 24, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-label {
+  display: block;
+  color: #8fb0c4;
+  font-size: clamp(11px, 1.5vh, 12.5px);
+}
+
+.stat-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: clamp(17px, 2.7vh, 22px);
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.stat-value.gold {
+  color: var(--gold);
+}
+
+/* A figure that is not there yet — no run this week, no school — says so at the
+   size of a label rather than shouting a dash. */
+.stat-value.quiet {
+  font-size: clamp(13px, 1.9vh, 15px);
+  color: #7f9cb0;
+}
+
+/* The shop header still shows the bank the old way, beside its title. */
 .profile-coins {
   display: flex;
   align-items: center;
@@ -936,14 +1065,16 @@ kbd {
   height: 18px;
 }
 
+/* Two buttons without an account, three with one — and on a narrow phone they
+   wrap to two rows rather than squeezing three Korean labels into 320px. */
 .title-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: 10px;
 }
 
 .title-actions .ghost {
-  margin-top: 10px;
+  margin-top: 0;
 }
 
 /* --- settings ------------------------------------------------------------ */
@@ -1348,19 +1479,9 @@ kbd {
 
 /* --- account & leaderboard ------------------------------------------------ */
 
-.account-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding: clamp(5px, 1vh, 9px) 14px;
-  border-radius: 14px;
-  background: rgba(7, 16, 24, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
 .account-state {
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   color: #9ec2d8;
   text-align: left;

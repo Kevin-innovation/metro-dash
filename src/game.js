@@ -107,6 +107,8 @@ export class Game {
     this.boardRange = "week";
     /** Counter that lets a stale rank lookup recognise it has been overtaken. */
     this.rankRequest = 0;
+    /** The same, for the title screen's two rank cells. */
+    this.standingRequest = 0;
     /** Live leaderboard subscriptions, and a counter to retire stale ones. */
     this.boardSubscriptions = [];
     this.boardGeneration = 0;
@@ -236,6 +238,52 @@ export class Game {
 
   onCloudChange() {
     this.screens.showAccountBar(this.cloud);
+    this.refreshStandings();
+  }
+
+  /**
+   * Fill the two rank cells on the title screen.
+   *
+   * The standings used to live behind the leaderboard button, which meant the
+   * question a class actually asks each other — 나 몇 등이야 — cost a modal to
+   * answer. Read once rather than watched: the title screen can be open for a
+   * whole lesson, and a live subscription for a number nobody is staring at is
+   * a poor trade. Refreshed when the account changes and on the way back from
+   * every run, which is when it can have moved.
+   */
+  async refreshStandings() {
+    if (!this.cloud.enabled) {
+      this.screens.showTitleRanks(null);
+      return;
+    }
+    if (!this.cloud.signedIn) {
+      this.screens.showTitleRanks({ guest: true });
+      return;
+    }
+
+    const token = ++this.standingRequest;
+    this.screens.showTitleRanks({ pending: true });
+    const [me, school] = await Promise.all([
+      this.cloud.standing("week"),
+      this.cloud.schoolStanding("week"),
+    ]);
+    // Overtaken by a newer lookup — a sign-in, or a run that finished while
+    // this was in flight. Its answer is the right one.
+    if (token !== this.standingRequest) return;
+    this.screens.showTitleRanks({ me, school, schoolNote: this.schoolCellNote() });
+  }
+
+  /**
+   * Why the school cell has no rank in it — in a width that fits the cell.
+   *
+   * The same three states as schoolStandingNote, which has a whole line to
+   * explain itself in and would be cut off here.
+   */
+  schoolCellNote() {
+    const label = this.cloud.schoolLabel;
+    if (!label) return "학교 미정";
+    if (label === GENERAL.label) return "일반부";
+    return "기록 없음";
   }
 
   openAccount() {
@@ -263,7 +311,7 @@ export class Game {
           window.location.href = "/admin.html";
           return;
         }
-        this.reconcileProfiles(result?.profile);
+        this.reconcileProfiles(result?.profile, result?.best);
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
@@ -284,8 +332,13 @@ export class Game {
    * play without a word. Now that only happens when there was nothing to lose;
    * when both sides have been played, the choice belongs to the player.
    */
-  reconcileProfiles(cloudProfile) {
+  reconcileProfiles(cloudProfile, serverBest) {
     const cloud = cloudProfile ? normalizeSave(cloudProfile) : null;
+    // The record inside the blob is only as fresh as the last save that got
+    // through; the account's own figure is what a validated run moves. Taking
+    // the higher of the two keeps the choice the player is about to make — and
+    // the profile they end up with — from showing a stale record.
+    if (cloud) cloud.best = Math.max(cloud.best, Math.floor(Number(serverBest) || 0));
     const local = this.store.data;
 
     if (!cloud || !hasProgress(cloud)) {
@@ -567,6 +620,7 @@ export class Game {
       this.screens.showToast("클라우드 저장이 거절됐어요 · 선생님께 문의해 주세요");
       return;
     }
+    if (result?.ok) this.adoptBest(result.best);
     if (!result?.ok || typeof result.coins !== "number") return;
 
     const before = this.store.data.coins;
@@ -582,6 +636,27 @@ export class Game {
         : `코인 ${(-change).toLocaleString()}개가 빠졌어요`,
     );
     if (change > 0) this.audio.purchase();
+  }
+
+  /**
+   * Take the record the server holds.
+   *
+   * `best` only moves when scores.js has approved a run, which is what keeps the
+   * leaderboard honest — but it also means this browser never hears about a run
+   * played anywhere else. Someone who set their record on a phone came back to
+   * the desktop and found 「내 최고 점수」 still showing the old figure while the
+   * board beside it showed the new one. Coins already came back on every sync;
+   * this is the record doing the same.
+   *
+   * Raised, never lowered: a run finished with the connection down is in the
+   * local save and has not reached the server yet, and it must not be undone by
+   * the next sync.
+   */
+  adoptBest(best) {
+    const next = Math.floor(Number(best) || 0);
+    if (next <= (this.store.data.best ?? 0)) return;
+    this.store.recordBest(next);
+    this.screens.refreshProfile(this.store.data);
   }
 
   /**
@@ -602,9 +677,11 @@ export class Game {
 
     const token = ++this.rankRequest;
     await submitted?.catch(() => null);
+    // Both on the same range, or the card would claim 「이번 주 우리 학교 기록이
+    // 없어요」 under a school rank counted over all time.
     const [me, school] = await Promise.all([
       this.cloud.standing(this.boardRange),
-      this.cloud.schoolStanding(),
+      this.cloud.schoolStanding(this.boardRange),
     ]);
     // A newer run finished while this was in flight; its answer is the right one.
     if (token !== this.rankRequest || !this.screens.gameOverVisible()) return;
@@ -649,14 +726,22 @@ export class Game {
   /** Send the finished run up. Never blocks, never fails the local save. */
   syncRun() {
     if (!this.cloud.signedIn) return null;
-    const submitted = this.cloud.submitRun({
-      score: Math.floor(this.run.score),
-      distance: Math.floor(this.run.distance),
-      coins: this.run.coins,
-      comboMax: this.run.comboMax,
-      seconds: Math.floor(this.run.seconds),
-      character: this.store.data.character,
-    });
+    const submitted = this.cloud
+      .submitRun({
+        score: Math.floor(this.run.score),
+        distance: Math.floor(this.run.distance),
+        coins: this.run.coins,
+        comboMax: this.run.comboMax,
+        seconds: Math.floor(this.run.seconds),
+        character: this.store.data.character,
+      })
+      // The server answers with the record after the run, which is the figure
+      // the board is about to rank — so the card and the board agree without
+      // waiting for the next sync.
+      .then((result) => {
+        if (result?.ok) this.adoptBest(result.best);
+        return result;
+      });
     this.syncCoins();
     return submitted;
   }
@@ -903,6 +988,9 @@ export class Game {
     this.seedPreview();
     this.screens.setOverlay("title");
     this.screens.refreshProfile(this.store.data);
+    // The run just finished may have moved either rank, and the title screen is
+    // now the thing claiming what they are.
+    this.refreshStandings();
     // Back at the title: safe to offer a reload, and worth asking again since
     // a deploy may have landed during the run.
     this.showUpdateBanner();

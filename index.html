@@ -105,31 +105,60 @@
                exist only so the split has something to split; see .title-body. -->
           <div class="title-body">
             <div class="title-main">
-              <div class="profile-bar">
-                <div class="profile-rank">
-                  <span id="rank-name">Lv.1 신입 러너</span>
-                  <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
+              <!-- Who you are. The name and school need an account; the rank and
+                   the bar under it are local, so a guest and a browser with no
+                   backend still get the lower half. -->
+              <div class="identity">
+                <div id="account-bar" class="identity-top hidden">
+                  <span id="account-state" class="account-state">게스트로 플레이 중</span>
+                  <span class="identity-actions">
+                    <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
+                    <button id="btn-account" type="button" class="account-action">로그인</button>
+                  </span>
+                </div>
+                <div class="identity-rank">
+                  <span id="rank-name" class="rank-name">Lv.1 신입 러너</span>
+                  <span id="streak-chip" class="streak-chip hidden">🔥 0일</span>
                   <span id="rank-xp" class="rank-xp">0 XP</span>
                 </div>
-                <div class="profile-coins">
-                  <span id="streak-chip" class="streak-chip hidden">🔥 0일</span>
-                  <span class="coin-orb small"></span>
-                  <strong id="coin-bank">0</strong>
-                </div>
+                <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
               </div>
 
-              <div id="account-bar" class="account-bar hidden">
-                <span id="account-state" class="account-state">게스트로 플레이 중</span>
-                <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
-                <button id="btn-account" type="button" class="account-action">로그인</button>
+              <!-- The number the whole game is about, and the only one at this
+                   size. It used to be twelve grey pixels under the how-to while
+                   the coin bank — a means, not a goal — was the largest thing on
+                   the screen. -->
+              <div class="hero-score">
+                <p class="hero-label">내 최고 점수</p>
+                <strong id="best-score" class="hero-value">0</strong>
+              </div>
+
+              <!-- Three supporting figures. The two ranks answer the question a
+                   class actually asks each other, which until now meant opening
+                   a modal to find out. -->
+              <div class="stat-cells">
+                <div id="cell-rank" class="stat-cell hidden">
+                  <span class="stat-label">이번 주 순위</span>
+                  <strong id="stat-rank" class="stat-value">—</strong>
+                </div>
+                <div id="cell-school" class="stat-cell hidden">
+                  <span class="stat-label">이번 주 학교</span>
+                  <strong id="stat-school" class="stat-value">—</strong>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-label">코인</span>
+                  <strong class="stat-value gold">
+                    <span class="coin-orb small"></span><span id="coin-bank">0</span>
+                  </strong>
+                </div>
               </div>
 
               <button id="btn-play" type="button">질주 시작</button>
               <div class="title-actions">
+                <button id="btn-leaderboard" type="button" class="ghost hidden">리더보드</button>
                 <button id="btn-shop" type="button" class="ghost">상점 · 강화</button>
                 <button id="btn-settings" type="button" class="ghost">설정</button>
               </div>
-              <button id="btn-leaderboard" type="button" class="ghost wide hidden">리더보드</button>
             </div>
 
             <div class="title-side">
@@ -150,8 +179,6 @@
                   <li>장애물을 아슬아슬하게 스치면 콤보와 보너스가 오릅니다</li>
                 </ul>
               </details>
-
-              <p class="best-line">내 최고 점수 <strong id="best-score">0</strong></p>
             </div>
           </div>
         </div>

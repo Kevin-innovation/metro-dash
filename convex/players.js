@@ -298,7 +298,11 @@ export const save = mutation({
       flagged: false,
       updatedAt: Date.now(),
     });
-    return { ok: true, coins };
+    // The record goes back down with the balance. A save cannot raise it — that
+    // is the whole point of pinning it above — but the browser still has to be
+    // told what it is, or a run played on a phone would raise the account's best
+    // everywhere except the screen that displays it.
+    return { ok: true, coins, best: player.best };
   },
 });
 

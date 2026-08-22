@@ -229,6 +229,49 @@ export class Screens {
     if (school) school.classList.toggle("hidden", !cloud.signedIn || Boolean(cloud.schoolLabel));
   }
 
+  /**
+   * The two rank cells on the title screen.
+   *
+   * Both need a server, so with none configured they are hidden outright rather
+   * than left showing a dash — the coin cell widens into the space, and a
+   * browser playing offline is not asked a question it cannot answer. Signed
+   * out they stay and say so, because that is a state a player can act on.
+   *
+   * @param {{ me?: object|null, school?: object|null, schoolNote?: string,
+   *   guest?: boolean, pending?: boolean }|null} ranks null when there is no
+   *   backend at all
+   */
+  showTitleRanks(ranks) {
+    const cells = [$("cell-rank"), $("cell-school")];
+    for (const cell of cells) cell?.classList.toggle("hidden", !ranks);
+    if (!ranks) return;
+
+    const write = (id, text, quiet) => {
+      const el = $(id);
+      if (!el) return;
+      el.textContent = text;
+      el.classList.toggle("quiet", Boolean(quiet));
+    };
+
+    if (ranks.guest || ranks.pending) {
+      const text = ranks.guest ? "로그인" : "…";
+      write("stat-rank", text, true);
+      write("stat-school", text, true);
+      return;
+    }
+
+    write(
+      "stat-rank",
+      ranks.me?.rank != null ? `${ranks.me.rank}위` : "기록 없음",
+      ranks.me?.rank == null,
+    );
+    write(
+      "stat-school",
+      ranks.school?.rank != null ? `${ranks.school.rank}위` : ranks.schoolNote || "—",
+      ranks.school?.rank == null,
+    );
+  }
+
   openAccount(mode = "signin") {
     this.setAccountMode(mode);
     $("field-handle").value = "";

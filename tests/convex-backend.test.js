@@ -252,9 +252,12 @@ describe("players:save", () => {
     const t = backend();
     const { token } = await signUp(t, "저장하기");
 
-    await t.mutation(api.players.save, { token, profile: { coins: 120, runs: 4 } });
+    // The balance is decided by the delta, not by the blob — so the blob comes
+    // back with the server's figure in it, and everything else as it was sent.
+    await t.mutation(api.players.save, { token, profile: { coins: 120, runs: 4 }, coinsDelta: 120 });
     const loaded = await t.query(api.players.load, { token });
     expect(loaded.profile).toMatchObject({ coins: 120, runs: 4 });
+    expect(loaded.coins).toBe(120);
   });
 
   it("cannot raise the score the leaderboard ranks on", async () => {
@@ -270,6 +273,28 @@ describe("players:save", () => {
 
     const board = await t.query(api.scores.top, {});
     expect(board).toHaveLength(0);
+  });
+
+  it("hands back the record the server holds", async () => {
+    const t = backend();
+    const phone = await signUp(t, "두기기최고", "1234", "phone");
+    const desktop = await t.mutation(api.players.signIn, {
+      handle: "두기기최고",
+      pin: "1234",
+      deviceId: "desktop",
+    });
+
+    // The record is set on one device…
+    await t.mutation(api.scores.submit, { token: phone.token, ...plausibleRun({ score: 4200 }) });
+
+    // …and the other one, which still thinks the best is 0, learns about it on
+    // its next sync. Without this the title screen and the leaderboard disagree
+    // until the account is signed in again.
+    const synced = await t.mutation(api.players.save, {
+      token: desktop.token,
+      profile: { coins: 0, best: 0 },
+    });
+    expect(synced).toMatchObject({ ok: true, best: 4200 });
   });
 
   it("refuses a save blob big enough to be an attack", async () => {
@@ -1046,7 +1071,16 @@ describe("admin gate", () => {
     await signUp(t, "사생활");
     const [row] = await t.query(api.admin.list, { adminKey: ADMIN_KEY });
     expect(Object.keys(row).sort()).toEqual(
-      ["best", "createdAt", "failedAttempts", "handle", "lockedUntil", "school"].sort(),
+      [
+        "best",
+        "coins",
+        "createdAt",
+        "failedAttempts",
+        "flagged",
+        "handle",
+        "lockedUntil",
+        "school",
+      ].sort(),
     );
   });
 });

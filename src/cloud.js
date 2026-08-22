@@ -328,8 +328,12 @@ export class Cloud {
       // on a new phone and find last month's save.
       // The balance comes back with it, and it is the answer — a correction
       // typed in by staff arrives this way, and so does anything earned on
-      // another device since this one last synced.
-      return result?.ok === false ? result : { ok: true, coins: result?.coins };
+      // another device since this one last synced. The record rides along for
+      // the same reason: it only moves on the server, so this is the only way
+      // this browser learns about a run played somewhere else.
+      return result?.ok === false
+        ? result
+        : { ok: true, coins: result?.coins, best: result?.best };
     } catch {
       return { ok: false, reason: "offline" };
     }
@@ -394,10 +398,11 @@ export class Cloud {
     return await this.query("schools:top", { limit });
   }
 
-  async schoolStanding() {
+  /** @param {"week"|"all"} range which board to stand in; see standing above. */
+  async schoolStanding(range = "week") {
     if (!this.signedIn) return null;
     try {
-      return await this.query("schools:standing", { token: this.session.token });
+      return await this.query("schools:standing", { token: this.session.token, range });
     } catch {
       return null;
     }
