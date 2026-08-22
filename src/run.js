@@ -1,4 +1,4 @@
-import { DAILY_BONUS, MISSION_TIERS, allCleared, applyMetrics, missionReward } from "./missions.js";
+import { MISSION_TIERS, allCleared, applyMetrics, dailyBonus, missionReward } from "./missions.js";
 import { dayKey } from "./daily.js";
 import {
   activatePowerup,
@@ -230,12 +230,15 @@ export class Run {
     });
 
     save.missions = missions;
-    const reward = missionReward(completed, missionTier(save.xp, MISSION_TIERS));
+    // Read once and used for both payouts below, so the set and the bonus for
+    // finishing it can never be settled at two different difficulty steps.
+    const tier = missionTier(save.xp, MISSION_TIERS);
+    // The character's mission perk applies to the mission payout only, not to
+    // the coins picked up during the run — those have their own multiplier.
+    const missionBonus = perkFor(save.character).missionBonus ?? 1;
+    const reward = missionReward(completed, tier);
     if (completed.length) {
       save.missionsDone += completed.length;
-      // The character's mission perk applies to the mission payout only, not to
-      // the coins picked up during the run — those have their own multiplier.
-      const missionBonus = perkFor(save.character).missionBonus ?? 1;
       reward.coins = Math.round(reward.coins * missionBonus);
       this.store.addCoins(reward.coins);
       this.store.addXp(reward.xp);
@@ -247,10 +250,16 @@ export class Run {
     const today = dayKey(Date.now());
     if (allCleared(save.missions) && save.missionBonusDay !== today) {
       save.missionBonusDay = today;
-      this.store.addCoins(DAILY_BONUS.coins);
-      this.store.addXp(DAILY_BONUS.xp);
-      reward.coins += DAILY_BONUS.coins;
-      reward.xp += DAILY_BONUS.xp;
+      // The perk reaches this too. It is a mission payout like any other, and
+      // it was only escaping because it was added after the line that applied
+      // the multiplier — which meant the one character built around missions
+      // lost its perk on the largest mission payout of the day.
+      const bonus = dailyBonus(tier);
+      const coins = Math.round(bonus.coins * missionBonus);
+      this.store.addCoins(coins);
+      this.store.addXp(bonus.xp);
+      reward.coins += coins;
+      reward.xp += bonus.xp;
       reward.dailyBonus = true;
     }
 

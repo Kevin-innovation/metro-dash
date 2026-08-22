@@ -4,9 +4,11 @@ import {
   MISSION_SLOTS,
   MISSION_TIERS,
   applyMetrics,
+  dailyBonus,
   ensureMissions,
   isComplete,
   missionLabel,
+  missionPay,
   missionReward,
   rollMissions,
 } from "../src/missions.js";
@@ -73,6 +75,47 @@ describe("mission definitions", () => {
 
   it("have enough variety to fill every slot without repeats", () => {
     expect(MISSION_DEFS.length).toBeGreaterThan(MISSION_SLOTS * 3);
+  });
+});
+
+describe("dailyBonus", () => {
+  /**
+   * The bonus is documented as worth more than any single mission, and for four
+   * ranks it was — then the targets kept growing and it did not. By the fifth
+   * rank it paid less than the biggest mission in the set it was rewarding you
+   * for finishing. Pinned at every step, because the failure was silent: nothing
+   * broke, the number just quietly stopped meaning what it said.
+   */
+  it("beats the largest single mission at every difficulty step", () => {
+    for (let tier = 0; tier < MISSION_TIERS; tier++) {
+      const best = MISSION_DEFS.reduce(
+        (top, def) => {
+          const pay = missionPay(def, tier);
+          return { coins: Math.max(top.coins, pay.coins), xp: Math.max(top.xp, pay.xp) };
+        },
+        { coins: 0, xp: 0 },
+      );
+      const bonus = dailyBonus(tier);
+      expect(bonus.coins, `tier ${tier}`).toBeGreaterThan(best.coins);
+      expect(bonus.xp, `tier ${tier}`).toBeGreaterThan(best.xp);
+    }
+  });
+
+  it("grows by the same step the missions do", () => {
+    // Two payouts on one ladder. Drifting apart is the whole bug.
+    const base = dailyBonus(0);
+    for (let tier = 1; tier < MISSION_TIERS; tier++) {
+      const mission = MISSION_DEFS[0];
+      const missionGrowth = missionPay(mission, tier).coins / missionPay(mission, 0).coins;
+      const bonusGrowth = dailyBonus(tier).coins / base.coins;
+      expect(bonusGrowth, `tier ${tier}`).toBeCloseTo(missionGrowth, 2);
+    }
+  });
+
+  it("does not keep growing past the last step", () => {
+    expect(dailyBonus(MISSION_TIERS)).toEqual(dailyBonus(MISSION_TIERS - 1));
+    expect(dailyBonus(99)).toEqual(dailyBonus(MISSION_TIERS - 1));
+    expect(dailyBonus(-5)).toEqual(dailyBonus(0));
   });
 });
 

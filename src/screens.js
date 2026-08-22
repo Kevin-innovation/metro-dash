@@ -3,9 +3,9 @@ import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
 import { GENERAL_LEVEL, LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
 import { loadSchoolNames } from "./school-list.js";
-import { missionLabel } from "./missions.js";
+import { MISSION_TIERS, missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
-import { runXp } from "./progression.js";
+import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
 import {
@@ -849,7 +849,7 @@ export class Screens {
     }
     const boardCount = $("board-count");
     if (boardCount) boardCount.textContent = String(save.hoverboards);
-    renderMissions($("mission-list"), save.missions);
+    renderMissions($("mission-list"), save.missions, missionTier(save.xp, MISSION_TIERS));
     renderRank($("rank-name"), $("rank-fill"), $("rank-xp"), save.xp);
   }
 

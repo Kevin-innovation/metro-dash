@@ -72,12 +72,31 @@ export const MISSION_DEFS = [
 export const MISSION_SLOTS = 3;
 
 /**
- * Paid for clearing all three in a day.
+ * Paid for clearing all three in a day, before the difficulty step is applied.
  *
- * Worth more than any single mission on purpose: the third one is the one
- * people give up on, and it should be the one they come back for.
+ * Twice the largest single mission on purpose: the third one is the one people
+ * give up on, and it should be the one they come back for.
  */
 export const DAILY_BONUS = { coins: 400, xp: 300 };
+
+/**
+ * What clearing the set actually pays at a difficulty step.
+ *
+ * Scaled by the same step the missions are, and for the same reason. Flat, it
+ * was a quiet penalty for levelling: the targets grew, every mission's payout
+ * grew with them, and this one number stayed where it was. By Lv.5 the reward
+ * for finishing all three was worth less than one of the three; by Lv.7 nine of
+ * the twenty missions each paid more on their own than the set did. The comment
+ * above said what it was for the whole time — it just stopped being true after
+ * the fourth rank.
+ */
+export function dailyBonus(tier = 0) {
+  const step = tierStep(tier);
+  return {
+    coins: Math.round(DAILY_BONUS.coins * step),
+    xp: Math.round(DAILY_BONUS.xp * step),
+  };
+}
 
 /** True once every mission in the day's set is done. */
 export function allCleared(missions) {
@@ -188,8 +207,18 @@ export function applyMetrics(missions, metrics) {
  * that set the target.
  */
 export function missionPay(def, tier) {
-  const step = 1 + Math.max(0, Math.min(MISSION_TIERS - 1, tier)) * 0.28;
+  const step = tierStep(tier);
   return { coins: Math.round(def.coins * step), xp: Math.round(def.xp * step) };
+}
+
+/**
+ * How much a payout grows at a difficulty step.
+ *
+ * One function rather than a number written out wherever it is needed — the
+ * all-clear bonus was left behind exactly once, and once was enough.
+ */
+export function tierStep(tier) {
+  return 1 + Math.max(0, Math.min(MISSION_TIERS - 1, tier)) * 0.28;
 }
 
 export function missionReward(completedList, tier = 0) {

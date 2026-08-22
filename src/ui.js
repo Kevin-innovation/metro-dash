@@ -1,9 +1,9 @@
 import { HOVERBOARD_TIME } from "./config.js";
 import { BOARD_HINT_LONG, BOARD_LIMIT_NOTE } from "./input.js";
 import {
-  DAILY_BONUS,
   allCleared,
   clearedCount,
+  dailyBonus,
   isComplete,
   missionDef,
   missionLabel,
@@ -21,7 +21,11 @@ export const escapeHtml = (value) =>
 
 const money = (n) => Math.floor(n).toLocaleString();
 
-export function renderMissions(el, missions) {
+/**
+ * @param {number} tier difficulty step the day's set was dealt at, so the bonus
+ *   line quotes what will actually be paid rather than the base it scales from.
+ */
+export function renderMissions(el, missions, tier = 0) {
   const counter = $("mission-count");
   if (counter) {
     const done = clearedCount(missions);
@@ -59,10 +63,11 @@ export function renderMissions(el, missions) {
 
   // Stated where the missions are, so the reason to finish the third one is
   // visible while looking at the third one.
+  const bonus = dailyBonus(tier);
   el.insertAdjacentHTML(
     "beforeend",
     `<li class="mission-bonus${allCleared(missions) ? " done" : ""}">
-       3개 모두 달성 시 🪙 ${money(DAILY_BONUS.coins)} · XP ${money(DAILY_BONUS.xp)}
+       3개 모두 달성 시 🪙 ${money(bonus.coins)} · XP ${money(bonus.xp)}
      </li>`,
   );
 }
