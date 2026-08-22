@@ -1565,8 +1565,43 @@ kbd {
  */
 #leaderboard-screen {
   z-index: 20;
-  background: rgba(4, 10, 16, 0.74);
-  backdrop-filter: blur(3px);
+  background: rgba(4, 10, 16, 0.78);
+}
+
+/**
+ * The way out, in the corner, always.
+ *
+ * These panels are taller than a phone, so the button at the bottom is only
+ * findable by scrolling to it — and a student who has scrolled down a list of
+ * fifty names has no reason to think the way out is further down. Fixed to the
+ * viewport rather than to the card, so it is in the same place whatever has
+ * been scrolled past.
+ *
+ * `position: fixed` needs its ancestors to be free of transforms and filters,
+ * which is why the blur that was on the board is gone: it would have made this
+ * scroll away with the panel it is meant to escape.
+ */
+.corner-close {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: calc(12px + env(safe-area-inset-right));
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: rgba(7, 16, 24, 0.92);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+}
+
+.corner-close:hover {
+  background: var(--gold);
+  color: #1a1200;
 }
 
 /* The rank a name has earned, beside the run it just did. Distinct from the

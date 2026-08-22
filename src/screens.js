@@ -91,6 +91,10 @@ export class Screens {
       const button = $(id);
       if (button) button.onclick = () => a.openLeaderboard();
     }
+    $("btn-board-x")?.addEventListener("click", () => a.closeLeaderboard());
+    $("btn-shop-x")?.addEventListener("click", () => this.closeShop());
+    $("btn-settings-x")?.addEventListener("click", () => this.closeSettings());
+
     const boardClose = $("btn-leaderboard-close");
     // Routed through the Game rather than closed directly: it owns the live
     // subscriptions behind the panel and has to be told to drop them.
