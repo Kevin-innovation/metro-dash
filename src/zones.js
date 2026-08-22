@@ -214,6 +214,23 @@ export function mixColor(a, b, k) {
  */
 export const OPEN_CEILING = 9.6;
 
+/**
+ * The next roofed section, and how long until it starts.
+ *
+ * The shell descends onto the runner during the fade, which is correct but
+ * reads as the world going dark rather than as arriving somewhere. Something
+ * has to come *towards* them, and to place it we have to know when.
+ *
+ * @returns {{ at: number, seconds: number } | null} null when the next section
+ *   is open sky, or when we are already inside one
+ */
+export function nextCeilingAt(t) {
+  const current = zoneAt(t);
+  const next = nextZone(current);
+  if (next === current || current.ceiling !== null || next.ceiling === null) return null;
+  return { at: next.from, seconds: next.from - t };
+}
+
 export function lookAt(t) {
   const { from, to, k } = zoneBlend(t);
   // Treating open sky as a very high ceiling rather than as no ceiling at all.

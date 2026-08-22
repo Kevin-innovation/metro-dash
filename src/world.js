@@ -31,6 +31,16 @@ const TUNNEL_LEN = 420;
 const TUNNEL_LAMPS = 28;
 /** Chosen so the lamps tile the shell exactly and the cycle has no seam. */
 const LAMP_SPACING = TUNNEL_LEN / TUNNEL_LAMPS;
+/** Height of the opening in the tunnel mouth. Clears the jetpack's altitude. */
+const MOUTH_TOP = 8.4;
+/**
+ * How long before a section starts that its mouth appears.
+ *
+ * Longer than the light fade, so the thing arrives before the world dims — the
+ * point is that the darkness has a cause and the cause is visible first.
+ */
+const MOUTH_LEAD_SECONDS = 7;
+
 /** How much of the shell sits behind the runner. */
 const TUNNEL_BEHIND = 60;
 
@@ -112,6 +122,37 @@ export function createWorld(scene, quality) {
   }
   shell.visible = false;
   scene.add(shell);
+
+  // The tunnel mouth.
+  //
+  // A frame standing across the track, placed at the world position where the
+  // section begins and then left alone: the runner closes on it at running
+  // speed, which is what makes the tunnel something you arrive at rather than
+  // something that switches on around you. Hidden until there is one to arrive
+  // at.
+  const mouth = new THREE.Group();
+  const faceMat = new THREE.MeshLambertMaterial({ color: 0x2b3138 });
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(26, 7, 1.4), faceMat);
+  lintel.position.y = MOUTH_TOP + 3.5;
+  mouth.add(lintel);
+  [-1, 1].forEach((side) => {
+    const pier = new THREE.Mesh(new THREE.BoxGeometry(5.4, MOUTH_TOP + 7, 1.4), faceMat);
+    pier.position.set(side * 9.4, (MOUTH_TOP + 7) / 2, 0);
+    mouth.add(pier);
+  });
+  // A lit rim along the opening, so the mouth is legible against a bright sky
+  // instead of reading as a dark smear on the horizon.
+  const rimMat = new THREE.MeshBasicMaterial({ color: 0xffcf6a });
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(13.6, 0.42, 1.6), rimMat);
+  rim.position.y = MOUTH_TOP;
+  mouth.add(rim);
+  [-1, 1].forEach((side) => {
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.42, MOUTH_TOP, 1.6), rimMat);
+    edge.position.set(side * 6.6, MOUTH_TOP / 2, 0);
+    mouth.add(edge);
+  });
+  mouth.visible = false;
+  scene.add(mouth);
 
   const ballastTex = makeBallast();
   ballastTex.repeat.set(3, 8);
@@ -239,7 +280,7 @@ export function createWorld(scene, quality) {
 
   return {
     scene, sky, sunBall, sun, hemi, ambient, ground, clouds,
-    shell, roof, walls, lamps,
+    shell, roof, walls, lamps, mouth,
     segments, buildings, poles, quality,
   };
 }
@@ -334,6 +375,38 @@ export function applyLook(world, look, quality) {
     world.lamps.forEach((lamp) => (lamp.visible = look.wall > 0.3));
     world.lamps.forEach((lamp) => (lamp.position.y = look.ceiling - 1.4));
   }
+}
+
+/**
+ * Put the tunnel mouth where the section begins, and leave it there.
+ *
+ * Placed once, from the runner's position and speed at the moment the section
+ * comes into range, and then never moved: recomputing it every frame would
+ * make it drift as the speed changed, and a landmark that slides around is not
+ * a landmark. Hidden again once it is safely behind.
+ *
+ * @param {{ at: number, seconds: number }|null} ahead from `nextCeilingAt`
+ * @param {number} playerZ
+ * @param {number} speed
+ */
+export function placeMouth(world, ahead, playerZ, speed) {
+  const mouth = world.mouth;
+  if (!mouth) return;
+
+  if (!ahead || ahead.seconds > MOUTH_LEAD_SECONDS) {
+    // Far off, or there is no roofed section next. Forget any earlier placing
+    // so the following one is measured fresh.
+    if (!ahead) world.mouthZ = null;
+    mouth.visible = false;
+    return;
+  }
+
+  if (world.mouthZ == null) world.mouthZ = playerZ + Math.max(20, speed * ahead.seconds);
+  mouth.position.z = world.mouthZ;
+  // Kept until it is a good way behind, so it is still there to be looked back
+  // at rather than blinking out the instant it is passed.
+  mouth.visible = world.mouthZ > playerZ - 30;
+  if (!mouth.visible) world.mouthZ = null;
 }
 
 /**

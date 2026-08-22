@@ -4,6 +4,7 @@ import { Bgm } from "./bgm.js";
 import { Cloud, cloudMessage } from "./cloud.js";
 import { approach } from "./collision.js";
 import {
+  FAST_FALL,
   FIXED_DT,
   HOVERBOARD_GRACE,
   HOVERBOARD_TIME,
@@ -20,7 +21,7 @@ import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
 import { MISSION_SLOTS, MISSION_TIERS, ensureMissions, rollMissions } from "./missions.js";
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
-import { lookAt } from "./zones.js";
+import { lookAt, nextCeilingAt } from "./zones.js";
 
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
@@ -37,7 +38,7 @@ import { characterById } from "./shop.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import { eventAt } from "./events.js";
-import { applyLook, applyWorldQuality, createWorld, syncWorld } from "./world.js";
+import { applyLook, applyWorldQuality, createWorld, placeMouth, syncWorld } from "./world.js";
 
 
 /** Gap kept between the camera and a roof overhead. */
@@ -45,6 +46,21 @@ const CAMERA_HEADROOM = 0.3;
 
 
 const $ = (id) => document.getElementById(id);
+
+/**
+ * The sneaker coin arc: where it starts, how high it climbs, how often.
+ *
+ * The low end sits where an ordinary jump can still take it, and the peak sits
+ * above — so a normal jump gets the shoulders of the arc and a boosted one gets
+ * all of it. Punishing the ordinary jump outright would make the power-up feel
+ * like a tax on not having it.
+ */
+const SNEAKER_COIN_LOW = 2.2;
+const SNEAKER_COIN_RISE = 2.0;
+const SNEAKER_ARC = 5;
+const SNEAKER_ARC_SPACING = 26;
+/** Long enough to fly to, like the jetpack trail. */
+const SNEAKER_LANE_RUN = 78;
 
 /** Rows a leaderboard column shows at a time, and the most it will ever show. */
 const BOARD_PAGE = 10;
@@ -805,6 +821,8 @@ export class Game {
     this.boardUsed = false;
     this.airborne = false;
     this.skyCoinZ = 0;
+    this.sneakerCoinZ = 0;
+    if (this.world) this.world.mouthZ = null;
     this.sectionId = null;
     this.section = null;
     // Optional call: the constructor resets the run state before the Screens
@@ -1014,10 +1032,34 @@ export class Game {
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
     // The title screen holds the opening look; only a run travels through zones.
-    applyLook(this.world, lookAt(this.state === "playing" ? this.runTime : 0), this.quality);
+    // The mouth first: whether it is still ahead decides whether the shell has
+    // any business being overhead yet.
+    placeMouth(
+      this.world,
+      this.state === "playing" ? nextCeilingAt(this.runTime) : null,
+      this.player.z,
+      this.speed,
+    );
+    applyLook(this.world, this.lookNow(), this.quality);
     this.updateCamera(frameDt);
     if (this.state === "playing") this.screens.syncHud(this);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * The zone as it should be drawn and collided against right now.
+   *
+   * The roof is held up until the runner is through the mouth. Left to the
+   * blend alone it descended over open track while the entrance was still a
+   * hundred metres away, so the world went dark and *then* you arrived at the
+   * tunnel — which is the wrong way round and is what made it feel like a
+   * switch being flipped. The light still fades early, the way a tunnel does
+   * cast its shadow before you reach it; only the geometry waits.
+   */
+  lookNow() {
+    const look = lookAt(this.state === "playing" ? this.runTime : 0);
+    const mouthAhead = this.world?.mouthZ != null && this.world.mouthZ > this.player.z;
+    return mouthAhead ? { ...look, ceiling: null, wall: 0 } : look;
   }
 
   /** Let the auto quality governor react to the measured frame rate. */
@@ -1061,6 +1103,41 @@ export class Game {
       const lane = SKY_WEAVE[Math.floor(this.skyCoinZ / SKY_LANE_RUN) % SKY_WEAVE.length];
       this.pool.spawn("coin", lane, this.skyCoinZ, JETPACK_ALTITUDE + 0.9);
       this.skyCoinZ += SKY_COIN_SPACING;
+    }
+  }
+
+  /**
+   * Coin arcs at boosted-jump height, for as long as super sneakers last.
+   *
+   * The boost by itself changed nothing: every obstacle that can be jumped is
+   * already cleared by an ordinary jump, so a higher one bought altitude with
+   * nothing in it. These put something there. They sit above what a normal jump
+   * reaches at the same point, so taking them is the boost being used rather
+   * than being carried.
+   */
+  emitSneakerCoins() {
+    if (this.state !== "playing" || !this.run.powerupActive("sneakers")) {
+      this.sneakerCoinZ = 0;
+      return;
+    }
+
+    const p = this.player;
+    if (!this.sneakerCoinZ || this.sneakerCoinZ < p.z) this.sneakerCoinZ = p.z + 24;
+
+    const ahead = p.z + 70;
+    while (this.sneakerCoinZ < ahead) {
+      // A short arc rather than a line: it is a jump, and an arc says so.
+      const lane = SKY_WEAVE[Math.floor(this.sneakerCoinZ / SNEAKER_LANE_RUN) % SKY_WEAVE.length];
+      for (let i = 0; i < SNEAKER_ARC; i++) {
+        const along = (i / (SNEAKER_ARC - 1)) * 2 - 1;
+        this.pool.spawn(
+          "coin",
+          lane,
+          this.sneakerCoinZ + along * 3.2,
+          SNEAKER_COIN_LOW + Math.cos(along * (Math.PI / 2)) * SNEAKER_COIN_RISE,
+        );
+      }
+      this.sneakerCoinZ += SNEAKER_ARC_SPACING;
     }
   }
 
@@ -1127,6 +1204,7 @@ export class Game {
   simulate(dt) {
     if (this.state === "playing") this.advanceRun(dt);
     this.emitSkyCoins();
+    this.emitSneakerCoins();
 
     // Snapshot every mover before anything shifts, so the swept collision test
     // has a valid start-of-step position for both player and obstacles.
@@ -1139,9 +1217,9 @@ export class Game {
       roofs: this.collectRoofs(),
       held: this.input.held,
       flying: this.state === "playing" && this.run.powerupActive("jetpack"),
-      // Read inside the fixed step, not from the rendered look, so the ceiling
-      // the runner bumps into is the same one on every machine.
-      ceiling: this.state === "playing" ? lookAt(this.runTime).ceiling : null,
+      // Read from the same look the world is drawn with, so the runner never
+      // bumps into a roof that is not there yet.
+      ceiling: this.state === "playing" ? this.lookNow().ceiling : null,
       onMount: (item, hop) => this.onMount(item, hop),
     });
 
@@ -1264,6 +1342,20 @@ export class Game {
         performance.now() - this.deadAt > 480
       ) {
         this.startRun();
+      } else if (act === "slide" && this.state === "playing" && this.player.flying) {
+        // Down while flying means "put me back on the ground". The flight ends
+        // and the runner drops under the fast-fall, so it is a decision with a
+        // cost rather than a free descent: coins in the sky are given up and
+        // whatever is on the deck arrives immediately.
+        if (this.run.endPowerup("jetpack")) {
+          this.player.flying = false;
+          this.player.jumping = true;
+          this.player.diving = true;
+          this.player.vy = FAST_FALL;
+          this.player.jets.visible = false;
+          this.audio.slam();
+          this.screens.showToast("착지!");
+        }
       } else if (this.state === "playing") {
         applyAction(this.player, act, this.audio, {
           jumpMultiplier: jumpMultiplier(this.run.powerups),
@@ -1531,7 +1623,7 @@ export class Game {
     // Stopping the runner at the roof is only half of it: the camera rides
     // above them, so without this it climbs out through the tunnel and looks
     // back down at the roof from the outside.
-    const ceiling = this.state === "playing" ? lookAt(this.runTime).ceiling : null;
+    const ceiling = this.state === "playing" ? this.lookNow().ceiling : null;
     const limit = ceiling != null ? ceiling - CAMERA_HEADROOM : Infinity;
     const ty = Math.min(wantY, limit);
     // How much height the roof took away. With none left to look down from,

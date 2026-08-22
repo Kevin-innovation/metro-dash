@@ -147,6 +147,19 @@ export class Run {
     return isActive(this.powerups, id);
   }
 
+  /**
+   * End one power-up now.
+   *
+   * The jetpack is the only thing that uses it, and only because the player
+   * asked: pressing down while flying should bring you back to the deck rather
+   * than being ignored for the six seconds the timer still holds.
+   */
+  endPowerup(id) {
+    if (!(this.powerups[id] > 0)) return false;
+    this.powerups[id] = 0;
+    return true;
+  }
+
   clearPowerups() {
     clearPowerups(this.powerups);
   }

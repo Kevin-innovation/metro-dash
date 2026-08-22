@@ -24,6 +24,17 @@ const PICKUP_REACH = 1.35;
  * in the lane for free.
  */
 const FLYING_PICKUP_REACH = 2.2;
+/**
+ * Reach while super sneakers are running.
+ *
+ * The coin arcs over an obstacle are placed for the height an ordinary jump
+ * reaches when it crosses them. A boosted jump crosses the same point two or
+ * three metres higher and sailed straight over the lot — so the power-up that
+ * makes you jump better was also the one that cost you coins. Wide enough that
+ * the boost does not take anything away, narrow enough that it is still a jump
+ * rather than a magnet.
+ */
+const SNEAKER_PICKUP_REACH = 3.0;
 
 /**
  * Resolves everything the runner touches during one simulation step: pickups,
@@ -63,6 +74,12 @@ export class Interactions {
     const magnetOn = this.run.powerupActive("magnet");
     // The jetpack collects with a wider reach; see FLYING_PICKUP_REACH.
     const flying = this.run.powerupActive("jetpack");
+    const bounding = this.run.powerupActive("sneakers");
+    const reach = flying
+      ? FLYING_PICKUP_REACH
+      : bounding
+        ? SNEAKER_PICKUP_REACH
+        : PICKUP_REACH;
 
     for (const item of this.pool.live) {
       if (item.taken || item.lethal) continue;
@@ -92,7 +109,7 @@ export class Interactions {
         );
         if (!hit.hit) continue;
         const midY = lerp(prev.y + prev.height * 0.5, cur.y + cur.height * 0.5, hit.t);
-        if (Math.abs(midY - itemY) > (flying ? FLYING_PICKUP_REACH : PICKUP_REACH)) continue;
+        if (Math.abs(midY - itemY) > reach) continue;
       }
 
       item.taken = true;
