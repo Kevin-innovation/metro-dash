@@ -1,12 +1,6 @@
 import * as THREE from "three";
 import { BUILDING_COLORS, FOG_COLOR, LANES, SEGMENT_COUNT, SEGMENT_LEN } from "./config.js";
-import { makeCloud, makeSky } from "./textures.js";
-import {
-  addGeneratedPlane,
-  bindGeneratedLayer,
-  generatedTexture,
-  refreshGeneratedLayer,
-} from "./generated-assets.js";
+import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
 import { OPEN_CEILING } from "./zones.js";
 
 function hexOf(n) {
@@ -103,10 +97,8 @@ export function createWorld(scene, quality) {
   // building it on demand would stall the frame the tunnel mouth appears on.
   // It travels with the runner like the ground does, so it never runs out.
   const shell = new THREE.Group();
-  const tunnelTex = generatedTexture("tunnel");
-  tunnelTex.repeat.set(2, 8);
-  const shellMat = new THREE.MeshLambertMaterial({ color: 0x39404a, map: tunnelTex });
-  const roofMat = new THREE.MeshLambertMaterial({ color: 0x4a525e, emissive: 0x1a1f26, map: tunnelTex });
+  const shellMat = new THREE.MeshLambertMaterial({ color: 0x39404a });
+  const roofMat = new THREE.MeshLambertMaterial({ color: 0x4a525e, emissive: 0x1a1f26 });
   // Wide enough to fill the view. A narrow roof reads as a dark bar hanging in
   // front of the skyline rather than as a ceiling over the track.
   const roof = new THREE.Mesh(new THREE.BoxGeometry(26, ROOF_THICKNESS, TUNNEL_LEN), roofMat);
@@ -162,15 +154,17 @@ export function createWorld(scene, quality) {
   mouth.visible = false;
   scene.add(mouth);
 
-  const ballastTex = generatedTexture("ballast");
+  const ballastTex = makeBallast();
   ballastTex.repeat.set(3, 8);
-  const woodTex = generatedTexture("wood");
-  const wallTex = generatedTexture("wall");
+  const woodTex = makeWood();
+  const wallTex = makeWall();
   wallTex.repeat.set(4, 1);
 
-  const facadeTex = generatedTexture("facade");
-  facadeTex.repeat.set(1, 1);
-  const facades = BUILDING_COLORS.map(() => facadeTex);
+  const facades = BUILDING_COLORS.map((c, i) => {
+    const t = makeFacade(i + 2, hexOf(c));
+    t.repeat.set(1, 1);
+    return t;
+  });
 
   // Travels with the runner. It is a flat, untextured plane, so sliding it is
   // invisible — whereas leaving it at the origin meant the world simply ran out
@@ -279,16 +273,6 @@ export function createWorld(scene, quality) {
     );
     arm.position.set(0.25, 5, 0);
     pole.add(arm);
-    const fallback = [post, lamp, arm];
-    const generated = addGeneratedPlane(
-      pole,
-      "streetlight",
-      1.1,
-      5.2,
-      [0, 2.7, 0.04],
-      () => refreshGeneratedLayer(pole),
-    );
-    bindGeneratedLayer(pole, fallback, { default: generated });
     pole.position.x = (i % 2 === 0 ? -1 : 1) * 4.7;
     scene.add(pole);
     poles.push({ group: pole, z: i * POLE_SPACING });
