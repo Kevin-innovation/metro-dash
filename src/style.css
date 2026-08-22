@@ -680,8 +680,7 @@ body.running #game-canvas {
     min-width: 0;
   }
 
-  /* The block and the list inside it both take the height they were given, so
-     the extra goes into the gaps between missions. */
+  /* The block and the list inside it take the height they were given. */
   .title-side .mission-block,
   .title-side .mission-block .mission-list {
     flex: 1;
@@ -693,8 +692,21 @@ body.running #game-canvas {
     gap: clamp(4px, 0.85vh, 8px);
   }
 
-  .title-side .mission-block .mission-list {
-    justify-content: space-between;
+  /**
+   * The extra height goes into the cards, never into the gaps between them.
+   *
+   * Spreading the gaps instead left three thin cards floating in a column of
+   * air — the two sides measured the same and looked nothing alike, which is
+   * not what matching heights was for. Growing the cards keeps the rhythm of
+   * the blocks on the left, where every panel is a solid thing rather than a
+   * line with space around it. The bonus box is left out: it is a footnote to
+   * the three, and a footnote the size of a card is not a footnote.
+   */
+  .title-side .mission-list > .mission {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   /* Seven lines across the full width read as two columns of three or four,
