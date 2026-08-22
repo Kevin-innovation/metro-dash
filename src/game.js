@@ -387,6 +387,18 @@ export class Game {
   async watchBoards() {
     this.stopWatchingBoards();
     const generation = ++this.boardGeneration;
+
+    // A closed week is not a ranking that moves, so the hall is one
+    // subscription rather than four and has no pager or standing behind it.
+    if (this.boardRange === "hall") {
+      const stop = await this.cloud.watch("hall:list", { limit: 8 }, (weeks) => {
+        if (generation !== this.boardGeneration) return;
+        this.screens.renderHall(weeks ?? []);
+      });
+      if (generation !== this.boardGeneration) stop();
+      else this.boardSubscriptions.push(stop);
+      return;
+    }
     const view = { rows: [], standing: null, schools: [], schoolStanding: null };
 
     const draw = () => {
@@ -428,11 +440,15 @@ export class Game {
         { limit: (this.boardPages.players + 1) * BOARD_PAGE, range: this.boardRange },
         "rows",
       ),
-      watch("schools:top", { limit: (this.boardPages.schools + 1) * BOARD_PAGE }, "schools"),
+      watch(
+        "schools:top",
+        { limit: (this.boardPages.schools + 1) * BOARD_PAGE, range: this.boardRange },
+        "schools",
+      ),
       ...(token
         ? [
             watch("scores:standing", { token, range: this.boardRange }, "standing"),
-            watch("schools:standing", { token }, "schoolStanding"),
+            watch("schools:standing", { token, range: this.boardRange }, "schoolStanding"),
           ]
         : []),
     ]);
@@ -553,8 +569,10 @@ export class Game {
   async setBoardRange(range) {
     if (this.boardRange === range) return;
     this.boardRange = range;
+    this.boardPages = { players: 0, schools: 0 };
     this.screens.setBoardTab(range);
     this.screens.renderLeaderboard([], null, this.cloud.handle);
+    this.screens.renderSchoolBoard([], null, "");
     // Both columns are resubscribed: the school ranking has no weekly form, but
     // dropping and remaking its subscription is cheaper than tracking which of
     // the four belongs to which tab.
@@ -573,7 +591,7 @@ export class Game {
     const label = this.cloud.schoolLabel;
     if (!label) return "학교를 정하면 순위가 나와요";
     if (label === GENERAL.label) return "일반부는 학교 랭킹에 오르지 않아요";
-    return "아직 학교 순위가 없어요";
+    return this.boardRange === "week" ? "이번 주 우리 학교 기록이 없어요" : "아직 학교 순위가 없어요";
   }
 
   /** Send the finished run up. Never blocks, never fails the local save. */

@@ -9,6 +9,8 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as crons from "../crons.js";
+import type * as hall from "../hall.js";
 import type * as players from "../players.js";
 import type * as reports from "../reports.js";
 import type * as schools from "../schools.js";
@@ -23,6 +25,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  crons: typeof crons;
+  hall: typeof hall;
   players: typeof players;
   reports: typeof reports;
   schools: typeof schools;

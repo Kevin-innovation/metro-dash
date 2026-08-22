@@ -215,9 +215,12 @@
             <section class="board-col">
               <div class="board-head">
                 <h3 class="board-title">개인</h3>
+                <!-- One set of tabs for the whole board: both columns count the
+                     same stretch of time, and two sets would invite them not to. -->
                 <div class="board-tabs">
                   <button id="tab-board-week" type="button" class="board-tab on">이번 주</button>
                   <button id="tab-board-all" type="button" class="board-tab">전체</button>
+                  <button id="tab-board-hall" type="button" class="board-tab">명예의 전당</button>
                 </div>
               </div>
               <p id="board-reset" class="board-note"></p>
@@ -232,7 +235,7 @@
               <div class="board-head">
                 <h3 class="board-title">학교</h3>
               </div>
-              <p class="board-note">전체 기간 누적</p>
+              <p id="school-note" class="board-note">전체 기간 누적</p>
               <p id="my-school-standing" class="my-standing hidden"></p>
               <ol id="school-list" class="leaderboard-list school"></ol>
               <div id="nav-schools" class="board-nav hidden">

@@ -101,7 +101,11 @@ export class Screens {
       $(`btn-prev-${column}`)?.addEventListener("click", () => a.turnBoardPage(column, -1));
     }
 
-    for (const [id, range] of [["tab-board-week", "week"], ["tab-board-all", "all"]]) {
+    for (const [id, range] of [
+      ["tab-board-week", "week"],
+      ["tab-board-all", "all"],
+      ["tab-board-hall", "hall"],
+    ]) {
       const tab = $(id);
       if (tab) tab.onclick = () => a.setBoardRange(range);
     }
@@ -307,14 +311,33 @@ export class Screens {
    * started first, and everyone who joins in March reads it as a closed door.
    */
   setBoardTab(range) {
-    const week = range !== "all";
-    $("tab-board-week")?.classList.toggle("on", week);
-    $("tab-board-all")?.classList.toggle("on", !week);
+    for (const [id, value] of [
+      ["tab-board-week", "week"],
+      ["tab-board-all", "all"],
+      ["tab-board-hall", "hall"],
+    ]) {
+      $(id)?.classList.toggle("on", range === value);
+    }
+
+    // Both columns follow the tabs now, so both captions are written here.
+    const school = $("school-note");
+    if (school) {
+      school.textContent =
+        range === "hall"
+          ? "주간 1~3위"
+          : range === "week"
+            ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
+            : "전체 기간 누적";
+    }
+
     const note = $("board-reset");
     if (note) {
-      note.textContent = week
-        ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
-        : "전체 기간 최고 기록";
+      note.textContent =
+        range === "hall"
+          ? "지난 주의 기록"
+          : range === "week"
+            ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
+            : "전체 기간 최고 기록";
     }
   }
 
@@ -927,6 +950,58 @@ export class Screens {
       ranks.school?.rank != null ? `${ranks.school.rank}위` : ranks.schoolNote || "—",
       ranks.school?.rank == null,
     );
+  }
+
+  /**
+   * The hall of fame, in the two columns the board already has.
+   *
+   * A week per block, its podium inside. Laid out down the same two columns as
+   * the live board so the eye does not have to relearn the screen: whatever is
+   * on the left is about people, whatever is on the right is about schools.
+   *
+   * @param {Array} weeks newest first
+   */
+  renderHall(weeks) {
+    const medal = ["🥇", "🥈", "🥉"];
+    const block = (label, rows, render) => `
+      <li class="hall-week">
+        <p class="hall-label">${escapeHtml(label)}</p>
+        ${
+          rows.length
+            ? rows.map((row, i) => `<p class="hall-row">${medal[i] ?? ""} ${render(row)}</p>`).join("")
+            : `<p class="hall-row empty">기록 없음</p>`
+        }
+      </li>`;
+
+    const fill = (id, pick, render) => {
+      const list = $(id);
+      if (!list) return;
+      list.innerHTML = weeks?.length
+        ? weeks.map((week) => block(week.label, pick(week) ?? [], render)).join("")
+        : `<li class="leaderboard-empty">아직 끝난 주가 없어요. 이번 주가 첫 번째입니다!</li>`;
+    };
+
+    fill(
+      "leaderboard-list",
+      (week) => week.players,
+      (row) =>
+        `<strong>${escapeHtml(row.handle)}</strong> ${row.score.toLocaleString()}` +
+        (row.school ? ` <em>${escapeHtml(row.school)}</em>` : ""),
+    );
+    fill(
+      "school-list",
+      (week) => week.schools,
+      (row) =>
+        `<strong>${escapeHtml(row.label)}</strong> ${row.total.toLocaleString()}` +
+        ` <em>${row.members}명</em>`,
+    );
+
+    // Nothing to page through and no standing to state: a closed week is whole.
+    for (const column of ["players", "schools"]) {
+      this.setBoardPager(column, { page: 0, size: 10, hasMore: false });
+    }
+    this.standings = { mine: "", school: "", schoolNote: "" };
+    this.applyStandings();
   }
 
   /** The rank climbed by this run, when there was one. */

@@ -129,10 +129,24 @@ export default defineSchema({
     members: v.number(),
     /** Sum of every member's best score. */
     total: v.number(),
+
+    /**
+     * The same sum, but of this week's bests.
+     *
+     * Kept by deltas beside the all-time figure for the same reason that one
+     * is: adding up the members on read would mean loading a save file per
+     * member. Stale rows are read as zero rather than swept — a school that
+     * has not played since Monday simply is not in this week's ranking.
+     */
+    weekTotal: v.optional(v.number()),
+    weekMembers: v.optional(v.number()),
+    weekKey: v.optional(v.string()),
+
     updatedAt: v.number(),
   })
     .index("by_key", ["key"])
-    .index("by_total", ["total"]),
+    .index("by_total", ["total"])
+    .index("by_week_total", ["weekKey", "weekTotal"]),
 
   /**
    * Signed-in devices, one row each.
@@ -175,10 +189,39 @@ export default defineSchema({
     .index("by_reporter_target", ["reporterId", "targetId"])
     .index("by_status", ["status", "createdAt"]),
 
+  /**
+   * Closed weeks, kept for good.
+   *
+   * A weekly board is only worth chasing if winning it leaves something
+   * behind; otherwise Monday erases the week and the person who topped it has
+   * nothing to show. One row per week, written once when the week ends.
+   */
+  halls: defineTable({
+    weekKey: v.string(),
+    /** 「8월 3주차」 — what the week is called to a player. */
+    label: v.string(),
+    startedAt: v.number(),
+    closedAt: v.number(),
+    /** Top three of each board, in order. */
+    players: v.array(
+      v.object({ rank: v.number(), handle: v.string(), score: v.number(), school: v.string() }),
+    ),
+    schools: v.array(
+      v.object({ rank: v.number(), label: v.string(), total: v.number(), members: v.number() }),
+    ),
+  }).index("by_week", ["weekKey"]),
+
   scores: defineTable({
     playerId: v.id("players"),
     /** Denormalised so the leaderboard is a single read. */
     handle: v.string(),
+    /**
+     * The school at the time of the run, denormalised for the same reason the
+     * nickname is: closing a week has to rank schools from these rows alone,
+     * and reading a player document per run would mean loading a save file per
+     * run to find out where they go.
+     */
+    school: v.optional(v.string()),
     score: v.number(),
     distance: v.number(),
     coins: v.number(),

@@ -409,16 +409,39 @@ export const backfillWeek = mutation({
     }
 
     let updated = 0;
+    /** This week's totals per school, rebuilt from the same bests. */
+    const bySchool = new Map();
     for (const { id, score } of best.values()) {
       const player = await ctx.db.get(id);
       if (!player) continue;
       const current = player.weekKey === week ? (player.weekBest ?? 0) : 0;
-      if (score <= current) continue;
-      await ctx.db.patch(id, { weekKey: week, weekBest: score });
-      updated += 1;
+      if (score > current) {
+        await ctx.db.patch(id, { weekKey: week, weekBest: score });
+        updated += 1;
+      }
+      const top = Math.max(score, current);
+      if (player.schoolKey && top > 0) {
+        const held = bySchool.get(player.schoolKey) ?? { total: 0, members: 0 };
+        held.total += top;
+        held.members += 1;
+        bySchool.set(player.schoolKey, held);
+      }
     }
 
-    return { ok: true, week, players: updated };
+    // Written wholesale rather than by delta: this is the rebuild, and a school
+    // whose members did not play this week is left with nothing for it.
+    let schools = 0;
+    for await (const row of ctx.db.query("schools")) {
+      const held = bySchool.get(row.key) ?? { total: 0, members: 0 };
+      await ctx.db.patch(row._id, {
+        weekKey: week,
+        weekTotal: held.total,
+        weekMembers: held.members,
+      });
+      schools += 1;
+    }
+
+    return { ok: true, week, players: updated, schools };
   },
 });
 

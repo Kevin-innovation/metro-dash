@@ -42,6 +42,19 @@ export function weekEnd(ms) {
 }
 
 /**
+ * What a week is called: 「8월 3주차」.
+ *
+ * Named after the month its Monday falls in, so a week that straddles the turn
+ * of a month belongs to one of them rather than being split. The number is
+ * which Monday of that month it is.
+ */
+export function weekLabel(ms) {
+  const monday = new Date(weekStart(ms) + KST_OFFSET_MS);
+  const nth = Math.floor((monday.getUTCDate() - 1) / 7) + 1;
+  return `${monday.getUTCMonth() + 1}월 ${nth}주차`;
+}
+
+/**
  * How long is left in the week, in the shape a player reads.
  * @returns {string} e.g. "3일 20시간 남음"
  */

@@ -1569,6 +1569,46 @@ kbd {
   backdrop-filter: blur(3px);
 }
 
+/* --- hall of fame --------------------------------------------------------- */
+
+.hall-week {
+  padding: 9px 12px 10px;
+  border-radius: 12px;
+  background: rgba(7, 16, 24, 0.55);
+  border: 1px solid rgba(255, 210, 74, 0.22);
+}
+
+.hall-label {
+  margin: 0 0 5px;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+
+.hall-row {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cfe3f0;
+}
+
+.hall-row strong {
+  color: #eaf5fc;
+  font-weight: normal;
+}
+
+.hall-row em {
+  font-style: normal;
+  font-size: 11px;
+  color: #7fa3ba;
+}
+
+.hall-row.empty {
+  color: #7fa3ba;
+  font-size: 12px;
+}
+
 /* Paging controls. Quiet, because they are an offer rather than the point of
    the screen — the top of the board is. */
 .board-nav {

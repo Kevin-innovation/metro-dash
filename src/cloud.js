@@ -381,6 +381,15 @@ export class Cloud {
     }
   }
 
+  /** Weeks already closed, newest first. */
+  async hallOfFame(limit = 8) {
+    try {
+      return await this.query("hall:list", { limit });
+    } catch {
+      return [];
+    }
+  }
+
   async schoolLeaderboard(limit = 10) {
     return await this.query("schools:top", { limit });
   }

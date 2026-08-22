@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { validateRun } from "../src/leaderboard-rules.js";
 import { weekKey } from "../src/week.js";
-import { adjustSchool } from "./schools.js";
+import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
 
 /**
@@ -54,6 +54,9 @@ export const submit = mutation({
     await ctx.db.insert("scores", {
       playerId: player._id,
       handle: player.handle,
+      // Stored with the run so a closed week can be ranked by school from this
+      // table alone, without reading a save file per run.
+      school: player.school?.label ?? "",
       score,
       distance: Math.floor(args.distance),
       coins: Math.floor(args.coins),
@@ -84,6 +87,14 @@ export const submit = mutation({
       // The school total is the sum of its members' bests, so it moves by the
       // same amount this player's best just moved by.
       await adjustSchool(ctx, player.schoolKey, { total: score - player.best });
+    }
+    // And the same again for the week, which has its own bests and its own
+    // membership: a school's weekly figure counts only who actually played.
+    if (score > weekBest) {
+      await adjustSchoolWeek(ctx, player.schoolKey, week, {
+        total: score - weekBest,
+        newMember: weekBest === 0,
+      });
     }
 
     return { ok: true, best: Math.max(score, player.best) };

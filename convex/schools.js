@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { isGeneral, schoolKey, schoolLabel } from "../src/school.js";
+import { weekKey } from "../src/week.js";
 import { requirePlayer } from "./session.js";
 
 /**
@@ -59,6 +60,39 @@ export async function adjustSchool(ctx, key, { members = 0, total = 0 }) {
   });
 }
 
+/**
+ * Move a school's weekly total.
+ *
+ * A row whose week has passed is read as empty and started again rather than
+ * being cleared on a schedule: nothing has to run on Monday for the ranking to
+ * be right, and a school that does not play that week simply never appears.
+ *
+ * @param {number} total points to add
+ * @param {boolean} newMember true when this is the member's first score of the week
+ */
+export async function adjustSchoolWeek(ctx, key, week, { total = 0, newMember = false }) {
+  if (!key || (total === 0 && !newMember)) return;
+  const row = await ctx.db
+    .query("schools")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+  if (!row) return;
+
+  const carry = row.weekKey === week;
+  await ctx.db.patch(row._id, {
+    weekKey: week,
+    weekTotal: Math.max(0, (carry ? (row.weekTotal ?? 0) : 0) + total),
+    weekMembers: Math.max(0, (carry ? (row.weekMembers ?? 0) : 0) + (newMember ? 1 : 0)),
+    updatedAt: Date.now(),
+  });
+}
+
+/** This week's figures for a row, or zeroes when it has not played since Monday. */
+function weekOf(row, week) {
+  if (row.weekKey !== week) return { total: 0, members: 0 };
+  return { total: row.weekTotal ?? 0, members: row.weekMembers ?? 0 };
+}
+
 /** Attach a player to a school and carry their current best into its total. */
 export async function joinSchool(ctx, player, school) {
   const row = await ensureSchool(ctx, school);
@@ -101,52 +135,69 @@ export async function leaveSchool(ctx, player) {
 const FILTER_MARGIN = 16;
 
 export const top = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit }) => {
+  args: { limit: v.optional(v.number()), range: v.optional(v.string()) },
+  handler: async (ctx, { limit, range }) => {
     const take = Math.min(SCHOOL_LIMIT, Math.max(1, Math.floor(limit ?? 10)));
-    const rows = await ctx.db
-      .query("schools")
-      .withIndex("by_total")
-      .order("desc")
-      .take(take + FILTER_MARGIN);
+    const weekly = range === "week";
+    const week = weekKey(Date.now());
+    const window = take + FILTER_MARGIN;
+
+    const rows = weekly
+      ? await ctx.db
+          .query("schools")
+          .withIndex("by_week_total", (q) => q.eq("weekKey", week))
+          .order("desc")
+          .take(window)
+      : await ctx.db.query("schools").withIndex("by_total").order("desc").take(window);
 
     return rows
       // 일반부 is an affiliation, not a school: it belongs under a player's name
       // on the individual board, not in a ranking of schools.
-      .filter((row) => row.total > 0 && !isGeneral(row))
+      .map((row) => ({ row, figures: weekly ? weekOf(row, week) : { total: row.total, members: row.members } }))
+      .filter(({ row, figures }) => figures.total > 0 && !isGeneral(row))
       .slice(0, take)
-      .map((row, index) => ({
+      .map(({ row, figures }, index) => ({
         rank: index + 1,
         key: row.key,
         label: row.label,
-        total: row.total,
-        members: row.members,
+        total: figures.total,
+        members: figures.members,
       }));
   },
 });
 
 /** Where the signed-in player's school sits, even when it is off the board. */
 export const standing = query({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
+  args: { token: v.string(), range: v.optional(v.string()) },
+  handler: async (ctx, { token, range }) => {
     const player = await requirePlayer(ctx, token);
     // Nothing to stand in for 일반부, which the board above leaves out.
     if (!player.schoolKey || isGeneral(player.school)) return null;
 
+    const weekly = range === "week";
+    const week = weekKey(Date.now());
     const row = await ctx.db
       .query("schools")
       .withIndex("by_key", (q) => q.eq("key", player.schoolKey))
       .unique();
-    if (!row || row.total <= 0) return { rank: null, label: row?.label ?? "", total: 0, members: row?.members ?? 0 };
+    if (!row) return { rank: null, label: "", total: 0, members: 0 };
 
-    const above = await ctx.db
-      .query("schools")
-      .withIndex("by_total", (q) => q.gt("total", row.total))
-      .collect();
+    const mine = weekly ? weekOf(row, week) : { total: row.total, members: row.members };
+    if (mine.total <= 0) return { rank: null, label: row.label, total: 0, members: mine.members };
+
+    const above = weekly
+      ? await ctx.db
+          .query("schools")
+          .withIndex("by_week_total", (q) => q.eq("weekKey", week).gt("weekTotal", mine.total))
+          .collect()
+      : await ctx.db
+          .query("schools")
+          .withIndex("by_total", (q) => q.gt("total", mine.total))
+          .collect();
 
     // Counted the same way the board is, or a 일반부 total above this one would
     // push every school below it down a place that does not exist on screen.
     const ahead = above.filter((other) => !isGeneral(other)).length;
-    return { rank: ahead + 1, label: row.label, total: row.total, members: row.members };
+    return { rank: ahead + 1, label: row.label, total: mine.total, members: mine.members };
   },
 });
