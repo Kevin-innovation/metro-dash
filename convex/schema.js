@@ -119,7 +119,12 @@ export default defineSchema({
     // Equality on the week first, so the weekly board is one indexed read and
     // last week's leaders are not merely filtered out but never looked at.
     .index("by_week_best", ["weekKey", "weekBest"])
-    .index("by_school", ["schoolKey"]),
+    .index("by_school", ["schoolKey"])
+    // Not read by any query — it exists so the dashboard can offer it. The
+    // data view sorts by index and by nothing else, so without one here there
+    // is no way to ask 「누가 최근에 플레이했나」, and by_creation_time answers a
+    // different question: when the account was made, not when it was last used.
+    .index("by_updatedAt", ["updatedAt"]),
 
   /**
    * School standings, kept as a running total rather than computed on read.
