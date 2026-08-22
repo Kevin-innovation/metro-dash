@@ -135,6 +135,40 @@ function stripRegion(region, level, name) {
   return name.slice(region.length);
 }
 
+/**
+ * The university whose 부설 school is simply 「사대부」 in each region.
+ *
+ * Every region has one national university, and its attached school is the one
+ * everybody there means by the bare abbreviation — in 대구 that is 경북대, so
+ * 경북대학교사범대학부설중학교 is 대구사대부중 to anyone who lives there. Other
+ * universities' attached schools keep their name, because 서울 has a dozen of
+ * them and dropping the name would make them all the same school.
+ */
+const REGION_UNIVERSITY = {
+  서울: "서울", 부산: "부산", 대구: "경북", 인천: "인천", 광주: "전남",
+  대전: "충남", 울산: "울산", 세종: "공주", 경기: "경인", 강원: "강원",
+  충북: "충북", 충남: "공주", 전북: "전북", 전남: "순천", 경북: "경북",
+  경남: "경상", 제주: "제주",
+};
+
+/**
+ * Shorten the formal names of attached schools.
+ *
+ * 「경북대학교사범대학부설」 is seventeen syllables that nobody says out loud and
+ * that no leaderboard column can hold. These are the abbreviations people
+ * actually use, so the board reads the way the school is spoken about.
+ */
+function aliasName(region, name) {
+  const home = REGION_UNIVERSITY[region];
+  if (home && new RegExp(`^${home}대학교사범대학부[설속]`).test(name)) {
+    return name.replace(/^[가-힣]+대학교사범대학부[설속]/, "사대부");
+  }
+  return name
+    .replace(/^([가-힣]{2,4})대학교사범대학부[설속]/, "$1대사대부")
+    .replace(/^([가-힣]{2,4})교육대학교[가-힣]*부[설속]/, "$1교대부")
+    .replace(/^([가-힣]{2,4})대학교교육대학부[설속]/, "$1대교대부");
+}
+
 export function levelLabel(code) {
   return LEVELS.find((level) => level.code === code)?.label ?? "";
 }
@@ -218,7 +252,7 @@ export function validateSchool({ region, level, name } = {}) {
   // recovered later: 「용연학교」 is complete but 「서울대학교사범대학부설」 is not,
   // and nothing in the two strings tells them apart.
   const whole = impliedLevel === null && base.includes("학교");
-  const name_ = stripRegion(region, level, base);
+  const name_ = stripRegion(region, level, aliasName(region, base));
   const school = { region, level, name: name_, label: composeLabel(region, level, name_, whole) };
   return { ok: true, school, label: school.label };
 }
@@ -284,7 +318,9 @@ export function canonicalSchool({ region, level, name, label } = {}) {
   const whole = label
     ? label.replace(/\s+/g, "") === `${region}${base}`
     : base.endsWith("학교");
-  const canonical = stripRegion(region, level, base);
+  // Aliasing is idempotent — 「사대부」 does not match the pattern that produced
+  // it — so a row already shortened passes through unchanged.
+  const canonical = stripRegion(region, level, aliasName(region, base));
   return { region, level, name: canonical, label: composeLabel(region, level, canonical, whole) };
 }
 
@@ -297,5 +333,5 @@ export function previewLabel({ region, level, name }) {
   const { base, impliedLevel } = resolve(name, level);
   if (!region || !level || !base) return "";
   const whole = impliedLevel === null && base.includes("학교");
-  return composeLabel(region, level, stripRegion(region, level, base), whole);
+  return composeLabel(region, level, stripRegion(region, level, aliasName(region, base)), whole);
 }

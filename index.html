@@ -100,51 +100,60 @@
             <h1>Met<span>Dash</span></h1>
           </div>
 
-          <div class="profile-bar">
-            <div class="profile-rank">
-              <span id="rank-name">Lv.1 신입 러너</span>
-              <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
-              <span id="rank-xp" class="rank-xp">0 XP</span>
+          <!-- One column on a phone, two once the screen is wide but short —
+               a laptop has the width to spare and never the height. The wrappers
+               exist only so the split has something to split; see .title-body. -->
+          <div class="title-body">
+            <div class="title-main">
+              <div class="profile-bar">
+                <div class="profile-rank">
+                  <span id="rank-name">Lv.1 신입 러너</span>
+                  <div class="rank-track"><div id="rank-fill" class="rank-fill"></div></div>
+                  <span id="rank-xp" class="rank-xp">0 XP</span>
+                </div>
+                <div class="profile-coins">
+                  <span id="streak-chip" class="streak-chip hidden">🔥 0일</span>
+                  <span class="coin-orb small"></span>
+                  <strong id="coin-bank">0</strong>
+                </div>
+              </div>
+
+              <div id="account-bar" class="account-bar hidden">
+                <span id="account-state" class="account-state">게스트로 플레이 중</span>
+                <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
+                <button id="btn-account" type="button" class="account-action">로그인</button>
+              </div>
+
+              <button id="btn-play" type="button">질주 시작</button>
+              <div class="title-actions">
+                <button id="btn-shop" type="button" class="ghost">상점 · 강화</button>
+                <button id="btn-settings" type="button" class="ghost">설정</button>
+              </div>
+              <button id="btn-leaderboard" type="button" class="ghost wide hidden">리더보드</button>
             </div>
-            <div class="profile-coins">
-              <span id="streak-chip" class="streak-chip hidden">🔥 0일</span>
-              <span class="coin-orb small"></span>
-              <strong id="coin-bank">0</strong>
+
+            <div class="title-side">
+              <div class="mission-block">
+                <p class="block-title">오늘의 미션 <em id="mission-count" class="mission-count"></em></p>
+                <ul id="mission-list" class="mission-list"></ul>
+              </div>
+
+              <details class="howto-wrap">
+                <summary>조작 방법</summary>
+                <ul class="howto">
+                  <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
+                  <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
+                  <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
+                  <li id="howto-board"></li>
+                  <li>노란 게이트 · 점프로 못 넘습니다 · 슬라이드 필수</li>
+                  <li>헤드라이트 버스 · 마주 오면 레인 변경</li>
+                  <li>장애물을 아슬아슬하게 스치면 콤보와 보너스가 오릅니다</li>
+                </ul>
+              </details>
+
+              <p class="best-line">내 최고 점수 <strong id="best-score">0</strong></p>
             </div>
           </div>
-
-          <div id="account-bar" class="account-bar hidden">
-            <span id="account-state" class="account-state">게스트로 플레이 중</span>
-            <button id="btn-school" type="button" class="account-action hidden">학교 정하기</button>
-            <button id="btn-account" type="button" class="account-action">로그인</button>
-          </div>
-
-          <button id="btn-play" type="button">질주 시작</button>
-          <div class="title-actions">
-            <button id="btn-shop" type="button" class="ghost">상점 · 강화</button>
-            <button id="btn-settings" type="button" class="ghost">설정</button>
-          </div>
-          <button id="btn-leaderboard" type="button" class="ghost wide hidden">리더보드</button>
-
-          <div class="mission-block">
-            <p class="block-title">오늘의 미션 <em id="mission-count" class="mission-count"></em></p>
-            <ul id="mission-list" class="mission-list"></ul>
-          </div>
-
-          <details class="howto-wrap">
-            <summary>조작 방법</summary>
-            <ul class="howto">
-              <li><kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프 · 레인 변경</li>
-              <li><kbd>↑</kbd> / 스페이스 / 위로 스와이프 · 점프 · 버스 위로</li>
-              <li><kbd>↓</kbd> / 아래로 스와이프 · 슬라이드 · 점프 중이면 캔슬</li>
-              <li id="howto-board"></li>
-              <li>노란 게이트 · 점프로 못 넘습니다 · 슬라이드 필수</li>
-              <li>헤드라이트 버스 · 마주 오면 레인 변경</li>
-              <li>장애물을 아슬아슬하게 스치면 콤보와 보너스가 오릅니다</li>
-            </ul>
-          </details>
-
-          <p class="best-line">내 최고 점수 <strong id="best-score">0</strong></p>
         </div>
       </div>
 
@@ -388,7 +397,13 @@
             보유 코인 <span class="coin-orb small"></span><strong id="over-bank">0</strong>
           </p>
           <button id="btn-retry" type="button">다시 달리기</button>
-          <button id="btn-home" type="button" class="ghost">타이틀로</button>
+          <!-- Two across: the board is what a player wants right after seeing
+               their score, and burying it behind the title screen made them
+               leave the results card to go and look. -->
+          <div class="title-actions">
+            <button id="btn-over-board" type="button" class="ghost hidden">리더보드</button>
+            <button id="btn-home" type="button" class="ghost">타이틀로</button>
+          </div>
         </div>
       </div>
     </div>

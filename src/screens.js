@@ -87,8 +87,10 @@ export class Screens {
     if (accountBtn) accountBtn.onclick = () => a.openAccount();
     const accountClose = $("btn-account-close");
     if (accountClose) accountClose.onclick = () => this.closeAccount();
-    const boardBtn2 = $("btn-leaderboard");
-    if (boardBtn2) boardBtn2.onclick = () => a.openLeaderboard();
+    for (const id of ["btn-leaderboard", "btn-over-board"]) {
+      const button = $(id);
+      if (button) button.onclick = () => a.openLeaderboard();
+    }
     const boardClose = $("btn-leaderboard-close");
     // Routed through the Game rather than closed directly: it owns the live
     // subscriptions behind the panel and has to be told to drop them.
@@ -191,7 +193,10 @@ export class Screens {
     const bar = $("account-bar");
     const boardBtn = $("btn-leaderboard");
     if (bar) bar.classList.toggle("hidden", !cloud.enabled);
-    if (boardBtn) boardBtn.classList.toggle("hidden", !cloud.enabled || !cloud.signedIn);
+    const overBoard = $("btn-over-board");
+    const canSee = cloud.enabled && cloud.signedIn;
+    if (boardBtn) boardBtn.classList.toggle("hidden", !canSee);
+    if (overBoard) overBoard.classList.toggle("hidden", !canSee);
     if (!cloud.enabled) return;
 
     const state = $("account-state");
@@ -501,6 +506,21 @@ export class Screens {
             </li>`;
         })
         .join("");
+
+      // Outside the top ten, the list is a list of other people. Pinned at the
+      // bottom so the player can see where they sit relative to it, which is
+      // the question they opened the board to answer.
+      if (standing?.rank != null && !rows.some((row) => row.handle === myHandle)) {
+        list.insertAdjacentHTML(
+          "beforeend",
+          `<li class="leaderboard-row me pinned">
+             <span class="leaderboard-rank">${standing.rank}</span>
+             <span class="leaderboard-handle">${escapeHtml(standing.handle ?? myHandle ?? "")}</span>
+             <span class="leaderboard-score">${standing.best.toLocaleString()}</span>
+             <span class="report-flag" aria-hidden="true"></span>
+           </li>`,
+        );
+      }
     }
 
     this.standings.mine =
@@ -538,6 +558,22 @@ export class Screens {
             </li>`,
         )
         .join("");
+
+      // Same for the school column: a school outside the top ten is still the
+      // player's school, and its place is the point.
+      if (standing?.rank != null && !rows.some((row) => row.label === standing.label)) {
+        list.insertAdjacentHTML(
+          "beforeend",
+          `<li class="leaderboard-row me pinned">
+             <span class="leaderboard-rank">${standing.rank}</span>
+             <span class="leaderboard-handle">
+               ${escapeHtml(standing.label)}
+               <em class="school-members">${standing.members ?? 0}명</em>
+             </span>
+             <span class="leaderboard-score">${standing.total.toLocaleString()}</span>
+           </li>`,
+        );
+      }
     }
 
     this.standings.school =
