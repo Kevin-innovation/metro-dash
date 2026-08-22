@@ -1,38 +1,38 @@
 # MetroDash generated asset 대응표 v1
 
-이 문서는 현재 코드의 프리미티브/절차 텍스처 대상과 생성 이미지 후보의 대응을 기록한다. 오브젝트 자산은 Phase 5에서 런타임 연결을 완료했고, 캐릭터·환경 자산은 다음 연결 작업을 위해 후보 상태로 유지한다.
+이 문서는 현재 코드의 프리미티브/절차 텍스처 대상과 생성 이미지 후보의 대응을 기록한다. Phase 5 전까지는 시각 자산만 확정하며, 런타임 연결은 보류한다.
 
 ## 확정된 게임 오브젝트
 
 | 코드 대상 | 논리 ID | 생성 자산 | 상태 |
 | --- | --- | --- | --- |
-| `makeTrain` | `train` | `objects/train/train-rear-3q-v1.png` | RGBA 확정; 런타임 billboard 연결 |
-| `makeBus` | `bus` | `objects/bus/bus-oncoming-front-3q-v1.png` | RGBA 확정; 접근 상태에 런타임 연결 |
-| `makeBarrier` | `barrier` | `objects/obstacles/barrier-jump-v1.png` | RGBA 확정; 점프 전용 billboard 연결 |
-| `makeSign` | `sign` | `objects/obstacles/slide-gate-v1.png` | RGBA 확정; 슬라이드 전용 billboard 연결 |
-| `makeCrate` | `crate` | `objects/obstacles/crate-v1.png` | RGBA 확정; 점프 전용 billboard 연결 |
-| `makeCoin` | `coin` | `objects/collectibles/coin-v1.png` | RGBA 확정; 런타임 billboard 연결 |
-| `makeMagnet` | `magnet` | `objects/powerups/magnet-v1.png` | RGBA 확정; 런타임 billboard 연결 |
-| `makeJetpack` | `jetpack` | `objects/powerups/jetpack-v1.png` | RGBA 확정; 런타임 billboard 연결 |
-| `makeDouble` | `double` | `objects/powerups/double-v1.png` | RGBA 확정; 런타임 billboard 연결 |
-| `makeSneakers` | `sneakers` | `objects/powerups/sneakers-v1.png` | RGBA 확정; 런타임 billboard 연결 |
+| `makeTrain` | `train` | `objects/train/train-rear-3q-v1.png` | RGBA 확정 |
+| `makeBus` | `bus` | `objects/bus/bus-oncoming-front-3q-v1.png` | RGBA 확정; 접근 방향 전용 |
+| `makeBarrier` | `barrier` | `objects/obstacles/barrier-jump-v1.png` | RGBA 확정; 점프 전용 |
+| `makeSign` | `sign` | `objects/obstacles/slide-gate-v1.png` | RGBA 확정; 슬라이드 전용 |
+| `makeCrate` | `crate` | `objects/obstacles/crate-v1.png` | RGBA 확정; 점프 전용 |
+| `makeCoin` | `coin` | `objects/collectibles/coin-v1.png` | RGBA 확정 |
+| `makeMagnet` | `magnet` | `objects/powerups/magnet-v1.png` | RGBA 확정 |
+| `makeJetpack` | `jetpack` | `objects/powerups/jetpack-v1.png` | RGBA 확정 |
+| `makeDouble` | `double` | `objects/powerups/double-v1.png` | RGBA 확정 |
+| `makeSneakers` | `sneakers` | `objects/powerups/sneakers-v1.png` | RGBA 확정 |
 
 ## 확정된 캐릭터 자산
 
 | 코드 대상 | 논리 ID/상태 | 생성 자산 | 규칙 |
 | --- | --- | --- | --- |
-| `src/player.js`의 Kai root/limb model | `kai` | `character/kai/character-kai-master-v2-rear.png` | 후방 3/4 마스터; 런타임 연결 대기 |
-| Kai pose states | `run`, `jump`, `slide`, `mount`, `boarding`, `flying` | `character/kai/character-kai-*-rear-v1.png` | 관절 각도만 변경; 헤어·의상·배낭·비율 고정; 런타임 연결 대기 |
+| `src/player.js`의 Kai root/limb model | `kai` | `character/kai/character-kai-master-v2-rear.png` | 후방 3/4 마스터 |
+| Kai pose states | `run`, `jump`, `slide`, `mount`, `boarding`, `flying` | `character/kai/character-kai-*-rear-v1.png` | 관절 각도만 변경; 헤어·의상·배낭·비율 고정 |
 
 ## 환경 자산 후보
 
 | 코드 대상 | 생성 자산 | 사용 의도 | 상태 |
 | --- | --- | --- | --- |
-| `makeFacade` / skyline building boxes | `environment/buildings/apartment-tower-3q-v1.png` | 반복 배치되는 아파트 시각 기준 | opaque RGB 후보; 런타임 연결 대기 |
-| `makeSky` + `makeClouds` + building recycle | `environment/city/city-skyline-panorama-v1.png` | 넓은 도시 배경·소실점 기준 | opaque RGB 후보; 런타임 연결 대기 |
-| `createWorld` tunnel shell/mouth | `environment/tunnel/tunnel-mouth-3q-v1.png` | 터널 진입 연출 기준 | opaque RGB 후보; 런타임 연결 대기 |
-| track segments / retaining wall | `environment/track/elevated-track-deck-v1.png` | 3레인 트랙·벽 livery 기준 | opaque RGB 후보; 런타임 연결 대기 |
-| `createWorld` pole loop | `environment/props/streetlamp-v1.png` | 반복 배치 가로등 prop | RGBA 확정; 런타임 연결 대기 |
+| `makeFacade` / skyline building boxes | `environment/buildings/apartment-tower-3q-v1.png` | 반복 배치되는 아파트 시각 기준 | opaque RGB 후보 |
+| `makeSky` + `makeClouds` + building recycle | `environment/city/city-skyline-panorama-v1.png` | 넓은 도시 배경·소실점 기준 | opaque RGB 후보 |
+| `createWorld` tunnel shell/mouth | `environment/tunnel/tunnel-mouth-3q-v1.png` | 터널 진입 연출 기준 | opaque RGB 후보 |
+| track segments / retaining wall | `environment/track/elevated-track-deck-v1.png` | 3레인 트랙·벽 livery 기준 | opaque RGB 후보 |
+| `createWorld` pole loop | `environment/props/streetlamp-v1.png` | 반복 배치 가로등 prop | RGBA 확정 |
 
 ## 방향·렌더링 규칙
 
