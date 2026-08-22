@@ -584,9 +584,16 @@ body.running #game-canvas {
   -webkit-overflow-scrolling: touch;
 }
 
-.sky-wash {
-  position: absolute;
-  inset: 0;
+/**
+ * The scrim behind the title screen, painted by the overlay itself.
+ *
+ * It used to be a child element at inset:0. Inside a scroll container that
+ * resolves against the visible box and then scrolls away with everything else —
+ * so the wash was exactly one screen tall, slid off the top on the first swipe,
+ * and every line below it sat on the bare game. An element's own background
+ * does not scroll with what it contains, which is the whole fix.
+ */
+#title-screen {
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -594,7 +601,24 @@ body.running #game-canvas {
     rgba(8, 16, 24, 0.35) 62%,
     rgba(8, 16, 24, 0.82) 100%
   );
-  pointer-events: none;
+}
+
+/**
+ * Below the split the card has no surface of its own — the text is straight on
+ * the game — and the page scrolls, which means any line can end up anywhere on
+ * the screen. A scrim that is only dark at the bottom cannot carry that, so on
+ * a phone it is dark all the way up. Still a gradient, so the sky above the
+ * wordmark is dimmed rather than covered.
+ */
+@media (max-width: 819px) {
+  #title-screen {
+    background: linear-gradient(
+      180deg,
+      rgba(8, 16, 24, 0.44) 0%,
+      rgba(8, 16, 24, 0.7) 40%,
+      rgba(8, 16, 24, 0.88) 100%
+    );
+  }
 }
 
 .title-card,
