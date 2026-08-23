@@ -11,7 +11,15 @@ import {
   upgradeCost,
 } from "../src/shop.js";
 import { MISSION_TIERS } from "../src/missions.js";
-import { RANKS, missionTier, rankAt, rankProgress, runXp } from "../src/progression.js";
+import {
+  RANKS,
+  missionTier,
+  rankAt,
+  rankProgress,
+  rankReward,
+  rankUpBetween,
+  runXp,
+} from "../src/progression.js";
 
 const storeWith = (patch = {}) => {
   const store = new SaveStore(createMemoryStorage());
@@ -212,6 +220,51 @@ describe("purchases", () => {
 });
 
 describe("rank progression", () => {
+  /**
+   * The nine ranks the ladder started with, written out rather than read from
+   * the table they are meant to guard. Everyone who has ever levelled did it
+   * against these numbers, and moving one demotes whoever is standing on it.
+   */
+  it("never moves the first nine thresholds", () => {
+    expect(RANKS.slice(0, 9).map((r) => r.xp)).toEqual([
+      0, 600, 1800, 4000, 7500, 13000, 21000, 33000, 50000,
+    ]);
+  });
+
+  it("runs to level 99, strictly increasing, every rank named", () => {
+    expect(RANKS).toHaveLength(99);
+    for (let i = 0; i < RANKS.length; i++) {
+      expect(RANKS[i].level, `index ${i}`).toBe(i + 1);
+      expect(RANKS[i].name, `Lv.${i + 1}`).toBeTruthy();
+      if (i > 0) expect(RANKS[i].xp, `Lv.${i + 1}`).toBeGreaterThan(RANKS[i - 1].xp);
+    }
+  });
+
+  /**
+   * The step to the next rank has to stay within reach of a session, or the
+   * ladder stops being something a player is climbing and becomes scenery.
+   */
+  it("keeps the next rank about a run away", () => {
+    for (let i = 9; i < RANKS.length; i++) {
+      const step = RANKS[i].xp - RANKS[i - 1].xp;
+      expect(step, `Lv.${RANKS[i].level}`).toBeGreaterThan(0);
+      // A good run pays around ten thousand; a step should never be a month.
+      expect(step / RANKS[i - 1].xp, `Lv.${RANKS[i].level}`).toBeLessThan(0.08);
+    }
+  });
+
+  /**
+   * The reward was 250 × (level - 1), which was fine while nine was the top and
+   * would have paid 24,500 for one level-up at ninety-nine — against a shop
+   * that costs 113,700 to empty.
+   */
+  it("does not turn ninety more ranks into a coin tap", () => {
+    expect(rankReward(2)).toBe(250);
+    expect(rankReward(9)).toBe(2000);
+    expect(rankReward(99)).toBe(2000);
+    expect(rankUpBetween(1, 99).coins).toBeLessThan(200_000);
+  });
+
   it("starts at level 1 and only ever climbs", () => {
     expect(rankAt(0).level).toBe(1);
     let previous = 0;
