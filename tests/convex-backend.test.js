@@ -1157,6 +1157,94 @@ describe("admin gate", () => {
   });
 });
 
+describe("admin:recordRun", () => {
+  /**
+   * The reason this exists. A score edited into the player row led the live
+   * weekly board and then vanished on Monday, because the hall is worked out
+   * from the runs and there was no run behind it.
+   */
+  it("reaches the weekly board, the school total and the hall alike", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "기록보정");
+    await t.mutation(api.players.setSchool, {
+      token,
+      region: "대구",
+      level: "중",
+      name: "노변",
+    });
+
+    await t.mutation(api.admin.recordRun, {
+      adminKey: ADMIN_KEY,
+      handle: "기록보정",
+      score: 260173,
+    });
+
+    const week = await t.query(api.scores.top, { range: "week" });
+    expect(week[0]).toMatchObject({ handle: "기록보정", best: 260173 });
+
+    const all = await t.query(api.scores.top, { range: "all" });
+    expect(all[0]).toMatchObject({ handle: "기록보정", best: 260173 });
+
+    const schools = await t.query(api.schools.top, {});
+    expect(schools[0]).toMatchObject({ label: "대구노변중", total: 260173 });
+
+    // And the hall, which reads the runs rather than any of the above.
+    await t.mutation(api.hall.closeWeek, { adminKey: ADMIN_KEY, weeksAgo: 0, force: true });
+    const [closed] = await t.query(api.hall.list, {});
+    expect(closed.players[0]).toMatchObject({ handle: "기록보정", score: 260173 });
+    expect(closed.schools[0]).toMatchObject({ label: "대구노변중", total: 260173 });
+  });
+
+  it("일반부도 개인 순위에는 들어간다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "일반부선수");
+    await t.mutation(api.players.setSchool, {
+      token,
+      region: "일반",
+      level: "일",
+      name: "일반부",
+    });
+    await t.mutation(api.admin.recordRun, {
+      adminKey: ADMIN_KEY,
+      handle: "일반부선수",
+      score: 90000,
+    });
+
+    const week = await t.query(api.scores.top, { range: "week" });
+    expect(week[0]).toMatchObject({ handle: "일반부선수", school: "일반부" });
+
+    await t.mutation(api.hall.closeWeek, { adminKey: ADMIN_KEY, weeksAgo: 0, force: true });
+    const [closed] = await t.query(api.hall.list, {});
+    // On the podium as a person, absent from the school ranking — 일반부 is an
+    // affiliation, not a school, and only the second of those excludes it.
+    expect(closed.players[0]).toMatchObject({ handle: "일반부선수", score: 90000 });
+    expect(closed.schools).toHaveLength(0);
+  });
+
+  it("does not pay for itself", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "무보수");
+    const before = await t.query(api.players.load, { token });
+    await t.mutation(api.admin.recordRun, { adminKey: ADMIN_KEY, handle: "무보수", score: 50000 });
+    const after = await t.query(api.players.load, { token });
+    expect(after.coins).toBe(before.coins);
+  });
+
+  it("refuses a wrong key, an unknown player and a score of zero", async () => {
+    const t = backend();
+    await signUp(t, "거절");
+    await expect(
+      t.mutation(api.admin.recordRun, { adminKey: "wrong", handle: "거절", score: 10 }),
+    ).rejects.toThrow(/관리자 키/);
+    await expect(
+      t.mutation(api.admin.recordRun, { adminKey: ADMIN_KEY, handle: "없는사람", score: 10 }),
+    ).rejects.toThrow(/닉네임/);
+    await expect(
+      t.mutation(api.admin.recordRun, { adminKey: ADMIN_KEY, handle: "거절", score: 0 }),
+    ).rejects.toThrow(/1 이상/);
+  });
+});
+
 describe("admin:rename", () => {
   it("carries the player's runs and clears the reports that prompted it", async () => {
     const t = backend();

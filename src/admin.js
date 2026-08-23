@@ -132,6 +132,7 @@ function renderPlayers() {
               : ""
           }
           <button data-act="coins" data-handle="${escapeHtml(row.handle)}">코인</button>
+          <button data-act="score" data-handle="${escapeHtml(row.handle)}">점수 기록</button>
           <button data-act="pin" data-handle="${escapeHtml(row.handle)}">비번 초기화</button>
           ${locked ? `<button data-act="unlock" data-handle="${escapeHtml(row.handle)}">잠금 해제</button>` : ""}
           <button data-act="rename" data-handle="${escapeHtml(row.handle)}">개명</button>
@@ -198,6 +199,18 @@ async function act(kind, handle) {
       if (!Number.isFinite(coins) || coins === 0) return toast("숫자를 입력하세요", "bad");
       const result = await call("mutation", "admin:grantCoins", { handle, coins });
       toast(`${handle} 코인 → ${result.coins.toLocaleString()}`);
+    } else if (kind === "score") {
+      // A run rather than a number: the weekly board, the school totals and the
+      // hall of fame all descend from the runs table, and a score typed
+      // straight into the player row reaches none of them.
+      const typed = prompt(`${handle} 님의 기록으로 남길 점수`, "");
+      if (!typed) return;
+      const score = Math.floor(Number(typed));
+      if (!Number.isFinite(score) || score <= 0) return toast("1 이상의 숫자를 입력하세요", "bad");
+      const result = await call("mutation", "admin:recordRun", { handle, score });
+      toast(
+        `${handle} 기록 ${score.toLocaleString()}점 · 최고 ${result.best.toLocaleString()}점`,
+      );
     } else if (kind === "unlock") {
       await call("mutation", "admin:unlock", { handle });
       toast(`${handle} 잠금을 풀었습니다`);

@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { handleKey, validateHandle } from "../src/nickname.js";
 import { canonicalSchool, schoolKey, schoolLabel, validateSchool } from "../src/school.js";
-import { ensureSchool, joinSchool, leaveSchool } from "./schools.js";
+import { adjustSchool, adjustSchoolWeek, ensureSchool, joinSchool, leaveSchool } from "./schools.js";
 import { endAllSessions } from "./session.js";
 import { weekKey, weekStart } from "../src/week.js";
 
@@ -459,6 +459,97 @@ export const backfillWeek = mutation({
     }
 
     return { ok: true, week, players: updated, schools, levelled };
+  },
+});
+
+/**
+ * Record a score as a run.
+ *
+ * The way to change what a player has scored. Editing `best` in the dashboard
+ * moves one number and leaves everything derived from runs behind it: the
+ * weekly board reads `weekBest`, the school boards read running totals, and the
+ * hall of fame is worked out from the `scores` table — so a hand-edited figure
+ * led the live board on Sunday and vanished from the hall on Monday.
+ *
+ * This writes the run first and lets everything else follow it, which is the
+ * same path a real run takes. What it deliberately does not do is pay: the coin
+ * ledger is untouched, because a correction is not an afternoon of playing.
+ *
+ * `at` records the run into a past week — for a week whose hall needs fixing,
+ * which can then be closed again with hall:closeWeek.
+ */
+export const recordRun = mutation({
+  args: {
+    adminKey: v.string(),
+    handle: v.string(),
+    score: v.number(),
+    at: v.optional(v.number()),
+  },
+  handler: async (ctx, { adminKey, handle, score: raw, at }) => {
+    requireAdmin(adminKey);
+    const player = await byHandle(ctx, handle);
+    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
+
+    const score = Math.floor(Number(raw));
+    if (!Number.isFinite(score) || score <= 0) throw new ConvexError("점수는 1 이상이어야 합니다");
+
+    const now = Date.now();
+    const when = Number.isFinite(at) ? Math.floor(at) : now;
+    if (when > now) throw new ConvexError("미래의 기록은 넣을 수 없습니다");
+
+    // The run itself. The shape of a real one, with the fields a staff entry
+    // cannot honestly claim left at zero — nothing reads them but the run
+    // detail, and inventing a distance to go with the score would be a lie the
+    // fairness audit would later have to explain.
+    await ctx.db.insert("scores", {
+      playerId: player._id,
+      handle: player.handle,
+      school: player.school?.label ?? "",
+      score,
+      distance: 0,
+      coins: 0,
+      comboMax: 0,
+      seconds: 0,
+      character: "staff",
+      createdAt: when,
+    });
+
+    const week = weekKey(when);
+    const thisWeek = week === weekKey(now);
+    const weekBest = player.weekKey === week ? (player.weekBest ?? 0) : 0;
+
+    const patch = { updatedAt: now };
+    if (score > player.best) patch.best = score;
+    // Only when the run lands in the week the player's stored figures are for.
+    // A run backfilled into March must not present itself as this week's best;
+    // the hall reads that week from the runs and will find it there.
+    if (thisWeek && (score > weekBest || player.weekKey !== week)) {
+      patch.weekKey = week;
+      patch.weekBest = Math.max(score, weekBest);
+    }
+    await ctx.db.patch(player._id, patch);
+
+    // The same deltas scores:submit moves, so the school boards stay in step
+    // without a rebuild.
+    if (score > player.best) {
+      await adjustSchool(ctx, player.schoolKey, { total: score - player.best });
+    }
+    if (thisWeek && score > weekBest) {
+      await adjustSchoolWeek(ctx, player.schoolKey, week, {
+        total: score - weekBest,
+        newMember: weekBest === 0,
+      });
+    }
+
+    return {
+      ok: true,
+      handle: player.handle,
+      score,
+      best: Math.max(score, player.best),
+      weekBest: thisWeek ? Math.max(score, weekBest) : weekBest,
+      week,
+      thisWeek,
+    };
   },
 });
 
