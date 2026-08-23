@@ -1961,6 +1961,25 @@ kbd {
   font-family: var(--font-numeric);
   font-size: 17px;
   color: var(--gold);
+  white-space: nowrap;
+}
+
+/**
+ * What the number on the right is measured in.
+ *
+ * Only the level tab carries one. Every other tab is ranking runs, and there
+ * the figure in this column is a score — which is exactly why the ladder needs
+ * to say otherwise: same place, same size, same gold, and 112,561 XP read as a
+ * score somebody had not seen before. Smaller and quieter than the number, so
+ * it labels it rather than competing with it.
+ */
+.score-unit {
+  margin-left: 4px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: #9ec2d8;
 }
 
 .leaderboard-empty {

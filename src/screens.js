@@ -1052,7 +1052,7 @@ export class Screens {
           ${escapeHtml(row.handle)}
           <em class="row-school">Lv.${row.level}${row.school ? ` · ${escapeHtml(row.school)}` : ""}</em>
         </span>
-        <span class="leaderboard-score">${row.xp.toLocaleString()}</span>
+        <span class="leaderboard-score">${row.xp.toLocaleString()}<em class="score-unit">XP</em></span>
         <span class="report-flag" aria-hidden="true"></span>
       </li>`;
 
@@ -1069,7 +1069,7 @@ export class Screens {
                ${escapeHtml(standing.handle ?? myHandle ?? "")}
                <em class="row-school">Lv.${standing.level}</em>
              </span>
-             <span class="leaderboard-score">${standing.xp.toLocaleString()}</span>
+             <span class="leaderboard-score">${standing.xp.toLocaleString()}<em class="score-unit">XP</em></span>
              <span class="report-flag" aria-hidden="true"></span>
            </li>`,
         );
@@ -1077,7 +1077,9 @@ export class Screens {
     }
 
     this.standings.mine =
-      standing?.rank != null ? `내 레벨 ${standing.rank}위 · Lv.${standing.level}` : "";
+      standing?.rank != null
+        ? `내 레벨 ${standing.rank}위 · Lv.${standing.level} · ${standing.xp.toLocaleString()} XP`
+        : "";
     this.standings.school = "";
     this.standings.schoolNote = "";
     this.applyStandings();
