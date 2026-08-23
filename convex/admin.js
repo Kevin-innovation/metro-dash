@@ -441,13 +441,19 @@ export const backfillWeek = mutation({
       schools += 1;
     }
 
-    // The experience mirror, for accounts that have not saved since the column
-    // existed. Without it the ladder would only show whoever played today.
+    // Seed the experience column on accounts that have not saved since it
+    // existed, so the ladder shows more than whoever played today.
+    //
+    // Only where it is absent. It used to overwrite from the profile every time
+    // this ran, which was right while the column was a mirror and is wrong now
+    // that the column is the truth — a correction typed in by staff, or
+    // experience earned on a phone that a stale desktop has not seen, would be
+    // undone by running a repair tool that has nothing to do with either.
     let levelled = 0;
     for await (const player of ctx.db.query("players")) {
+      if (typeof player.xp === "number") continue;
       const stored = player.profile?.xp ?? 0;
       const xp = Number.isFinite(stored) ? Math.max(0, Math.floor(stored)) : 0;
-      if (player.xp === xp) continue;
       await ctx.db.patch(player._id, { xp });
       levelled += 1;
     }

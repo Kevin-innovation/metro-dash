@@ -4,6 +4,7 @@ import { convexTest } from "convex-test";
 import schema from "../convex/schema.js";
 import { api } from "../convex/_generated/api.js";
 import { FREE_ATTEMPTS, MAX_ACCOUNTS_PER_DEVICE, maxDistanceIn } from "../src/leaderboard-rules.js";
+import { rankAt } from "../src/progression.js";
 import { MAX_SESSIONS } from "../convex/session.js";
 
 /**
@@ -295,6 +296,77 @@ describe("players:save", () => {
       profile: { coins: 0, best: 0 },
     });
     expect(synced).toMatchObject({ ok: true, best: 4200 });
+  });
+
+  it("adds the experience a browser reports instead of taking its total", async () => {
+    const t = backend();
+    const phone = await signUp(t, "경험치두기기", "1234", "phone");
+    const desktop = await t.mutation(api.players.signIn, {
+      handle: "경험치두기기",
+      pin: "1234",
+      deviceId: "desktop",
+    });
+
+    await t.mutation(api.players.save, {
+      token: phone.token,
+      profile: { coins: 0, xp: 5000 },
+      xpDelta: 5000,
+    });
+
+    // The desktop has not played since, so its profile still says 0. Reporting
+    // what it earned rather than what it holds is what stops it from undoing
+    // the afternoon the phone had — this used to drag the rank backwards on a
+    // device that was merely opened.
+    const stale = await t.mutation(api.players.save, {
+      token: desktop.token,
+      profile: { coins: 0, xp: 0 },
+      xpDelta: 0,
+    });
+    expect(stale).toMatchObject({ ok: true, xp: 5000 });
+
+    // And a second device that did play adds to it rather than replacing it.
+    const played = await t.mutation(api.players.save, {
+      token: desktop.token,
+      profile: { coins: 0, xp: 300 },
+      xpDelta: 300,
+    });
+    expect(played.xp).toBe(5300);
+
+    const loaded = await t.query(api.players.load, { token: phone.token });
+    expect(loaded.level).toBe(rankAt(5300).level);
+  });
+
+  it("keeps a correction typed in by staff", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "경험치보정");
+    await t.mutation(api.players.save, { token, profile: { coins: 0, xp: 100 }, xpDelta: 100 });
+
+    // Staff raise the column in the dashboard. The next sync used to overwrite
+    // it with whatever the browser happened to be holding.
+    const player = await t.run(async (ctx) => {
+      const row = await ctx.db.query("players").first();
+      await ctx.db.patch(row._id, { xp: 30000 });
+      return row._id;
+    });
+    expect(player).toBeTruthy();
+
+    const after = await t.mutation(api.players.save, {
+      token,
+      profile: { coins: 0, xp: 100 },
+      xpDelta: 0,
+    });
+    expect(after.xp).toBe(30000);
+  });
+
+  it("caps how much experience one sync may add", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "경험치폭탄");
+    const result = await t.mutation(api.players.save, {
+      token,
+      profile: { coins: 0, xp: 99_999_999 },
+      xpDelta: 99_999_999,
+    });
+    expect(result.xp).toBeLessThan(99_999_999);
   });
 
   it("refuses a save blob big enough to be an attack", async () => {

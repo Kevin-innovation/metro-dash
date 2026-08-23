@@ -425,8 +425,10 @@ export class Game {
     this.store.data = normalizeSave(profile);
     // Taken wholesale from the server, so it is already in step with it. Left
     // at zero, the next sync would read the whole balance as newly earned and
-    // hand it out a second time.
+    // hand it out a second time. Experience is settled the same way and needs
+    // the same marker for the same reason.
     this.store.data.syncedCoins = this.store.data.coins;
+    this.store.data.syncedXp = this.store.data.xp;
     this.store.flush();
     this.settings = this.store.data.settings;
     this.syncMissions();
@@ -627,7 +629,10 @@ export class Game {
       this.screens.showToast("클라우드 저장이 거절됐어요 · 선생님께 문의해 주세요");
       return;
     }
-    if (result?.ok) this.adoptBest(result.best);
+    if (result?.ok) {
+      this.adoptBest(result.best);
+      this.adoptXp(result.xp);
+    }
     if (!result?.ok || typeof result.coins !== "number") return;
 
     const before = this.store.data.coins;
@@ -663,6 +668,29 @@ export class Game {
     const next = Math.floor(Number(best) || 0);
     if (next <= (this.store.data.best ?? 0)) return;
     this.store.recordBest(next);
+    this.screens.refreshProfile(this.store.data);
+  }
+
+  /**
+   * Take the experience the server settled on.
+   *
+   * Set outright rather than raised, unlike the record above: this is the same
+   * arrangement the coin balance has, where what comes back is the answer. It
+   * has to be, or a correction made by staff would be undone by the next run,
+   * and experience earned on a phone would never reach the desktop.
+   *
+   * The marker moves whether or not the figure did, because it is the marker
+   * that says what has already been reported — leaving it behind would send the
+   * same experience up a second time and pay it twice.
+   */
+  adoptXp(xp) {
+    if (typeof xp !== "number" || !Number.isFinite(xp)) return;
+    const next = Math.max(0, Math.floor(xp));
+    this.store.set("syncedXp", next);
+    if (next === this.store.data.xp) return;
+    this.store.set("xp", next);
+    // The rank badge, the bar under it and the difficulty the next set of
+    // missions is dealt at all read this number.
     this.screens.refreshProfile(this.store.data);
   }
 

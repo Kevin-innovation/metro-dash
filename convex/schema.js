@@ -68,12 +68,18 @@ export default defineSchema({
     pendingCoins: v.optional(v.number()),
 
     /**
-     * A copy of the profile's experience, out here so it can be indexed.
+     * The account's experience, owned by the server.
      *
-     * Mirrored on every save rather than owned like `coins`: it decides a rank
-     * badge and a ladder, not a balance anyone can spend, so the cost of a
-     * client overstating it is a wrong badge. Clamped on the way in so it
-     * cannot be a string or an infinity.
+     * It used to be mirrored from the profile on every save, on the reasoning
+     * that a client overstating it costs only a wrong badge. What that missed
+     * was the other direction. A device that had not played since Tuesday
+     * pushed Tuesday's figure up on its next page load — not on a run, on
+     * merely being opened — and the rank went *backwards*. A correction typed
+     * into the dashboard lasted until the player next opened the game.
+     *
+     * So it works like `coins` now: the client reports what it earned since it
+     * last synced and is handed the total back. Absent on accounts that have
+     * not synced since; the first sync fills it from the profile they had.
      */
     xp: v.optional(v.number()),
 

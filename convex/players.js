@@ -89,6 +89,14 @@ function coinsOf(player) {
 /** Most a single sync may add. A run pays tens of coins; this is a wall. */
 const MAX_COIN_GAIN_PER_SYNC = 5000;
 
+/**
+ * The same wall for experience, set far higher because one run legitimately
+ * pays far more: XP is a twenty-fifth of the score, and a good run scores in
+ * the hundreds of thousands. This is a bound on the absurd, not on the
+ * generous — a browser offline all afternoon still lands everything it earned.
+ */
+const MAX_XP_GAIN_PER_SYNC = 60000;
+
 function newToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -257,8 +265,12 @@ export const save = mutation({
      * balance rather than a change to one.
      */
     coinsAbsolute: v.optional(v.boolean()),
+    /** Experience earned since this browser last synced; see the schema note. */
+    xpDelta: v.optional(v.number()),
+    /** The same one moment coinsAbsolute is sent for, and for the same reason. */
+    xpAbsolute: v.optional(v.boolean()),
   },
-  handler: async (ctx, { token, profile, coinsDelta, coinsAbsolute }) => {
+  handler: async (ctx, { token, profile, coinsDelta, coinsAbsolute, xpDelta, xpAbsolute }) => {
     const player = await requirePlayer(ctx, token);
 
     // The ledger no longer has to police the balance — the server owns that
@@ -281,12 +293,21 @@ export const save = mutation({
       ? Math.max(0, Math.floor(profile?.coins ?? 0))
       : Math.max(0, held + Math.min(delta, MAX_COIN_GAIN_PER_SYNC));
 
+    // Settled the same way, and deliberately not from `profile.xp` — a client
+    // that has been away states an old total, and stating totals is what let a
+    // browser drag the rank backwards by being opened.
+    const heldXp = xpOf(player);
+    const gainedXp = Math.trunc(xpDelta ?? 0);
+    const xp = xpAbsolute
+      ? Math.max(0, Math.floor(profile?.xp ?? 0))
+      : Math.max(0, heldXp + Math.min(gainedXp, MAX_XP_GAIN_PER_SYNC));
+
     await ctx.db.patch(player._id, {
       // The blob keeps a copy so a fresh device restoring it starts correct,
-      // but the column above is what decides.
-      profile: { ...sanitizeProfile(profile, player.best), coins },
+      // but the columns above are what decide.
+      profile: { ...sanitizeProfile(profile, player.best), coins, xp },
       coins,
-      xp: xpOf({ profile }),
+      xp,
       // Folded into `coins` by coinsOf; nothing left to hold.
       pendingCoins: 0,
       coinLedger: ledger,
@@ -301,8 +322,9 @@ export const save = mutation({
     // The record goes back down with the balance. A save cannot raise it — that
     // is the whole point of pinning it above — but the browser still has to be
     // told what it is, or a run played on a phone would raise the account's best
-    // everywhere except the screen that displays it.
-    return { ok: true, coins, best: player.best };
+    // everywhere except the screen that displays it. Experience rides along for
+    // the same reason: the server settled it, so the server states it.
+    return { ok: true, coins, best: player.best, xp };
   },
 });
 

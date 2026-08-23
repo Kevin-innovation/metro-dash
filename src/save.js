@@ -43,6 +43,8 @@ export function defaultSave() {
      * balance corrected by staff would be undone by the next run.
      */
     syncedCoins: 0,
+    /** The experience the server last confirmed. Same job as syncedCoins. */
+    syncedXp: 0,
     /** Consecutive days played, and the day the last run started. */
     streak: 0,
     lastDay: 0,
@@ -90,6 +92,7 @@ export function normalizeSave(raw) {
   // earned — the first sync would add it on top of what the server already
   // holds and double it. Absent means "already accounted for".
   out.syncedCoins = raw.syncedCoins === undefined ? out.coins : clampInt(raw.syncedCoins);
+  out.syncedXp = raw.syncedXp === undefined ? out.xp : clampInt(raw.syncedXp);
 
   out.settings = normalizeSettings(raw.settings);
   out.upgrades = { ...base.upgrades };

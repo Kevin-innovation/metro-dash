@@ -316,11 +316,17 @@ export class Cloud {
       // when a submitted run passes validation. Coins work the same way now:
       // what goes up is the change since the last sync, never a total.
       const coinsDelta = Math.round((profile?.coins ?? 0) - (profile?.syncedCoins ?? 0));
+      // Experience the same way, and for a reason coins learned first: a total
+      // is a claim about the world, a delta is a report about this browser. A
+      // browser that has been away has a stale total and an honest delta.
+      const xpDelta = Math.round((profile?.xp ?? 0) - (profile?.syncedXp ?? 0));
       const result = await this.mutation("players:save", {
         token: this.session.token,
         profile,
         coinsDelta,
         coinsAbsolute: options.absolute === true,
+        xpDelta,
+        xpAbsolute: options.absolute === true,
       });
       // The server refuses a save worth more coins than the account could have
       // earned. Reported rather than swallowed: a cloud copy that quietly
@@ -333,7 +339,7 @@ export class Cloud {
       // this browser learns about a run played somewhere else.
       return result?.ok === false
         ? result
-        : { ok: true, coins: result?.coins, best: result?.best };
+        : { ok: true, coins: result?.coins, best: result?.best, xp: result?.xp };
     } catch {
       return { ok: false, reason: "offline" };
     }
