@@ -572,6 +572,48 @@ body.running #game-canvas {
   pointer-events: auto;
 }
 
+/* Sits above the board button in the same corner. Not a button: nothing about
+   it is chosen, it simply either fires or it does not. */
+.antidote-chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 2px solid rgba(20, 212, 184, 0.6);
+  background: rgba(7, 16, 24, 0.6);
+  backdrop-filter: blur(8px);
+  animation: chipIn 0.28s ease-out;
+}
+
+.antidote-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Fires as the antidote is spent, so the corner it vanished from is the thing
+   that moved — a chip that simply stopped being there is not a message. */
+.antidote-chip.spent {
+  animation: antidoteSpend 0.5s ease-out forwards;
+}
+
+@keyframes antidoteSpend {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 rgba(20, 212, 184, 0);
+  }
+  35% {
+    transform: scale(1.35);
+    opacity: 1;
+    box-shadow: 0 0 22px rgba(20, 212, 184, 0.9);
+  }
+  100% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
 #btn-board {
   display: flex;
   align-items: center;
@@ -865,6 +907,60 @@ body.running #game-canvas {
   text-align: center;
 }
 
+/**
+ * The build number, tucked against the top of the wordmark.
+ *
+ * Inline, and vertically aligned to the cap height rather than the baseline,
+ * so it rides the shoulder of the D instead of sitting on the line with it.
+ * It is the smallest thing on the screen on purpose — knowing which version
+ * you are on matters exactly once, when something has changed.
+ */
+.version-badge {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: top;
+  transform: translateY(0.35em);
+  color: #7c9bb0;
+  font-family: var(--font-numeric);
+  font-size: clamp(10px, 1.5vh, 13px);
+  letter-spacing: 0.08em;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+/**
+ * The patch-notes button, in the space at the end of the 「내 기록」 heading.
+ *
+ * A ghost of a chip rather than a button: it is a door to something optional,
+ * and anything in this column that looks as solid as the panels under it would
+ * be read as one of them.
+ *
+ * Sits next to the heading rather than pinned to the far end of it. Pushed
+ * right it landed a few pixels from 「오늘의 미션」 across the column gap, and
+ * two headings that close together read as one heading with a button loose in
+ * the middle of it.
+ */
+.notes-chip {
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(7, 16, 24, 0.4);
+  color: #9ec2d8;
+  font-family: inherit;
+  font-size: clamp(10px, 1.4vh, 12px);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.notes-chip:hover,
+.notes-chip:focus-visible {
+  border-color: rgba(255, 210, 74, 0.6);
+  color: var(--gold);
+}
+
 h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -1107,14 +1203,17 @@ kbd {
  * blocks' own margins zeroed so they cannot argue with it.
  */
 .over-main,
-.over-side {
+.over-side,
+.over-outcome,
+.over-cta {
   display: flex;
   flex-direction: column;
   gap: clamp(8px, 1.4vh, 14px);
 }
 
 .over-main.over-main > *,
-.over-side.over-side > * {
+.over-outcome.over-outcome > *,
+.over-cta.over-cta > * {
   margin-top: 0;
   margin-bottom: 0;
 }
@@ -1122,7 +1221,7 @@ kbd {
 /* The lip under the primary button is painted rather than laid out, so it
    still needs its own room on top of the gap — otherwise the row of ghost
    buttons sits on it. Written in the same number that draws it. */
-.over-side.over-side > #btn-retry {
+.over-cta.over-cta > #btn-retry {
   margin-bottom: var(--btn-lip);
 }
 
@@ -1146,14 +1245,17 @@ kbd {
     min-width: 0;
   }
 
-  /* Both columns start on the same line. Centring this one against the taller
-     column beside it left a band of nothing above it the height of the score
-     breakdown, and two columns that begin at different heights do not read as
-     two columns — they read as one that has slipped. */
+  /**
+   * What the run earned rides the top, what to do next rides the bottom.
+   *
+   * Centring the whole column left a band of nothing above it the height of
+   * the score breakdown; top-aligning it left the same band below the buttons
+   * instead. Neither is a column — one is a column that has slipped and the
+   * other is a column that stops early. Pushed apart, both ends of this half
+   * meet both ends of the half beside it and there is no dead space at either.
+   */
   .over-side {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
     text-align: center;
   }
 
@@ -1374,6 +1476,134 @@ kbd {
 
 .title-actions .ghost {
   margin-top: 0;
+}
+
+/* --- patch notes ---------------------------------------------------------- */
+
+.notes-dialog {
+  width: min(620px, 100%);
+  text-align: left;
+}
+
+.notes-dialog h2 {
+  text-align: center;
+}
+
+.notes-sub {
+  margin: 0 0 16px;
+  color: #9ec2d8;
+  font-size: 14px;
+  text-align: center;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* The list is the only thing in here that grows, so it is the only thing
+     that scrolls. The heading and the close button stay put, which is what
+     keeps a long history from burying the way out of it. */
+  max-height: min(56vh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+.note {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(7, 16, 24, 0.5);
+  /* The accent is set per entry below and read by the version tag and the
+     bullets, so one declaration colours the whole card. */
+  --note: #9ec2d8;
+}
+
+.note-major {
+  --note: var(--gold);
+  border-color: rgba(255, 210, 74, 0.28);
+}
+
+.note-minor {
+  --note: #14d4b8;
+}
+
+.note-fix {
+  --note: #7c9bb0;
+}
+
+.note-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+/* Safari draws its own marker from a pseudo-element the standard rule misses. */
+.note-head::-webkit-details-marker {
+  display: none;
+}
+
+.note-version {
+  font-family: var(--font-numeric);
+  font-size: 15px;
+  color: var(--note);
+}
+
+.note-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #7c9bb0;
+}
+
+.note-kind {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--note) 45%, transparent);
+  color: var(--note);
+  white-space: nowrap;
+}
+
+.note-date {
+  white-space: nowrap;
+}
+
+.note-body {
+  margin: 0;
+  padding: 0 16px 13px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #c7dbe8;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.note-body li::marker {
+  color: var(--note);
+}
+
+/* Turns the arrow rather than swapping a character, so it is one shape moving
+   instead of two shapes taking turns. */
+.note-head::before {
+  content: "▸";
+  color: var(--note);
+  transition: transform 0.18s ease;
+}
+
+.note[open] > .note-head::before {
+  transform: rotate(90deg);
 }
 
 /* --- settings ------------------------------------------------------------ */

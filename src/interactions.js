@@ -67,7 +67,7 @@ export class Interactions {
 
   /**
    * @returns {Array<{ type: "coin", gain: number } | { type: "powerup", id: string }
-   *   | { type: "hazard", id: string }>}
+   *   | { type: "hazard", id: string, blocked: boolean }>}
    */
   collectPickups(player, { upgradeLevel }) {
     const events = [];
@@ -142,8 +142,8 @@ export class Interactions {
           life: 0.8,
           size: 0.4,
         });
-        this.run.addHazard(item.hazard);
-        events.push({ type: "hazard", id: item.hazard });
+        const { blocked } = this.run.addHazard(item.hazard);
+        events.push({ type: "hazard", id: item.hazard, blocked });
       } else if (item.powerup) {
         this.particles.burst(itemX, itemY, item.z, {
           count: 26,

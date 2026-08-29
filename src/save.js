@@ -22,6 +22,12 @@ export function defaultSave() {
     totalCoins: 0,
     xp: 0,
     hoverboards: 0,
+    /**
+     * Crow antidotes held. Blocks one crow egg and is spent doing it, so like
+     * the hoverboard this is a thing you buy for the run you are about to
+     * play rather than a stack you sit on.
+     */
+    antidotes: 0,
     character: DEFAULT_CHARACTER,
     characters: [DEFAULT_CHARACTER],
     upgrades,
@@ -79,6 +85,7 @@ export function normalizeSave(raw) {
     totalCoins: clampInt(raw.totalCoins),
     xp: clampInt(raw.xp),
     hoverboards: clampInt(raw.hoverboards, 0, 99),
+    antidotes: clampInt(raw.antidotes, 0, 99),
     missionsDone: clampInt(raw.missionsDone),
     missionDay: clampInt(raw.missionDay),
     missionBonusDay: clampInt(raw.missionBonusDay),
@@ -209,6 +216,18 @@ export class SaveStore {
     this.data.totalCoins += Math.floor(coins);
     this.recordBest(score);
     return this.flush();
+  }
+
+  /**
+   * Consume one crow antidote.
+   *
+   * @returns {boolean} whether one was held and has now been spent.
+   */
+  spendAntidote() {
+    if (!((this.data.antidotes ?? 0) > 0)) return false;
+    this.data.antidotes -= 1;
+    this.flush();
+    return true;
   }
 
   upgradeLevel(id) {

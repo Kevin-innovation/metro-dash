@@ -991,6 +991,13 @@ export class Game {
     const perk = perkFor(this.store.data.character);
     this.player.slideScale = perk.slideTime ?? 1;
     this.interactions.magnetScale = perk.magnetRange ?? 1;
+    // The run owns the numbers it ticks; reading the perk here means nothing
+    // downstream has to know a character was equipped.
+    this.run.crowScale = perk.crowTime ?? 1;
+    this.run.comboScale = perk.comboWindow ?? 1;
+    this.run.xpScale = perk.xpBonus ?? 1;
+    this.boardScale = perk.boardTime ?? 1;
+    this.crowVeilScale = perk.crowVeil ?? 1;
     this.cam = { x: 0, y: 3.6, z: -7.4 };
     this.pool.clear();
     this.particles.clear();
@@ -1174,7 +1181,9 @@ export class Game {
     // death and on reset, and gating on `playing` as well would lift the veil
     // the instant the game was paused and drop it again on resume.
     const veil = crowVeil(this.run.crowT, this.run.crowSeconds);
-    applyCrowGloom(this.world, veil);
+    // The world dims by the same reduced amount the overlay does, or 허수아비
+    // would be looking at a clear sheet over a pitch-dark track.
+    applyCrowGloom(this.world, veil * (this.crowVeilScale ?? 1));
     // Frozen with the rest of the simulation while paused, rather than left
     // flapping over a still frame.
     updateCrow(
@@ -1184,7 +1193,9 @@ export class Game {
       this.run.crowT,
       this.run.crowSeconds,
     );
-    this.screens.setCrowVeil(veil, this.quality.screenBlur);
+    // The perk thins the veil without shortening it separately — crowScale on
+    // the Run already did the length.
+    this.screens.setCrowVeil(veil * (this.crowVeilScale ?? 1), this.quality.screenBlur);
     this.updateCamera(frameDt);
     if (this.state === "playing") this.screens.syncHud(this);
     this.renderer.render(this.scene, this.camera);
@@ -1529,7 +1540,7 @@ export class Game {
     this.boardUsed = true;
     this.run.addBoard();
     this.player.boarding = true;
-    this.boardT = HOVERBOARD_TIME;
+    this.boardT = HOVERBOARD_TIME * (this.boardScale ?? 1);
     this.audio.board();
     vibrate(15);
     this.screens.refreshProfile(this.store.data);
@@ -1659,12 +1670,21 @@ export class Game {
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
       } else if (event.type === "hazard") {
-        this.audio.caw();
-        // Longer than a power-up's nudge and in two beats, so the hand knows
-        // something went wrong before the eyes have worked out what.
-        vibrate([28, 60, 40]);
-        this.screens.showToast(`${CROW.icon} ${CROW.name}가 달라붙었다!`);
-        this.shake = Math.max(this.shake, 0.45);
+        if (event.blocked) {
+          // The antidote is the only thing in the game that stops something
+          // from happening, so it gets its own sound and its own line. Silence
+          // plus a crow that failed to appear would read as the egg missing.
+          this.audio.powerup();
+          vibrate(18);
+          this.screens.showToast("💊 해독제가 까마귀를 막았다!");
+        } else {
+          this.audio.caw();
+          // Longer than a power-up's nudge and in two beats, so the hand knows
+          // something went wrong before the eyes have worked out what.
+          vibrate([28, 60, 40]);
+          this.screens.showToast(`${CROW.icon} ${CROW.name}가 달라붙었다!`);
+          this.shake = Math.max(this.shake, 0.45);
+        }
       } else {
         if (event.id === "jetpack") this.audio.jetpack();
         else this.audio.powerup();

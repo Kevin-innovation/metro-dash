@@ -34,6 +34,14 @@ export class Run {
   constructor(store) {
     this.store = store;
     this.powerups = createPowerupState();
+    /**
+     * Character perks, as multipliers. Written once per run by Game and left
+     * alone by reset(), which also runs on death — a perk is a property of who
+     * is equipped, not of the run in progress.
+     */
+    this.crowScale = 1;
+    this.comboScale = 1;
+    this.xpScale = 1;
     this.reset();
   }
 
@@ -72,6 +80,7 @@ export class Run {
       gates: 0,
       barriers: 0,
       crows: 0,
+      antidotes: 0,
     };
     // A run is banked when the player dies and again when they leave the card,
     // so progress is always committed as a delta against this.
@@ -93,7 +102,7 @@ export class Run {
 
   bumpCombo() {
     this.combo += 1;
-    this.comboT = COMBO_WINDOW;
+    this.comboT = COMBO_WINDOW * this.comboScale;
     if (this.combo > this.comboMax) this.comboMax = this.combo;
   }
 
@@ -154,10 +163,19 @@ export class Run {
    * one doubling the first.
    */
   addHazard(id, seconds = CROW_TIME) {
-    if (id !== "crow") return;
-    this.crowSeconds = seconds;
-    this.crowT = Math.max(this.crowT, seconds);
+    if (id !== "crow") return { blocked: false };
     this.metrics.crows += 1;
+    // The antidote is checked here rather than at the pickup, so every route
+    // into a hazard — the egg, a test, anything added later — is covered by
+    // one rule instead of by whoever remembered.
+    if (this.store.spendAntidote()) {
+      this.metrics.antidotes += 1;
+      return { blocked: true };
+    }
+    const held = seconds * this.crowScale;
+    this.crowSeconds = held;
+    this.crowT = Math.max(this.crowT, held);
+    return { blocked: false };
   }
 
   crowActive() {
@@ -218,7 +236,8 @@ export class Run {
     const score = this.score;
     const coinsDelta = this.coins - this.banked.coins;
     const distanceDelta = this.distance - this.banked.distance;
-    const xpDelta = runXp(score) - this.banked.xp;
+    const earnedXp = Math.round(runXp(score) * this.xpScale);
+    const xpDelta = earnedXp - this.banked.xp;
     const deltas = {};
     for (const key of Object.keys(this.metrics)) {
       deltas[key] = this.metrics[key] - (this.banked[key] ?? 0);
@@ -244,7 +263,7 @@ export class Run {
     this.banked = {
       coins: this.coins,
       distance: this.distance,
-      xp: runXp(score),
+      xp: earnedXp,
       ...this.metrics,
     };
 

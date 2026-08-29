@@ -6,7 +6,31 @@ export { CHARACTERS, characterById };
 /** Cost to reach level N (index 0 is unused — everyone starts at level 1). */
 export const UPGRADE_COSTS = [0, 0, 500, 1200, 2400, 4200];
 
-export const HOVERBOARD_COST = 350;
+/**
+ * A hoverboard eats the crash that would have ended the run, once per run.
+ *
+ * At 350 it was the cheapest thing in the shop and strictly the most valuable —
+ * a few coin lines paid for it, so there was never a reason not to be holding
+ * one, and "do I spend on insurance or on a character" was not a decision
+ * anybody had to make. Priced at what an extra life is actually worth.
+ */
+export const HOVERBOARD_COST = 3000;
+
+/**
+ * The crow antidote. Blocks one crow egg and is spent doing it.
+ *
+ * More than a hoverboard because it answers a worse problem: a crash is over
+ * in an instant and a crow is four and a half seconds of not being able to see
+ * what is coming, which is where the crash after it comes from.
+ */
+export const ANTIDOTE_COST = 5000;
+
+/**
+ * One at a time, same as the hoverboard and for the same reason: only one can
+ * be used per run, so holding nine would be buying nine runs of insurance in
+ * advance and would make the shop a place where the answer is "save up".
+ */
+export const ANTIDOTE_MAX = 1;
 /**
  * How many boards may be held at once.
  *
@@ -46,7 +70,16 @@ export function profileWorth(save) {
   for (const id of save?.characters ?? []) {
     spent += CHARACTERS.find((character) => character.id === id)?.cost ?? 0;
   }
-  spent += Math.max(0, Math.floor(save?.hoverboards ?? 0)) * HOVERBOARD_COST;
+  // Consumables are left out entirely, on purpose.
+  //
+  // They are spent and gone, so counting the ones still held always understated
+  // the total anyway — but the real reason is that this number is compared
+  // against a ledger recorded when the account was created, and repricing an
+  // item revalues everything already bought at the new price. The hoverboard
+  // went from 350 to 3,000: counted here, every profile holding a board bought
+  // last week would have appeared to have spent 2,650 coins it never earned,
+  // and the save would have been refused and the account flagged. Nobody who
+  // did that would have done anything wrong.
   return Math.max(0, Math.floor(save?.coins ?? 0)) + spent;
 }
 
@@ -94,6 +127,12 @@ export function shopView(save) {
       cost: HOVERBOARD_COST,
       affordable: save.coins >= HOVERBOARD_COST && save.hoverboards < HOVERBOARD_MAX,
     },
+    antidotes: {
+      owned: save.antidotes ?? 0,
+      max: ANTIDOTE_MAX,
+      cost: ANTIDOTE_COST,
+      affordable: save.coins >= ANTIDOTE_COST && (save.antidotes ?? 0) < ANTIDOTE_MAX,
+    },
   };
 }
 
@@ -120,6 +159,14 @@ export function purchase(store, kind, id) {
     if (save.hoverboards >= HOVERBOARD_MAX) return { ok: false, reason: "maxed" };
     if (!store.spendCoins(HOVERBOARD_COST)) return { ok: false, reason: "poor" };
     save.hoverboards += 1;
+    store.flush();
+    return { ok: true };
+  }
+
+  if (kind === "antidote") {
+    if ((save.antidotes ?? 0) >= ANTIDOTE_MAX) return { ok: false, reason: "maxed" };
+    if (!store.spendCoins(ANTIDOTE_COST)) return { ok: false, reason: "poor" };
+    save.antidotes = (save.antidotes ?? 0) + 1;
     store.flush();
     return { ok: true };
   }

@@ -81,7 +81,14 @@
         </div>
         <div id="near-miss" class="near-miss hidden">아슬아슬!</div>
 
+        <!-- What you are carrying into this run. The board is a button because
+             it is deployed by hand; the antidote is not, because it spends
+             itself the moment a crow egg is taken — so it is shown rather than
+             offered, and only while there is one to show. -->
         <div id="board-wrap" class="board-wrap">
+          <div id="antidote-chip" class="antidote-chip hidden" aria-label="까마귀 해독제">
+            <span class="antidote-icon">💊</span>
+          </div>
           <button id="btn-board" type="button" aria-label="호버보드">
             <span class="board-icon">🛹</span>
             <span id="board-count">0</span>
@@ -101,7 +108,10 @@
         <div class="title-card">
           <div class="title-head">
             <p class="eyebrow">ENDLESS 3-LANE RUNNER</p>
-            <h1>Met<span>Dash</span></h1>
+            <!-- The wordmark and the build it is. Beside the title rather than
+                 under it: the number is a footnote, and a footnote on its own
+                 line is not a footnote. -->
+            <h1>Met<span>Dash</span><small id="version-badge" class="version-badge"></small></h1>
           </div>
 
           <!-- One column on a phone, two once the screen is wide but short —
@@ -124,6 +134,11 @@
                 <p class="block-title">
                   내 기록
                   <span id="streak-chip" class="streak-chip hidden">🔥 0일</span>
+                  <!-- The end of this heading was empty on every screen wide
+                       enough to have a heading, and what belongs in it is the
+                       one thing on the title screen nobody would go looking
+                       for in a menu. -->
+                  <button id="btn-notes" type="button" class="notes-chip">패치노트</button>
                 </p>
 
                 <!-- Who you are. The name and school need an account; the rank
@@ -406,6 +421,16 @@
         </div>
       </div>
 
+      <div id="notes-screen" class="overlay hidden">
+        <div class="dialog notes-dialog">
+          <button id="btn-notes-x" type="button" class="corner-close" aria-label="닫기">✕</button>
+          <h2>패치노트</h2>
+          <p class="notes-sub">무엇이 바뀌었고, 그래서 무엇을 할 수 있는지</p>
+          <div id="notes-list" class="notes-list"></div>
+          <button id="btn-notes-close" type="button" class="ghost">닫기</button>
+        </div>
+      </div>
+
       <div id="settings-screen" class="overlay hidden">
         <button id="btn-settings-x" type="button" class="corner-close" aria-label="닫기">✕</button>
         <div class="dialog">
@@ -481,6 +506,11 @@
             </div>
 
             <div class="over-side">
+              <!-- What the run did for you, and then what to do next. Grouped
+                   so the two can be pushed apart: the results column beside
+                   this one is the taller of the two, and without the split the
+                   buttons ended halfway up with dead space under them. -->
+              <div class="over-outcome">
               <div id="rank-up" class="rank-up hidden"></div>
               <div id="mission-cleared" class="mission-cleared hidden"></div>
 
@@ -503,6 +533,9 @@
               <p class="bank-line">
                 보유 코인 <span class="coin-orb small"></span><strong id="over-bank">0</strong>
               </p>
+              </div>
+
+              <div class="over-cta">
               <button id="btn-retry" type="button">다시 달리기</button>
               <!-- Two across: the board is what a player wants right after
                    seeing their score, and burying it behind the title screen
@@ -510,6 +543,7 @@
               <div class="title-actions">
                 <button id="btn-over-board" type="button" class="ghost hidden">리더보드</button>
                 <button id="btn-home" type="button" class="ghost">타이틀로</button>
+              </div>
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { readRemember } from "./cloud.js";
+import { HOVERBOARD_TIME } from "./config.js";
 import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
 import { GENERAL_LEVEL, LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
@@ -8,10 +9,12 @@ import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
+import { VERSION } from "./release.js";
 import {
   escapeHtml,
   renderHud,
   renderMissions,
+  renderNotes,
   renderRank,
   renderSettings,
   renderShop,
@@ -31,6 +34,10 @@ export class Screens {
    */
   constructor(actions) {
     this.actions = actions;
+    // Written from the constant rather than typed into the markup, so the
+    // badge and the newest patch note can never claim different versions.
+    const badge = $("version-badge");
+    if (badge) badge.textContent = `ver ${VERSION}`;
     /** Text for the two standing lines, kept together so they move together. */
     this.standings = { mine: "", school: "", schoolNote: "" };
     this.toastTimer = 0;
@@ -93,6 +100,11 @@ export class Screens {
 
     const boardBtn = $("btn-board");
     if (boardBtn) boardBtn.onclick = () => a.deployBoard();
+    const notesBtn = $("btn-notes");
+    if (notesBtn) notesBtn.onclick = () => this.openNotes();
+    $("btn-notes-close")?.addEventListener("click", () => this.closeNotes());
+    $("btn-notes-x")?.addEventListener("click", () => this.closeNotes());
+
     const settingsBtn = $("btn-settings");
     if (settingsBtn) settingsBtn.onclick = () => a.openSettings();
     const settingsClose = $("btn-settings-close");
@@ -786,6 +798,22 @@ export class Screens {
     if (shop) shop.classList.add("hidden");
   }
 
+  /**
+   * The patch notes.
+   *
+   * Rendered on open rather than at boot: the list is static, but it is also
+   * the one screen most players will never open, and building it costs nothing
+   * if nobody asks.
+   */
+  openNotes() {
+    renderNotes($("notes-list"));
+    $("notes-screen")?.classList.remove("hidden");
+  }
+
+  closeNotes() {
+    $("notes-screen")?.classList.add("hidden");
+  }
+
   openSettings(settings, tier) {
     renderSettings($("settings-list"), settings, tier);
     $("settings-screen").classList.remove("hidden");
@@ -892,8 +920,12 @@ export class Screens {
       durations,
       boarding: game.player.boarding,
       boardT: game.boardT,
+      // The full duration this run's board actually got, so a character that
+      // extends it drains a full bar rather than one that starts over 100%.
+      boardMax: HOVERBOARD_TIME * (game.boardScale ?? 1),
       boardUsed: game.boardUsed,
       hoverboards: game.store.data.hoverboards,
+      antidotes: game.store.data.antidotes ?? 0,
       phaseName: game.phaseName(),
       speed: game.speed,
       crow: game.run.crowT > 0 ? { remaining: game.run.crowT, seconds: game.run.crowSeconds } : null,

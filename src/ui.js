@@ -1,4 +1,3 @@
-import { HOVERBOARD_TIME } from "./config.js";
 import { BOARD_HINT_LONG, BOARD_LIMIT_NOTE } from "./input.js";
 import {
   allCleared,
@@ -10,6 +9,7 @@ import {
   missionPay,
 } from "./missions.js";
 import { CROW } from "./crow.js";
+import { CHANGELOG } from "./release.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
@@ -159,12 +159,21 @@ function hudNodes() {
     boardWrap,
     boardFill: boardWrap?.querySelector(".board-fill") ?? null,
     boardCount: $("board-count"),
+    antidote: $("antidote-chip"),
     pace: $("pace-chip"),
     event: $("event-chip"),
     eventName: $("event-name"),
     eventFill: $("event-fill"),
     /** Last value written, so an unchanged string is not written again. */
-    last: { score: null, coins: null, combo: null, boards: null, pace: null, event: null },
+    last: {
+      score: null,
+      coins: null,
+      combo: null,
+      boards: null,
+      pace: null,
+      event: null,
+      antidotes: null,
+    },
   };
   return hud;
 }
@@ -201,10 +210,31 @@ export function renderHud(state) {
     // Greyed once this run's board has been used, so the button is not offering
     // something it will refuse.
     el.boardWrap.classList.toggle("spent", Boolean(state.boardUsed) && !state.boarding);
-    if (el.boardFill) el.boardFill.style.transform = `scaleX(${state.boardT / HOVERBOARD_TIME})`;
+    if (el.boardFill) {
+      el.boardFill.style.transform = `scaleX(${state.boardT / (state.boardMax || 1)})`;
+    }
     if (el.boardCount && state.hoverboards !== last.boards) {
       el.boardCount.textContent = String(state.hoverboards);
       last.boards = state.hoverboards;
+    }
+  }
+
+  // Shown only while one is held, and animated out on the frame it is spent so
+  // the corner it left is what says the antidote did something.
+  if (el.antidote && state.antidotes !== last.antidotes) {
+    const had = last.antidotes;
+    last.antidotes = state.antidotes;
+    if (state.antidotes > 0) {
+      el.antidote.classList.remove("hidden", "spent");
+    } else if (had > 0) {
+      el.antidote.classList.add("spent");
+      // Removed only once the animation it was given has finished, or the node
+      // would be display:none before the first frame of it was drawn.
+      setTimeout(() => {
+        if (el.antidote.classList.contains("spent")) el.antidote.classList.add("hidden");
+      }, 520);
+    } else {
+      el.antidote.classList.add("hidden");
     }
   }
 
@@ -298,6 +328,9 @@ export function renderShop(root, view) {
     .join("");
 
   const board = view.hoverboards;
+  const antidote = view.antidotes;
+  // Both are consumables held one at a time, so they read as one section and
+  // the same three lines: what it does, what the limit is, what it costs.
   const boardBlock = `
     <div class="shop-item" style="--accent:#ff3d71">
       <div class="shop-icon">🛹</div>
@@ -307,7 +340,21 @@ export function renderShop(root, view) {
         <div class="shop-meta">${escapeHtml(BOARD_LIMIT_NOTE)}</div>
       </div>
       <button type="button" class="shop-buy" data-buy="hoverboard" data-id="hoverboard"
-        ${board.affordable ? "" : "disabled"}>🪙 ${money(board.cost)}</button>
+        ${board.affordable ? "" : "disabled"}>${
+          board.owned >= board.max ? "보유 중" : `🪙 ${money(board.cost)}`
+        }</button>
+    </div>
+    <div class="shop-item" style="--accent:#14d4b8">
+      <div class="shop-icon">💊</div>
+      <div class="shop-body">
+        <div class="shop-title">까마귀 해독제 <em>${antidote.owned}/${antidote.max}</em></div>
+        <div class="shop-blurb">까마귀 알을 먹어도 한 번은 막아 줍니다</div>
+        <div class="shop-meta">막으면서 사라집니다 · 한 판에 한 번</div>
+      </div>
+      <button type="button" class="shop-buy" data-buy="antidote" data-id="antidote"
+        ${antidote.affordable ? "" : "disabled"}>${
+          antidote.owned >= antidote.max ? "보유 중" : `🪙 ${money(antidote.cost)}`
+        }</button>
     </div>`;
 
   const characters = view.characters
@@ -345,4 +392,45 @@ export function renderShop(root, view) {
       <h3>캐릭터</h3>
       ${characters}
     </section>`;
+}
+
+/** Korean date, so「2026-08-29」is not the first thing a student has to parse. */
+function noteDate(iso) {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  return Number.isFinite(y) ? `${y}년 ${m}월 ${d}일` : iso;
+}
+
+const NOTE_KIND = {
+  major: "큰 업데이트",
+  minor: "업데이트",
+  fix: "수정",
+};
+
+/**
+ * The patch notes.
+ *
+ * Newest first and open by default at the top, because the reason anyone opens
+ * this is the entry they have not read yet. Everything below it is collapsed —
+ * the history is worth having and is not worth scrolling past.
+ */
+export function renderNotes(el, entries = CHANGELOG) {
+  if (!el) return;
+  el.innerHTML = entries
+    .map(
+      (entry, i) => `
+      <details class="note note-${entry.kind}"${i === 0 ? " open" : ""}>
+        <summary class="note-head">
+          <span class="note-version">v${escapeHtml(entry.version)}</span>
+          <span class="note-title">${escapeHtml(entry.title)}</span>
+          <span class="note-meta">
+            <span class="note-kind">${escapeHtml(NOTE_KIND[entry.kind] ?? "업데이트")}</span>
+            <span class="note-date">${escapeHtml(noteDate(entry.date))}</span>
+          </span>
+        </summary>
+        <ul class="note-body">
+          ${entry.notes.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}
+        </ul>
+      </details>`,
+    )
+    .join("");
 }
