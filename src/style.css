@@ -2429,7 +2429,7 @@ kbd {
   font-size: 14px;
 }
 
-/* --- reporting & profile merge -------------------------------------------- */
+/* --- reporting ------------------------------------------------------------ */
 
 /* Also worn by an empty span on rows that cannot be reported, which is what
    holds the column open. Only the button form is visible. */
@@ -2471,43 +2471,6 @@ button.report-flag:disabled {
   border: 1px solid rgba(20, 212, 184, 0.45);
   color: #b7f3e7;
   font-size: 13.5px;
-}
-
-.merge-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.merge-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  background: rgba(7, 16, 24, 0.6);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.merge-card:hover {
-  border-color: rgba(20, 212, 184, 0.6);
-  background: rgba(20, 212, 184, 0.1);
-}
-
-.merge-title {
-  font-size: 16px;
-  color: var(--gold);
-}
-
-.merge-body {
-  font-size: 13px;
-  color: #9ec2d8;
-  line-height: 1.7;
-  white-space: pre-line;
 }
 
 /* --- school ranking ------------------------------------------------------- */

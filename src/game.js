@@ -29,7 +29,7 @@ import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
-import { SaveStore, describeSave, hasProgress, normalizeSave } from "./save.js";
+import { SaveStore, hasProgress, mergeProfiles, normalizeSave } from "./save.js";
 import { GENERAL } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { Screens } from "./screens.js";
@@ -198,7 +198,6 @@ export class Game {
       turnBoardPage: (column, direction) => this.turnBoardPage(column, direction),
       reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
-      resolveMerge: (choice) => this.resolveMerge(choice),
     });
     this.resize();
     window.addEventListener("resize", () => this.resize());
@@ -337,11 +336,14 @@ export class Game {
   }
 
   /**
-   * Decide what happens to the guest save when someone signs in.
+   * Fold the guest save into the account when someone signs in.
    *
-   * Taking the cloud copy unconditionally used to throw away a session of guest
-   * play without a word. Now that only happens when there was nothing to lose;
-   * when both sides have been played, the choice belongs to the player.
+   * Nothing is discarded here any more. Taking the cloud copy unconditionally
+   * used to throw away a session of guest play without a word; putting the
+   * choice to the player was worse, because on a shared school PC both sides
+   * always have something on them, and「고르지 않은 쪽은 사라집니다」was being
+   * answered by students picking the run they had just played and losing the
+   * balance of the account they were signing into. See mergeProfiles.
    */
   reconcileProfiles(cloudProfile, serverBest) {
     const cloud = cloudProfile ? normalizeSave(cloudProfile) : null;
@@ -364,25 +366,18 @@ export class Game {
       return;
     }
 
-    this.pendingMerge = { local, cloud };
-    this.screens.openMerge(describeSave(local), describeSave(cloud));
-  }
-
-  resolveMerge(choice) {
-    const pending = this.pendingMerge;
-    this.pendingMerge = null;
-    this.screens.closeMerge();
-    if (!pending) return;
-
-    if (choice === "cloud") {
-      this.adoptProfile(pending.cloud);
-    } else {
-      // Keeping this browser's save means the server has to be told about it,
-      // or the next sign-in would offer the same choice again. Absolute for the
-      // same reason as above: the player has just chosen a balance.
-      this.syncCoins({ absolute: true });
-    }
+    const { save, carried } = mergeProfiles(local, cloud);
+    this.adoptProfile(save);
+    // Absolute, because the merged balance is a total this browser worked out
+    // rather than a change the server can add up for itself.
+    this.syncCoins({ absolute: true });
     this.screens.refreshProfile(this.store.data);
+    // Said out loud only when the guest session actually brought something. A
+    // player who earned coins before logging in should be able to see that they
+    // arrived, rather than having to count.
+    if (carried > 0) {
+      this.screens.showToast(`이 기기에서 번 코인 ${carried.toLocaleString()}개를 계정에 더했어요`);
+    }
   }
 
   /** Report a nickname from the leaderboard. */

@@ -289,15 +289,106 @@ export function hasProgress(save) {
   );
 }
 
-/** One-line summary of a profile, so a player can tell two of them apart. */
-export function describeSave(save) {
-  const normalized = normalizeSave(save);
-  return {
-    best: normalized.best,
-    coins: normalized.coins,
-    runs: normalized.runs,
-    xp: normalized.xp,
-  };
+/**
+ * Most coins a guest session may carry into an account it signs into.
+ *
+ * The carried figure is derived from the browser's own save, which anyone can
+ * edit, so it needs a ceiling — but the ceiling is a wall against a hand-edited
+ * number, not a budget: a good run pays a few hundred, so a session that
+ * genuinely earned this much was a long one. Matched to the server's own
+ * per-sync limit so the two cannot disagree about what is plausible.
+ */
+export const MAX_GUEST_CARRY = 5000;
+
+/**
+ * Combine a guest save with the account it is signing into.
+ *
+ * This used to be a question put to the player — two cards, pick one, and in
+ * small print, "고르지 않은 쪽은 사라집니다". It was asked whenever both sides
+ * had anything at all on them, which on a shared school PC is every single
+ * sign-in: play one guest run before logging in and the account you then log
+ * into is offered up for deletion. Students picked 「이 기기 기록」, because the
+ * run they had just played was obviously theirs, and their account balance was
+ * overwritten with whatever that one guest run had earned. That is the whole of
+ * "코인을 쓰지도 않았는데 사라졌어요".
+ *
+ * Nothing about it needed to be a choice. Every field here has an answer that
+ * loses nothing:
+ *
+ * - Coins add, because they were earned twice over. Only what this browser
+ *   earned *since the server last confirmed a balance* is carried, so a save
+ *   that has been synced ten times cannot pay itself in ten times.
+ * - Records and totals take the higher side. A record is the best thing that
+ *   ever happened, not the most recent.
+ * - Owned things take the union. Nobody should have to buy a character twice
+ *   because they logged in on a different machine.
+ * - Settings stay with the device, because a phone and a school desktop do not
+ *   want the same graphics tier.
+ *
+ * @param {object} local this browser's save
+ * @param {object} cloud the account's save
+ * @returns {{ save: object, carried: number }} the merged profile, and the
+ *   coins the guest session brought with it, for the line shown to the player.
+ */
+export function mergeProfiles(local, cloud) {
+  const a = normalizeSave(local);
+  const b = normalizeSave(cloud);
+  const out = { ...b };
+
+  // What this browser has earned that the server has not seen. Clamped at both
+  // ends: a save whose synced marker is ahead of its balance (coins spent since)
+  // carries nothing rather than a negative.
+  const unsynced = Math.max(0, a.coins - a.syncedCoins);
+  const carried = Math.min(unsynced, MAX_GUEST_CARRY);
+  out.coins = b.coins + carried;
+  // The account's balance has just moved, and the server is about to be told
+  // the whole of it. Marking it synced here would claim it already knew.
+  out.syncedCoins = b.syncedCoins;
+
+  const higher = (key) => Math.max(a[key] ?? 0, b[key] ?? 0);
+  for (const key of [
+    "best",
+    "xp",
+    "runs",
+    "totalDistance",
+    "totalCoins",
+    "missionsDone",
+    "hoverboards",
+    "antidotes",
+    "streak",
+    "bestStreak",
+    "lastDay",
+  ]) {
+    out[key] = higher(key);
+  }
+  out.syncedXp = Math.min(a.syncedXp, b.syncedXp);
+
+  out.characters = Array.from(new Set([...b.characters, ...a.characters]));
+  // Whichever side actually chose one. A guest save is on the default runner
+  // because nobody picked it — taking that as a preference would un-equip the
+  // character the player bought, every time they signed in on a school PC.
+  const chosen = [a.character, b.character].find(
+    (id) => id !== DEFAULT_CHARACTER && out.characters.includes(id),
+  );
+  out.character = chosen ?? DEFAULT_CHARACTER;
+
+  out.upgrades = {};
+  for (const id of POWERUP_IDS) {
+    out.upgrades[id] = Math.max(a.upgrades[id] ?? 1, b.upgrades[id] ?? 1);
+  }
+
+  // Today's missions come from whichever side was dealt more recently, with
+  // their progress. Taking the higher progress field by field would mix two
+  // different sets of missions into one that was never dealt.
+  const fresher = a.missionDay >= b.missionDay ? a : b;
+  out.missions = fresher.missions;
+  out.missionDay = fresher.missionDay;
+  out.missionBonusDay = Math.max(a.missionBonusDay, b.missionBonusDay);
+
+  // Sound, haptics and graphics belong to the machine in front of you.
+  out.settings = a.settings;
+
+  return { save: out, carried };
 }
 
 /** In-memory storage with the localStorage surface, for tests. */

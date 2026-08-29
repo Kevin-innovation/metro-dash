@@ -56,8 +56,6 @@ const SEED = () => {
     el.classList.remove("hidden");
   }
 
-  document.getElementById("merge-local").textContent = "최고 12,400점\n코인 830개\n41판 · 2,100 XP";
-  document.getElementById("merge-cloud").textContent = "최고 9,100점\n코인 220개\n12판 · 900 XP";
   document.getElementById("school-confirm-label").textContent = "대구동중";
 };
 
@@ -68,7 +66,6 @@ const SCREENS = [
   "account-screen",
   "school-screen",
   "leaderboard-screen",
-  "merge-screen",
   "gameover-screen",
   "pause-screen",
 ];

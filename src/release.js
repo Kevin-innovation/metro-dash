@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.00";
+export const VERSION = "2.01";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,19 @@ export const VERSION = "2.00";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.01",
+    date: "2026-08-29",
+    kind: "fix",
+    title: "쓰지 않은 코인이 사라지던 문제",
+    notes: [
+      "로그인할 때 「기록이 두 개예요」라며 한쪽을 고르게 하던 화면을 없앴어요. 이제 자동으로 합쳐집니다.",
+      "학교 컴퓨터에서 로그인 없이 한 판 돌고 나서 로그인하면 그 화면이 떴고, 「이 기기 기록」을 고르면 계정에 있던 코인이 방금 번 코인으로 덮어써졌습니다. 쓰지도 않은 코인이 사라진 게 이것 때문이었어요.",
+      "이제 코인은 더해지고, 최고 점수·레벨·판수는 높은 쪽이 남고, 산 캐릭터와 강화는 양쪽 것이 모두 남습니다. 태블릿과 PC를 오가며 플레이해도 아무것도 없어지지 않습니다.",
+      "로그인 전에 번 코인이 계정에 더해지면 몇 개가 들어왔는지 알려 줍니다.",
+      "소리·진동·화질 설정은 기기마다 따로 유지됩니다.",
+    ],
+  },
   {
     version: "2.00",
     date: "2026-08-29",

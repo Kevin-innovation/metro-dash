@@ -169,10 +169,6 @@ export class Screens {
     const schoolConfirm = $("btn-school-confirm");
     if (schoolConfirm) schoolConfirm.onclick = () => a.submitSchool(this.schoolInput());
 
-    const keepLocal = $("btn-keep-local");
-    if (keepLocal) keepLocal.onclick = () => a.resolveMerge("local");
-    const keepCloud = $("btn-keep-cloud");
-    if (keepCloud) keepCloud.onclick = () => a.resolveMerge("cloud");
 
     for (const [id, mode] of [["tab-signin", "signin"], ["tab-signup", "signup"]]) {
       const tab = $(id);
@@ -599,26 +595,6 @@ export class Screens {
     if (message) this.reportNoteTimer = setTimeout(() => note.classList.add("hidden"), 3000);
   }
 
-  /**
-   * Ask which save to keep.
-   *
-   * Shown only when both sides have real progress — replacing an untouched
-   * profile needs no ceremony, but silently dropping a played one does.
-   */
-  openMerge(local, cloud) {
-    const format = (s) =>
-      `최고 ${s.best.toLocaleString()}점\n코인 ${s.coins.toLocaleString()}개\n` +
-      `${s.runs.toLocaleString()}판 · ${s.xp.toLocaleString()} XP`;
-    $("merge-local").textContent = format(local);
-    $("merge-cloud").textContent = format(cloud);
-    $("merge-screen").classList.remove("hidden");
-  }
-
-  closeMerge() {
-    const panel = $("merge-screen");
-    if (panel) panel.classList.add("hidden");
-  }
-
   renderLeaderboard(rows, standing, myHandle) {
     const list = $("leaderboard-list");
     if (!list) return;
@@ -770,7 +746,6 @@ export class Screens {
     this.closeSettings();
     this.closeAccount();
     this.actions.closeLeaderboard?.();
-    this.closeMerge();
     this.closeSchool();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
