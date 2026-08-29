@@ -1096,6 +1096,36 @@ kbd {
   flex-direction: column;
 }
 
+/**
+ * Both columns are spaced by one gap, not by each block's own margin.
+ *
+ * The blocks in here were written for a single stack and carry six different
+ * numbers between them — the best line 16 above, the new-best 12 below, the
+ * retry button only the height of its own painted lip. Stacked that was merely
+ * uneven; side by side it was the reason the buttons sat welded together while
+ * the lines above them floated. Same fix as .title-card: one gap, and the
+ * blocks' own margins zeroed so they cannot argue with it.
+ */
+.over-main,
+.over-side {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.4vh, 14px);
+}
+
+.over-main.over-main > *,
+.over-side.over-side > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* The lip under the primary button is painted rather than laid out, so it
+   still needs its own room on top of the gap — otherwise the row of ghost
+   buttons sits on it. Written in the same number that draws it. */
+.over-side.over-side > #btn-retry {
+  margin-bottom: var(--btn-lip);
+}
+
 @media (min-width: 820px) {
   /* Wider than the 440px every other dialog gets, because it is now carrying
      two columns rather than one. */
@@ -1116,13 +1146,14 @@ kbd {
     min-width: 0;
   }
 
-  /* Centred against the taller column beside it, so a short right-hand side —
-     no rank-up, no missions cleared, which is most runs — sits level with the
-     score rather than clinging to the top of an empty half. */
+  /* Both columns start on the same line. Centring this one against the taller
+     column beside it left a band of nothing above it the height of the score
+     breakdown, and two columns that begin at different heights do not read as
+     two columns — they read as one that has slipped. */
   .over-side {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     text-align: center;
   }
 
