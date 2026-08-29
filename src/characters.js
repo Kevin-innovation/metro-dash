@@ -66,17 +66,6 @@ export const CHARACTERS = [
     palette: { shirt: 0x1e3a5f, trim: 0x0d1b2a, pack: 0xffc107, hair: 0x2b2b2b, streak: 0xffd54f },
   },
   {
-    id: "scarecrow",
-    name: "허수아비",
-    cost: 15000,
-    blurb: "새를 쫓는 일을 하던 사람 · 까마귀 지속 -30% · 흐림 -50%",
-    // Two numbers rather than one, and deliberately so: this is the character
-    // bought *because of* the crow, and shortening it alone would still leave
-    // the screen as dark as it ever was for as long as it lasted.
-    perk: { crowTime: 0.7, crowVeil: 0.5 },
-    palette: { shirt: 0xb45309, trim: 0x78350f, pack: 0xfde68a, hair: 0x422006, streak: 0xfbbf24 },
-  },
-  {
     id: "nightshift",
     name: "야근러",
     cost: 20000,
@@ -115,6 +104,21 @@ export const CHARACTERS = [
     blurb: "이 노선을 제일 잘 아는 사람 · 획득 XP +25%",
     perk: { xpBonus: 1.25 },
     palette: { shirt: 0x1e40af, trim: 0x172554, pack: 0xe2e8f0, hair: 0x1c1917, streak: 0x60a5fa },
+  },
+  {
+    id: "scarecrow",
+    name: "허수아비",
+    // The dearest thing in the shop. Every other perk makes a good run better;
+    // this one is the only answer to the thing that takes a run away from you,
+    // and something bought to stop being hurt is worth more than something
+    // bought to score faster.
+    cost: 75000,
+    blurb: "새를 쫓는 일을 하던 사람 · 까마귀 지속 -30% · 흐림 -50%",
+    // Two numbers rather than one, and deliberately so: this is the character
+    // bought *because of* the crow, and shortening it alone would still leave
+    // the screen as dark as it ever was for as long as it lasted.
+    perk: { crowTime: 0.7, crowVeil: 0.5 },
+    palette: { shirt: 0xb45309, trim: 0x78350f, pack: 0xfde68a, hair: 0x422006, streak: 0xfbbf24 },
   },
 ];
 
