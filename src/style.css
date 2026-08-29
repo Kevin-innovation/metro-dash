@@ -941,14 +941,19 @@ body.running #game-canvas {
  * the middle of it.
  */
 .notes-chip {
-  padding: 3px 10px;
+  /* Matched to the streak capsule it stands next to, down to the line-height:
+     two pills on one line at two different heights read as a mistake, and the
+     browser's own button metrics are what made them differ. */
+  padding: 2px 9px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   background: rgba(7, 16, 24, 0.4);
   color: #9ec2d8;
   font-family: inherit;
-  font-size: clamp(10px, 1.4vh, 12px);
+  font-size: 12px;
+  line-height: 1.35;
   letter-spacing: 0.04em;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     border-color 0.16s ease,

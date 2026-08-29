@@ -618,6 +618,10 @@ export class Game {
    */
   async syncCoins(options = {}) {
     if (!this.cloud.signedIn) return;
+    // Read before the request goes out. Coins picked up while it is in flight
+    // belong to the next sync, and acknowledging them here would mark credits
+    // as reported that the server was never told about.
+    const reported = this.store.data.earned;
     const result = await this.cloud.save(this.store.data, options);
 
     if (result?.reason === "ledger") {
@@ -636,6 +640,10 @@ export class Game {
 
     const before = this.store.data.coins;
     this.store.set("syncedCoins", result.coins);
+    // Acknowledged along with the balance: the server has taken this browser's
+    // credits into its ledger, so reporting them again would pay for the same
+    // purchases twice over.
+    this.store.set("syncedEarned", reported);
     if (result.coins === before) return;
 
     this.store.set("coins", result.coins);

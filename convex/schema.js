@@ -43,6 +43,14 @@ export default defineSchema({
      * come from playing. Absent on accounts that have not saved since.
      */
     coinLedger: v.optional(v.number()),
+    /**
+     * Which meaning `coinLedger` was last written under.
+     *
+     * Absent or behind means the number in it came from the version that froze
+     * it at signup, and the account is re-seeded once on its next save. See
+     * LEDGER_VERSION in players.js.
+     */
+    ledgerV: v.optional(v.number()),
     /** Set when a save was refused for exceeding the ledger, for staff to see. */
     flagged: v.optional(v.boolean()),
 

@@ -49,6 +49,21 @@ export function defaultSave() {
      * balance corrected by staff would be undone by the next run.
      */
     syncedCoins: 0,
+    /**
+     * Coins this profile has ever been credited, spending not subtracted.
+     *
+     * The balance and the delta built from it are both *net*, which means the
+     * server cannot tell a run that paid 3,000 from one that paid 3,000 and
+     * then bought a 2,500 upgrade — both report +500. It was checking permanent
+     * purchases against a number that only ever saw the net, so an honest
+     * player who earned 50,000 and spent 2,500 of it looked like someone who
+     * had spent coins they never had.
+     *
+     * This is the gross figure, and it only ever goes up.
+     */
+    earned: 0,
+    /** The gross figure the server last acknowledged. Same job as syncedCoins. */
+    syncedEarned: 0,
     /** The experience the server last confirmed. Same job as syncedCoins. */
     syncedXp: 0,
     /** Consecutive days played, and the day the last run started. */
@@ -100,6 +115,13 @@ export function normalizeSave(raw) {
   // holds and double it. Absent means "already accounted for".
   out.syncedCoins = raw.syncedCoins === undefined ? out.coins : clampInt(raw.syncedCoins);
   out.syncedXp = raw.syncedXp === undefined ? out.xp : clampInt(raw.syncedXp);
+  // A save written before the gross figure existed has no history to recover:
+  // what it spent is already spent and what it earned is not written down. It
+  // opens level with its own balance and marked as already reported, so the
+  // first sync after the update claims nothing. The server forgives what came
+  // before separately; see the ledger re-seed in convex/players.js.
+  out.earned = raw.earned === undefined ? out.coins : clampInt(raw.earned);
+  out.syncedEarned = raw.syncedEarned === undefined ? out.earned : clampInt(raw.syncedEarned);
 
   out.settings = normalizeSettings(raw.settings);
   out.upgrades = { ...base.upgrades };
@@ -182,7 +204,12 @@ export class SaveStore {
   }
 
   addCoins(amount) {
-    this.data.coins = Math.max(0, this.data.coins + Math.floor(amount));
+    const n = Math.floor(amount);
+    this.data.coins = Math.max(0, this.data.coins + n);
+    // Only the credits. This is the number the server checks purchases against,
+    // and subtracting spending from it here would put it right back where the
+    // net delta already was.
+    if (n > 0) this.data.earned += n;
     return this.flush();
   }
 
@@ -344,6 +371,11 @@ export function mergeProfiles(local, cloud) {
   // The account's balance has just moved, and the server is about to be told
   // the whole of it. Marking it synced here would claim it already knew.
   out.syncedCoins = b.syncedCoins;
+
+  // The gross figure follows the coins: the account is credited what the guest
+  // session carried in, so the ledger behind it has to be told the same thing.
+  out.earned = b.earned + carried;
+  out.syncedEarned = b.syncedEarned;
 
   const higher = (key) => Math.max(a[key] ?? 0, b[key] ?? 0);
   for (const key of [

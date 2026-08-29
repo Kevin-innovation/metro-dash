@@ -316,6 +316,14 @@ export class Cloud {
       // when a submitted run passes validation. Coins work the same way now:
       // what goes up is the change since the last sync, never a total.
       const coinsDelta = Math.round((profile?.coins ?? 0) - (profile?.syncedCoins ?? 0));
+      // What was credited, before anything was spent out of it. The delta above
+      // is the two netted together and cannot tell the server how much this
+      // browser was actually paid — which is the one thing it needs in order to
+      // say whether a purchase was affordable.
+      const coinsEarned = Math.max(
+        0,
+        Math.round((profile?.earned ?? 0) - (profile?.syncedEarned ?? 0)),
+      );
       // Experience the same way, and for a reason coins learned first: a total
       // is a claim about the world, a delta is a report about this browser. A
       // browser that has been away has a stale total and an honest delta.
@@ -324,6 +332,7 @@ export class Cloud {
         token: this.session.token,
         profile,
         coinsDelta,
+        coinsEarned,
         coinsAbsolute: options.absolute === true,
         xpDelta,
         xpAbsolute: options.absolute === true,

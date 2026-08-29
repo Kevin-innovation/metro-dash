@@ -66,6 +66,7 @@ const SCREENS = [
   "account-screen",
   "school-screen",
   "leaderboard-screen",
+  "notes-screen",
   "gameover-screen",
   "pause-screen",
 ];

@@ -90,6 +90,36 @@ function coinsOf(player) {
 const MAX_COIN_GAIN_PER_SYNC = 5000;
 
 /**
+ * The ledger's current meaning, so accounts written under the old one can be
+ * recognised and re-seeded exactly once.
+ *
+ * Version 1 froze the ledger at whatever the account was worth when it was
+ * created and then compared a permanently growing figure — everything the
+ * profile had ever bought — against it. An account that signed up with nothing,
+ * earned fifty thousand coins and bought a single character had spent more than
+ * a ledger that still said zero, so its save was refused and it was flagged.
+ * Every save after that was refused too, because spending only ever goes up.
+ * Version 2 grows it by what the account is credited, which is what the schema
+ * said it did all along.
+ */
+const LEDGER_VERSION = 2;
+
+/**
+ * The ledger to check this save against, before this sync's credits.
+ *
+ * Accounts that never reached version 2 are forgiven whatever they are holding
+ * at that moment. There is no record to audit them against — the old ledger is
+ * a number from the day they signed up and the profile is written by the
+ * browser — so the choice is between forgiving everyone once and continuing to
+ * refuse the honest ones. Enforcement is exact from the next save onward.
+ */
+function ledgerBefore(player, spent) {
+  const stored = Math.max(0, Math.floor(player.coinLedger ?? 0));
+  if (player.ledgerV === LEDGER_VERSION) return stored;
+  return Math.max(stored, spent, coinsOf(player));
+}
+
+/**
  * The same wall for experience, set far higher because one run legitimately
  * pays far more: XP is a twenty-fifth of the score, and a good run scores in
  * the hundreds of thousands. This is a bound on the absurd, not on the
@@ -162,6 +192,11 @@ export const register = mutation({
       // A guest who played offline arrives with coins they really did earn, so
       // the ledger opens where they are rather than at zero.
       coinLedger: profileWorth(profile),
+      // Stamped now, so a brand-new account never qualifies for the one-off
+      // forgiveness meant for accounts stranded by the old frozen ledger.
+      // Without this, registering and immediately saving a profile with
+      // everything already unlocked would be forgiven on the spot.
+      ledgerV: LEDGER_VERSION,
       // A new account starts at zero however good the local save claims to be;
       // the board is only ever climbed through a validated run.
       best: 0,
@@ -258,6 +293,15 @@ export const save = mutation({
     /** Coins earned minus coins spent since this browser last synced. */
     coinsDelta: v.optional(v.number()),
     /**
+     * Coins *credited* since the last sync, with nothing subtracted.
+     *
+     * The delta above is the netted figure and is what settles the balance. It
+     * cannot settle the ledger: a sync reporting +500 might be a quiet run, or
+     * a good run followed by an upgrade, and only the second one has paid for
+     * anything. This is the gross number the ledger grows by.
+     */
+    coinsEarned: v.optional(v.number()),
+    /**
      * Take the profile's balance as the truth instead of applying a delta.
      *
      * Sent once, right after signing in, when the player has chosen which of
@@ -270,27 +314,42 @@ export const save = mutation({
     /** The same one moment coinsAbsolute is sent for, and for the same reason. */
     xpAbsolute: v.optional(v.boolean()),
   },
-  handler: async (ctx, { token, profile, coinsDelta, coinsAbsolute, xpDelta, xpAbsolute }) => {
+  handler: async (
+    ctx,
+    { token, profile, coinsDelta, coinsEarned, coinsAbsolute, xpDelta, xpAbsolute },
+  ) => {
     const player = await requirePlayer(ctx, token);
 
     // The ledger no longer has to police the balance — the server owns that
     // now, and a client can only report what changed. What it still catches is
     // upgrades and characters appearing without having been paid for.
     const spent = profileWorth(profile) - Math.max(0, Math.floor(profile?.coins ?? 0));
-    const ledger = player.coinLedger ?? Math.max(spent, profileWorth(player.profile));
+    const credited = Math.min(
+      Math.max(0, Math.trunc(coinsEarned ?? 0)),
+      MAX_COIN_GAIN_PER_SYNC,
+    );
+    const ledger = ledgerBefore(player, spent) + credited;
 
     if (spent > ledger) {
       // Kept out of the cloud copy rather than argued with: the browser goes on
       // playing from its own save, and staff get a name to look at. Whatever is
       // stored here is what a new device restores, and that stays honest.
-      await ctx.db.patch(player._id, { coinLedger: ledger, flagged: true });
+      await ctx.db.patch(player._id, {
+        coinLedger: ledger,
+        ledgerV: LEDGER_VERSION,
+        flagged: true,
+      });
       return { ok: false, reason: "ledger" };
     }
 
     const held = coinsOf(player);
     const delta = Math.trunc(coinsDelta ?? 0);
+    // Absolute is the sign-in merge stating a total. It is still bounded by the
+    // same wall as a delta: left unbounded it was a way for any client to set
+    // its own balance to anything, which is a larger hole than the one the
+    // ledger beside it exists to close.
     const coins = coinsAbsolute
-      ? Math.max(0, Math.floor(profile?.coins ?? 0))
+      ? Math.max(0, Math.min(Math.floor(profile?.coins ?? 0), held + MAX_COIN_GAIN_PER_SYNC))
       : Math.max(0, held + Math.min(delta, MAX_COIN_GAIN_PER_SYNC));
 
     // Settled the same way, and deliberately not from `profile.xp` — a client
@@ -299,7 +358,7 @@ export const save = mutation({
     const heldXp = xpOf(player);
     const gainedXp = Math.trunc(xpDelta ?? 0);
     const xp = xpAbsolute
-      ? Math.max(0, Math.floor(profile?.xp ?? 0))
+      ? Math.max(0, Math.min(Math.floor(profile?.xp ?? 0), heldXp + MAX_XP_GAIN_PER_SYNC))
       : Math.max(0, heldXp + Math.min(gainedXp, MAX_XP_GAIN_PER_SYNC));
 
     await ctx.db.patch(player._id, {
@@ -311,6 +370,7 @@ export const save = mutation({
       // Folded into `coins` by coinsOf; nothing left to hold.
       pendingCoins: 0,
       coinLedger: ledger,
+      ledgerV: LEDGER_VERSION,
       // Cleared on a save that passes. The flag means "this account is claiming
       // more than it could have earned", which is a condition, not a permanent
       // mark — left set it would still be accusing an account long after the

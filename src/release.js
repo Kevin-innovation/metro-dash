@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.01";
+export const VERSION = "2.02";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,17 @@ export const VERSION = "2.01";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.02",
+    date: "2026-08-30",
+    kind: "fix",
+    title: "클라우드 저장이 거절되던 문제 · 패치노트 버튼",
+    notes: [
+      "상점에서 캐릭터나 강화를 사고 나면 그 뒤로 클라우드 저장이 계속 거절되던 문제를 고쳤어요. 열심히 모아서 쓴 사람일수록 먼저 걸리던 문제라, 다른 기기에서 로그인하면 산 것이 없어져 보였습니다.",
+      "이미 이 문제로 저장이 막혀 있던 계정은 다음 접속 때 자동으로 풀립니다.",
+      "패치노트 버튼을 눌러도 아무 일도 일어나지 않던 것을 고쳤어요. 버튼 크기도 옆의 연속 출석 표시와 맞췄습니다.",
+    ],
+  },
   {
     version: "2.01",
     date: "2026-08-29",
