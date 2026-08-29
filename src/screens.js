@@ -859,6 +859,7 @@ export class Screens {
     $("pace-chip").textContent = "START";
     $("speed-toast").classList.add("hidden");
     $("coin-gain").classList.add("hidden");
+    this.setCrowVeil(0);
     $("combo").classList.remove("on");
     // Nothing to say to a keyboard: the hint describes swipes.
     const touch = window.matchMedia?.("(pointer: coarse)").matches ?? false;
@@ -895,6 +896,7 @@ export class Screens {
       hoverboards: game.store.data.hoverboards,
       phaseName: game.phaseName(),
       speed: game.speed,
+      crow: game.run.crowT > 0 ? { remaining: game.run.crowT, seconds: game.run.crowSeconds } : null,
       event: game.section
         ? {
             name: game.section.event.name,
@@ -907,6 +909,33 @@ export class Screens {
   }
 
   /** The banner that says what this stretch of track is for. */
+  /**
+   * Drive the crow's overlay.
+   *
+   * Written straight to the style every frame from the curve in crow.js rather
+   * than handed to a CSS transition, so the sheet, the fog and the lights are
+   * always at the same point of the same ramp.
+   *
+   * @param {number} veil 0-1
+   * @param {boolean} blur whether this quality tier can afford a backdrop blur
+   */
+  setCrowVeil(veil, blur = false) {
+    const el = $("crow-veil");
+    if (!el) return;
+    if (veil <= 0) {
+      if (this.crowVeilOn) {
+        el.style.opacity = "0";
+        el.classList.remove("blurred");
+        this.crowVeilOn = false;
+      }
+      return;
+    }
+    this.crowVeilOn = true;
+    el.style.opacity = String(veil);
+    el.classList.toggle("blurred", blur);
+    if (blur) el.style.setProperty("--crow-blur", `${(veil * 3.4).toFixed(2)}px`);
+  }
+
   showEvent(event) {
     const el = $("event-chip");
     if (!el) return;

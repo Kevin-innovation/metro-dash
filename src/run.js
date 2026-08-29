@@ -8,6 +8,7 @@ import {
   powerupScoreMultiplier,
   tickPowerups,
 } from "./powerups.js";
+import { CROW_TIME } from "./config.js";
 import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
@@ -43,6 +44,15 @@ export class Run {
     this.coins = 0;
     /** Set by Game while a section is running; 1 the rest of the time. */
     this.eventMultiplier = 1;
+    /**
+     * Seconds of crow left, and the duration it was granted for.
+     *
+     * Kept out of `powerups` on purpose. That table is the shop's: every id in
+     * it has an upgrade level, a purchase price and a HUD chip that means "you
+     * are winning". A debuff filed there would appear in all three.
+     */
+    this.crowT = 0;
+    this.crowSeconds = CROW_TIME;
     this.combo = 0;
     this.comboMax = 0;
     this.comboT = 0;
@@ -61,6 +71,7 @@ export class Run {
       boards: 0,
       gates: 0,
       barriers: 0,
+      crows: 0,
     };
     // A run is banked when the player dies and again when they leave the card,
     // so progress is always committed as a delta against this.
@@ -101,6 +112,8 @@ export class Run {
     this.comboT -= dt;
     if (this.comboT <= 0) this.combo = 0;
 
+    this.crowT = Math.max(0, this.crowT - dt);
+
     return tickPowerups(this.powerups, dt);
   }
 
@@ -133,6 +146,24 @@ export class Run {
     if (counter) this.metrics[counter] += 1;
   }
 
+  /**
+   * Take a hazard pickup.
+   *
+   * Refreshes rather than stacks, exactly like a power-up: two crow eggs in
+   * quick succession are already a bad enough few seconds without the second
+   * one doubling the first.
+   */
+  addHazard(id, seconds = CROW_TIME) {
+    if (id !== "crow") return;
+    this.crowSeconds = seconds;
+    this.crowT = Math.max(this.crowT, seconds);
+    this.metrics.crows += 1;
+  }
+
+  crowActive() {
+    return this.crowT > 0;
+  }
+
   addBoard() {
     this.metrics.boards += 1;
   }
@@ -162,6 +193,9 @@ export class Run {
 
   clearPowerups() {
     clearPowerups(this.powerups);
+    // Death takes the bird with it. Leaving it running meant the game-over
+    // card came up behind a veil the player could no longer do anything about.
+    this.crowT = 0;
   }
 
   /**

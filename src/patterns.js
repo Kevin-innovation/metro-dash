@@ -431,6 +431,31 @@ export const POWERUP_PATTERNS = {
   sneakers: (z, lane) => [{ type: "sneakers", lane, z, y: 1.05 }, ...coinLine(lane, z + 3, 6)],
 };
 
+/**
+ * The crow egg, dropped into a coin line.
+ *
+ * A trap needs a reason to be walked into, or nobody ever walks into it and it
+ * may as well not exist. So the egg sits in the middle of a run of coins, at
+ * coin height, where the line the player is already following goes — and the
+ * neighbouring lane is given its own coins over exactly the stretch the egg
+ * occupies, so bailing out is a decision with an upside rather than a penalty
+ * for having been greedy.
+ *
+ * Both outs are moves the game has already taught: change lane, or jump it
+ * (a 2.9m apex clears a coin-height pickup comfortably).
+ */
+export function crowEggPattern(z, lane) {
+  const detour = lane === 0 ? (Math.random() < 0.5 ? -1 : 1) : 0;
+  return [
+    ...coinLine(lane, z, 4),
+    { type: "crowEgg", lane, z: z + 6.6, y: 0.75 },
+    ...coinLine(lane, z + 9.4, 4),
+    // The way out, and it pays. Starts before the egg so it is visible as an
+    // alternative while there is still time to take it.
+    ...coinLine(detour, z + 4.2, 5),
+  ];
+}
+
 function coinLine(lane, z, count, step = 1.5, y = 0.7) {
   return Array.from({ length: count }, (_, i) => ({ type: "coin", lane, z: z + i * step, y }));
 }

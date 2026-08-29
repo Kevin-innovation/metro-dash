@@ -66,7 +66,8 @@ export class Interactions {
   }
 
   /**
-   * @returns {Array<{ type: "coin", gain: number } | { type: "powerup", id: string }>}
+   * @returns {Array<{ type: "coin", gain: number } | { type: "powerup", id: string }
+   *   | { type: "hazard", id: string }>}
    */
   collectPickups(player, { upgradeLevel }) {
     const events = [];
@@ -75,7 +76,7 @@ export class Interactions {
     // The jetpack collects with a wider reach; see FLYING_PICKUP_REACH.
     const flying = this.run.powerupActive("jetpack");
     const bounding = this.run.powerupActive("sneakers");
-    const reach = flying
+    const rewardReach = flying
       ? FLYING_PICKUP_REACH
       : bounding
         ? SNEAKER_PICKUP_REACH
@@ -109,6 +110,12 @@ export class Interactions {
         );
         if (!hit.hit) continue;
         const midY = lerp(prev.y + prev.height * 0.5, cur.y + cur.height * 0.5, hit.t);
+        // A hazard is never granted the widened reach. Those exist so a
+        // power-up cannot cost you the coins it flew you past; extending them
+        // to the crow egg would mean the two power-ups that make you jump
+        // higher also drag traps in from three metres away, and a trap you
+        // cannot dodge is not a choice.
+        const reach = item.hazard ? PICKUP_REACH : rewardReach;
         if (Math.abs(midY - itemY) > reach) continue;
       }
 
@@ -124,6 +131,19 @@ export class Interactions {
           size: 0.26,
         });
         events.push({ type: "coin", gain: this.run.addCoin() });
+      } else if (item.hazard) {
+        // Soot rather than the pickup's own bright colour: the burst is the
+        // last thing seen clearly before the veil closes, so it has to read as
+        // a mistake and not as a reward.
+        this.particles.burst(itemX, itemY, item.z, {
+          count: 22,
+          colour: 0x1b2029,
+          speed: 5.4,
+          life: 0.8,
+          size: 0.4,
+        });
+        this.run.addHazard(item.hazard);
+        events.push({ type: "hazard", id: item.hazard });
       } else if (item.powerup) {
         this.particles.burst(itemX, itemY, item.z, {
           count: 26,

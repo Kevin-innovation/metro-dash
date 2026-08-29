@@ -9,6 +9,7 @@ import {
   missionLabel,
   missionPay,
 } from "./missions.js";
+import { CROW } from "./crow.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
@@ -89,21 +90,29 @@ export function renderRank(nameEl, barEl, xpEl, xp) {
 /** The bar nodes of the chips currently mounted, so the frame loop never queries. */
 let powerupFills = [];
 
-export function renderPowerupHud(el, timers, durations) {
+/**
+ * @param {{remaining:number, seconds:number}|null} [crow] the debuff, if it is
+ *   running. Drawn as a chip in the same row and read the same way — icon plus
+ *   a draining bar — because "a timed thing is on you" is one idea and should
+ *   have one shape. The colour is what says which kind.
+ */
+export function renderPowerupHud(el, timers, durations, crow = null) {
   if (!el) return;
   const active = Object.keys(POWERUPS).filter((id) => timers[id] > 0);
-  const signature = active.join(",");
+  const chips = crow ? [...active, CROW.id] : active;
+  const signature = chips.join(",");
 
   if (el.dataset.signature !== signature) {
     el.dataset.signature = signature;
-    el.innerHTML = active
+    el.innerHTML = chips
       .map((id) => {
-        const spec = POWERUPS[id];
+        const spec = id === CROW.id ? CROW : POWERUPS[id];
+        const bad = id === CROW.id ? " bad" : "";
         // The name is kept in the DOM but hidden by CSS: the icon is what a
         // player reads mid-run, and four spelled-out names used to cover the
         // track. `title` puts it back on hover for anyone who wants it.
         return `
-          <div class="pw-chip" data-pw="${id}" style="--pw:${spec.colour}"
+          <div class="pw-chip${bad}" data-pw="${id}" style="--pw:${spec.colour}"
             title="${escapeHtml(spec.name)}">
             <span class="pw-icon" aria-hidden="true">${spec.icon}</span>
             <span class="pw-name">${escapeHtml(spec.name)}</span>
@@ -113,12 +122,17 @@ export function renderPowerupHud(el, timers, durations) {
       .join("");
     // Looked up once per change of the set, rather than three querySelectors
     // every frame for the whole of a magnet.
-    powerupFills = active.map((id) => [id, el.querySelector(`[data-pw="${id}"] .pw-fill`)]);
-    el.classList.toggle("hidden", active.length === 0);
+    powerupFills = chips.map((id) => [id, el.querySelector(`[data-pw="${id}"] .pw-fill`)]);
+    el.classList.toggle("hidden", chips.length === 0);
   }
 
   for (const [id, fill] of powerupFills) {
-    if (fill) fill.style.transform = `scaleX(${Math.max(0, timers[id] / (durations[id] || 1))})`;
+    if (!fill) continue;
+    const left =
+      id === CROW.id
+        ? (crow?.remaining ?? 0) / (crow?.seconds || 1)
+        : timers[id] / (durations[id] || 1);
+    fill.style.transform = `scaleX(${Math.max(0, left)})`;
   }
 }
 
@@ -180,7 +194,7 @@ export function renderHud(state) {
     last.combo = combo;
   }
 
-  renderPowerupHud(el.powerups, state.powerups, state.durations);
+  renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow);
 
   if (el.boardWrap) {
     el.boardWrap.classList.toggle("riding", state.boarding);

@@ -6,6 +6,14 @@
  */
 export const QUALITY_TIERS = ["low", "medium", "high"];
 
+/**
+ * `screenBlur` gates the one effect that costs the compositor rather than the
+ * GPU: a backdrop-filter over the canvas forces a readback of the whole frame,
+ * which is exactly the wrong thing to ask of the device that was already too
+ * slow to hold its tier. The crow's haze is in the fog and the lights as well,
+ * so switching this off dims and thickens the world without blurring it.
+ */
+
 export const QUALITY_PROFILES = {
   low: {
     label: "낮음",
@@ -14,6 +22,7 @@ export const QUALITY_PROFILES = {
     shadowMapSize: 512,
     particleBudget: 60,
     speedLines: false,
+    screenBlur: false,
     fog: [34, 120],
     drawDistance: 150,
   },
@@ -24,6 +33,7 @@ export const QUALITY_PROFILES = {
     shadowMapSize: 1024,
     particleBudget: 160,
     speedLines: true,
+    screenBlur: true,
     fog: [48, 165],
     drawDistance: 210,
   },
@@ -34,6 +44,7 @@ export const QUALITY_PROFILES = {
     shadowMapSize: 2048,
     particleBudget: 260,
     speedLines: true,
+    screenBlur: true,
     fog: [58, 200],
     drawDistance: 260,
   },

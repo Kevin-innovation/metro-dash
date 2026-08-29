@@ -16,6 +16,7 @@ import {
   START_SPEED,
   TITLE_SPEED,
 } from "./config.js";
+import { CROW, applyCrowGloom, crowVeil, makeCrow, updateCrow } from "./crow.js";
 import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
@@ -166,6 +167,9 @@ export class Game {
     this.player = createPlayer(characterById(this.store.data.character).palette);
     this.scene.add(this.player.root);
     this.scene.add(this.player.shadow);
+    // Rides the runner rather than the track, so it is not in the entity pool.
+    this.crow = makeCrow();
+    this.scene.add(this.crow.root);
     this.pool = new EntityPool(this.scene);
     this.particles = new ParticleField(this.scene, 260);
     this.spawner = new Spawner(this.pool, { onOncoming: (item) => this.makeItemOncoming(item) });
@@ -1164,6 +1168,23 @@ export class Game {
       this.speed,
     );
     applyLook(this.world, this.lookNow(), this.quality);
+    // After the zone has written its own look, so this reads as the same world
+    // getting murkier rather than as a grey sheet laid over the top of it.
+    // Read from the timer, not from the state: the timer is already zeroed on
+    // death and on reset, and gating on `playing` as well would lift the veil
+    // the instant the game was paused and drop it again on resume.
+    const veil = crowVeil(this.run.crowT, this.run.crowSeconds);
+    applyCrowGloom(this.world, veil);
+    // Frozen with the rest of the simulation while paused, rather than left
+    // flapping over a still frame.
+    updateCrow(
+      this.crow,
+      this.state === "playing" ? frameDt : 0,
+      this.player,
+      this.run.crowT,
+      this.run.crowSeconds,
+    );
+    this.screens.setCrowVeil(veil, this.quality.screenBlur);
     this.updateCamera(frameDt);
     if (this.state === "playing") this.screens.syncHud(this);
     this.renderer.render(this.scene, this.camera);
@@ -1637,6 +1658,13 @@ export class Game {
         this.audio.coin();
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
+      } else if (event.type === "hazard") {
+        this.audio.caw();
+        // Longer than a power-up's nudge and in two beats, so the hand knows
+        // something went wrong before the eyes have worked out what.
+        vibrate([28, 60, 40]);
+        this.screens.showToast(`${CROW.icon} ${CROW.name}가 달라붙었다!`);
+        this.shake = Math.max(this.shake, 0.45);
       } else {
         if (event.id === "jetpack") this.audio.jetpack();
         else this.audio.powerup();

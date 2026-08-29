@@ -134,6 +134,31 @@ export class AudioBus {
     o.stop(t + 0.6);
   }
 
+  /**
+   * The crow. Two harsh falling rasps rather than the rising three-note runs
+   * every reward in here plays — the shape alone says something went wrong,
+   * before the pitch or the timbre are taken in.
+   */
+  caw() {
+    if (this.muted || !this.ctx) return;
+    const rasp = (at, from, to) => {
+      const t = this.ctx.currentTime + at;
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(from, t);
+      o.frequency.exponentialRampToValueAtTime(to, t + 0.17);
+      g.gain.setValueAtTime(0.34, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      o.connect(g);
+      g.connect(this.master);
+      o.start(t);
+      o.stop(t + 0.2);
+    };
+    rasp(0, 900, 380);
+    rasp(0.16, 760, 300);
+  }
+
   nearMiss() {
     this.beep(1500, 0.05, "triangle", 0.22);
   }

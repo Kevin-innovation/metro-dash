@@ -117,6 +117,91 @@ body.running #game-canvas {
   display: none !important;
 }
 
+/* --- crow veil ------------------------------------------------------------
+   What the crow egg costs you: the track goes murky and dark while the HUD
+   stays legible. Driven from one number (crowVeil in crow.js) that the fog and
+   the lights read too, so the overlay can never disagree with the world under
+   it about how bad things are.
+
+   The tint is a vignette rather than a flat sheet: a uniform grey over the
+   whole frame reads as a broken renderer, whereas darkness closing in from the
+   edges reads as something happening to you. */
+.crow-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle at 50% 46%,
+      rgba(10, 13, 19, 0.12) 0%,
+      rgba(10, 13, 19, 0.46) 46%,
+      rgba(6, 8, 12, 0.86) 100%
+    );
+  /* No transition: the opacity is written every frame from the same eased
+     curve the fog uses, and a CSS transition on top of that would fight it. */
+}
+
+/* The blur is the expensive half — a backdrop-filter forces the compositor to
+   read back the whole canvas each frame — so it is added by the quality tier
+   rather than being part of the base effect. Without it the veil still dims
+   and the world's own fog still thickens. */
+.crow-veil.blurred {
+  backdrop-filter: blur(var(--crow-blur, 0px));
+  -webkit-backdrop-filter: blur(var(--crow-blur, 0px));
+}
+
+/* Feathers drifting past. Two slow, offset sweeps rather than a particle
+   system: this sits above the canvas, and the thing it is decorating is the
+   player's inability to see. */
+.crow-veil::before,
+.crow-veil::after {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(ellipse 14% 5% at 22% 30%, rgba(9, 11, 16, 0.55), transparent 70%),
+    radial-gradient(ellipse 10% 4% at 74% 58%, rgba(9, 11, 16, 0.5), transparent 70%),
+    radial-gradient(ellipse 8% 3% at 45% 78%, rgba(9, 11, 16, 0.45), transparent 70%);
+  animation: crowDrift 3.1s linear infinite;
+}
+
+.crow-veil::after {
+  animation-duration: 4.4s;
+  animation-delay: -1.6s;
+  transform: scaleX(-1);
+}
+
+@keyframes crowDrift {
+  from {
+    transform: translate3d(0, -14%, 0);
+  }
+  to {
+    transform: translate3d(0, 14%, 0);
+  }
+}
+
+.crow-veil::after {
+  animation-name: crowDriftBack;
+}
+
+@keyframes crowDriftBack {
+  from {
+    transform: scaleX(-1) translate3d(0, 12%, 0);
+  }
+  to {
+    transform: scaleX(-1) translate3d(0, -12%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crow-veil::before,
+  .crow-veil::after {
+    animation: none;
+  }
+}
+
 #hud {
   position: absolute;
   inset: 0;
@@ -374,6 +459,26 @@ body.running #game-canvas {
   border-bottom: 2px solid var(--pw, var(--gold));
   backdrop-filter: blur(8px);
   animation: chipIn 0.28s ease-out;
+}
+
+/* The debuff chip. Same shape as the rest of the row so the bar still reads as
+   "time left", inverted in tone so it is never mistaken for one. */
+.pw-chip.bad {
+  background: rgba(50, 12, 8, 0.72);
+  border-bottom-color: var(--pw, #c2410c);
+  animation:
+    chipIn 0.28s ease-out,
+    badPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes badPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(194, 65, 12, 0);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(194, 65, 12, 0.75);
+  }
 }
 
 .pw-icon {
@@ -975,6 +1080,65 @@ kbd {
 .new-best {
   color: var(--gold);
   margin: 0 0 12px;
+}
+
+/**
+ * The results split.
+ *
+ * One column on a phone — byte for byte the old card. Once the screen is wide
+ * enough for two readable columns, the score breakdown and the run's figures
+ * take one side and what the run earned plus where to go next take the other.
+ * This card is the one every run ends at, and as a single column it was
+ * 660px of content on laptops with 620 to give.
+ */
+.over-body {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 820px) {
+  /* Wider than the 440px every other dialog gets, because it is now carrying
+     two columns rather than one. */
+  .dialog.crash {
+    width: min(720px, 100%);
+  }
+
+  .over-body {
+    flex-direction: row;
+    align-items: stretch;
+    gap: clamp(14px, 2vw, 24px);
+    text-align: left;
+  }
+
+  .over-main,
+  .over-side {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* Centred against the taller column beside it, so a short right-hand side —
+     no rank-up, no missions cleared, which is most runs — sits level with the
+     score rather than clinging to the top of an empty half. */
+  .over-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* The last margin in each column would otherwise push the card taller than
+     either column actually needs. */
+  .over-main > :last-child,
+  .over-side > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Two across rather than three: half the width, so the cells would otherwise
+     drop to one per row and the column would grow instead of shrinking. */
+  .over-main .stat-grid div {
+    flex: 1 1 calc(50% - 10px);
+    max-width: none;
+  }
 }
 
 .dialog {

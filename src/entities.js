@@ -379,6 +379,55 @@ export function makeSneakers() {
   return g;
 }
 
+/**
+ * The crow egg: the one pickup you are meant to leave alone.
+ *
+ * Built on the same halo shell as the power-ups so it is unmistakably a thing
+ * you can take, then coloured against every one of them — they are all bright
+ * and saturated, this is soot with a warning ring — because a trap that is not
+ * legible at draw distance is not a trap, it is a coin flip. The bird it
+ * hatches lives in crow.js; this is only the shell on the track.
+ */
+export function makeCrowEgg() {
+  const g = powerupShell(0xff5a3c, 0xb91c1c);
+  const egg = new THREE.Mesh(
+    new THREE.SphereGeometry(0.26, 12, 10),
+    new THREE.MeshLambertMaterial({ color: 0x2b3340, emissive: 0x141821, emissiveIntensity: 0.5 }),
+  );
+  // Squashed at the equator and drawn out at the top: a sphere reads as a ball
+  // and a ball reads as a coin.
+  egg.scale.set(1, 1.34, 1);
+  egg.position.y = 0.22;
+  g.add(egg);
+
+  // Speckles, which is what makes it an egg rather than a dark pebble.
+  for (const [x, y, z] of [
+    [0.1, 0.3, 0.16],
+    [-0.13, 0.2, 0.1],
+    [0.04, 0.12, -0.19],
+    [-0.06, 0.36, -0.1],
+  ]) {
+    const fleck = new THREE.Mesh(
+      new THREE.BoxGeometry(0.07, 0.07, 0.07),
+      new THREE.MeshLambertMaterial({ color: 0x0d1016 }),
+    );
+    fleck.position.set(x, y, z);
+    g.add(fleck);
+  }
+
+  // A single black feather stuck through the ring: the only cue on the track
+  // that says which bird this belongs to.
+  const feather = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.3, 0.11),
+    new THREE.MeshLambertMaterial({ color: 0x0b0e13 }),
+  );
+  feather.position.set(0.2, 0.42, -0.06);
+  feather.rotation.z = 0.55;
+  g.add(feather);
+
+  return g;
+}
+
 const FACTORIES = {
   train: () => makeTrain(TRAIN_COLORS[(Math.random() * TRAIN_COLORS.length) | 0]),
   bus: () => makeBus(BUS_COLORS[(Math.random() * BUS_COLORS.length) | 0]),
@@ -390,6 +439,7 @@ const FACTORIES = {
   jetpack: makeJetpack,
   double: makeDouble,
   sneakers: makeSneakers,
+  crowEgg: makeCrowEgg,
 };
 
 export { SPEC };
@@ -426,6 +476,8 @@ export class EntityPool {
       lane,
       z,
       powerup: spec.powerup ?? null,
+      /** Non-null on a pickup that hurts to take. See crow.js. */
+      hazard: spec.hazard ?? null,
       /** Set once the runner has passed it, so near misses only score once. */
       scored: false,
       // Position at the start of the current simulation step, so the swept

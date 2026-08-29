@@ -102,6 +102,17 @@ export const JETPACK_CLIMB = 7.5;
 
 export const MAGNET_TIME = 8;
 
+// --- Crow egg --------------------------------------------------------------
+
+/**
+ * Seconds the crow harasses the runner after its egg is taken.
+ *
+ * Short on purpose. This is the one pickup that costs you something, and what
+ * it costs is sight — the thing a runner needs most. Long enough to have to be
+ * survived, short enough that it is a bad few seconds rather than a lost run.
+ */
+export const CROW_TIME = 4.5;
+
 /** Seconds a crashed hoverboard keeps the runner invulnerable while recovering. */
 export const HOVERBOARD_GRACE = 1.1;
 export const HOVERBOARD_TIME = 22;

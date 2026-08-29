@@ -56,11 +56,18 @@ export const SPEC = {
   jetpack: { length: 0.7, depth: 0.32, minY: 0, maxY: 3.2, lethal: false, powerup: "jetpack" },
   double: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "double" },
   sneakers: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "sneakers" },
+  // Not lethal and not a power-up: taking it costs you sight rather than the
+  // run. Given the same band as the power-ups so it can be placed among them
+  // and has to be told apart by looking at it, which is the whole point.
+  crowEgg: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, hazard: "crow" },
 };
 
 export const ENTITY_TYPES = Object.keys(SPEC);
 
 export const POWERUP_PICKUPS = ENTITY_TYPES.filter((type) => SPEC[type].powerup);
+
+/** Pickups that hurt to take. Deliberately not power-ups: nothing buys these. */
+export const HAZARD_PICKUPS = ENTITY_TYPES.filter((type) => SPEC[type].hazard);
 
 export function isRideable(type) {
   return !!SPEC[type]?.rideable;

@@ -7,6 +7,7 @@ import {
   POWERUP_PATTERNS,
   SLIDE_DEAD_BAND,
   candidatesFor,
+  crowEggPattern,
   describePattern,
   inSlideDeadBand,
   patternById,
@@ -29,6 +30,19 @@ const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
 /** Power-ups are dealt on a cadence; the jetpack stays the rare one. */
 const POWERUP_DECK = ["magnet", "double", "sneakers", "magnet", "jetpack", "double", "sneakers"];
 const POWERUP_EVERY = 6;
+
+/**
+ * How often the crow egg is dealt, and how long the run gets before the first
+ * one.
+ *
+ * Rarer than the power-ups by a wide margin, and coprime with their cadence so
+ * the two do not lock into a rhythm the player can count. The grace period is
+ * so a new player meets the four pickups that help before meeting the one that
+ * does not — a trap only reads as a trap once there is something for it to be
+ * the opposite of.
+ */
+const HAZARD_EVERY = 17;
+const HAZARD_AFTER = 14;
 
 /**
  * Metres two patterns' hazards must keep between them, whatever the timing
@@ -283,6 +297,12 @@ export class Spawner {
     if (this.patternCount % POWERUP_EVERY === 0) {
       const index = ((this.patternCount / POWERUP_EVERY) | 0) % POWERUP_DECK.length;
       return POWERUP_PATTERNS[POWERUP_DECK[index]](z, context.lane);
+    }
+
+    // Checked after the power-ups, so on the rare draw where both cadences
+    // land on the same pattern the player gets the good one.
+    if (this.patternCount >= HAZARD_AFTER && this.patternCount % HAZARD_EVERY === 0) {
+      return crowEggPattern(z, context.lane);
     }
 
     return pick(candidatesFor(phaseId, slideBias)).build(context);

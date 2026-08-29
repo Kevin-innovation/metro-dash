@@ -41,6 +41,11 @@
     <div id="app">
       <canvas id="game-canvas"></canvas>
 
+      <!-- The crow's veil. Between the canvas and the HUD on purpose: it takes
+           sight of the track away and leaves the score and the timers readable,
+           which is what makes it survivable. -->
+      <div id="crow-veil" class="crow-veil" aria-hidden="true"></div>
+
       <div id="hud" class="hidden">
         <div class="hud-top">
           <div class="hud-left">
@@ -422,80 +427,91 @@
         <div class="dialog crash">
           <p class="eyebrow">RUN OVER</p>
           <h2 id="gameover-title">충돌!</h2>
-          <div class="breakdown">
-            <div>
-              <span>거리 점수</span>
-              <strong id="break-dist">0</strong>
-            </div>
-            <div>
-              <span>코인 점수</span>
-              <strong id="break-coins">0</strong>
-            </div>
-            <div>
-              <span>보너스</span>
-              <strong id="break-bonus">0</strong>
-            </div>
-            <div class="total">
-              <span>합계</span>
-              <strong id="final-score">0</strong>
-            </div>
-          </div>
-          <div class="stat-grid">
-            <div>
-              <span>이번 판 코인</span>
-              <strong id="final-coins">0</strong>
-            </div>
-            <div>
-              <span>거리</span>
-              <strong id="final-dist">0m</strong>
-            </div>
-            <div>
-              <span>최고 콤보</span>
-              <strong id="final-combo">0</strong>
-            </div>
-            <div>
-              <span>아슬아슬</span>
-              <strong id="final-nearmiss">0</strong>
-            </div>
-            <div>
-              <span>지붕 탑승</span>
-              <strong id="final-mounts">0</strong>
-            </div>
-            <div>
-              <span>획득 XP</span>
-              <strong id="final-xp">+0</strong>
-            </div>
-          </div>
 
-          <div id="rank-up" class="rank-up hidden"></div>
-          <div id="mission-cleared" class="mission-cleared hidden"></div>
-
-          <!-- Where that run put you. Filled in once the server has taken the
-               score, which is the only moment a rank means anything. -->
-          <div id="over-ranks" class="over-ranks hidden">
-            <div class="over-rank">
-              <span class="over-rank-label">개인</span>
-              <strong id="over-rank-me" class="over-rank-value">…</strong>
+          <!-- Same split as the title screen, for the same reason: on a laptop
+               this card is the one thing every run ends at, and as one column
+               it ran off the bottom of a 13-inch screen. What you scored on the
+               left, what it did for you and where to go next on the right. -->
+          <div class="over-body">
+            <div class="over-main">
+              <div class="breakdown">
+                <div>
+                  <span>거리 점수</span>
+                  <strong id="break-dist">0</strong>
+                </div>
+                <div>
+                  <span>코인 점수</span>
+                  <strong id="break-coins">0</strong>
+                </div>
+                <div>
+                  <span>보너스</span>
+                  <strong id="break-bonus">0</strong>
+                </div>
+                <div class="total">
+                  <span>합계</span>
+                  <strong id="final-score">0</strong>
+                </div>
+              </div>
+              <div class="stat-grid">
+                <div>
+                  <span>이번 판 코인</span>
+                  <strong id="final-coins">0</strong>
+                </div>
+                <div>
+                  <span>거리</span>
+                  <strong id="final-dist">0m</strong>
+                </div>
+                <div>
+                  <span>최고 콤보</span>
+                  <strong id="final-combo">0</strong>
+                </div>
+                <div>
+                  <span>아슬아슬</span>
+                  <strong id="final-nearmiss">0</strong>
+                </div>
+                <div>
+                  <span>지붕 탑승</span>
+                  <strong id="final-mounts">0</strong>
+                </div>
+                <div>
+                  <span>획득 XP</span>
+                  <strong id="final-xp">+0</strong>
+                </div>
+              </div>
             </div>
-            <div class="over-rank">
-              <span class="over-rank-label">학교</span>
-              <strong id="over-rank-school" class="over-rank-value">…</strong>
+
+            <div class="over-side">
+              <div id="rank-up" class="rank-up hidden"></div>
+              <div id="mission-cleared" class="mission-cleared hidden"></div>
+
+              <!-- Where that run put you. Filled in once the server has taken
+                   the score, which is the only moment a rank means anything. -->
+              <div id="over-ranks" class="over-ranks hidden">
+                <div class="over-rank">
+                  <span class="over-rank-label">개인</span>
+                  <strong id="over-rank-me" class="over-rank-value">…</strong>
+                </div>
+                <div class="over-rank">
+                  <span class="over-rank-label">학교</span>
+                  <strong id="over-rank-school" class="over-rank-value">…</strong>
+                </div>
+              </div>
+
+              <p class="best-line over-best">내 최고 점수 <strong id="over-best">0</strong></p>
+              <p id="new-best" class="new-best hidden">새 최고 기록!</p>
+
+              <p class="bank-line">
+                보유 코인 <span class="coin-orb small"></span><strong id="over-bank">0</strong>
+              </p>
+              <button id="btn-retry" type="button">다시 달리기</button>
+              <!-- Two across: the board is what a player wants right after
+                   seeing their score, and burying it behind the title screen
+                   made them leave the results card to go and look. -->
+              <div class="title-actions">
+                <button id="btn-over-board" type="button" class="ghost hidden">리더보드</button>
+                <button id="btn-home" type="button" class="ghost">타이틀로</button>
+              </div>
             </div>
-          </div>
-
-          <p class="best-line over-best">내 최고 점수 <strong id="over-best">0</strong></p>
-          <p id="new-best" class="new-best hidden">새 최고 기록!</p>
-
-          <p class="bank-line">
-            보유 코인 <span class="coin-orb small"></span><strong id="over-bank">0</strong>
-          </p>
-          <button id="btn-retry" type="button">다시 달리기</button>
-          <!-- Two across: the board is what a player wants right after seeing
-               their score, and burying it behind the title screen made them
-               leave the results card to go and look. -->
-          <div class="title-actions">
-            <button id="btn-over-board" type="button" class="ghost hidden">리더보드</button>
-            <button id="btn-home" type="button" class="ghost">타이틀로</button>
           </div>
         </div>
       </div>
