@@ -99,9 +99,13 @@ export function renderPowerupHud(el, timers, durations) {
     el.innerHTML = active
       .map((id) => {
         const spec = POWERUPS[id];
+        // The name is kept in the DOM but hidden by CSS: the icon is what a
+        // player reads mid-run, and four spelled-out names used to cover the
+        // track. `title` puts it back on hover for anyone who wants it.
         return `
-          <div class="pw-chip" data-pw="${id}" style="--pw:${spec.colour}">
-            <span class="pw-icon">${spec.icon}</span>
+          <div class="pw-chip" data-pw="${id}" style="--pw:${spec.colour}"
+            title="${escapeHtml(spec.name)}">
+            <span class="pw-icon" aria-hidden="true">${spec.icon}</span>
             <span class="pw-name">${escapeHtml(spec.name)}</span>
             <div class="pw-track"><div class="pw-fill"></div></div>
           </div>`;

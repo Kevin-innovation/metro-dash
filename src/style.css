@@ -200,15 +200,18 @@ body.running #game-canvas {
   box-shadow: inset 0 -3px 0 #c07a00, 0 0 10px rgba(255, 210, 74, 0.6);
 }
 
-/* Under the score: the section banner, the power-up chips and the toast, in
-   that order, spaced by the layout rather than by absolute offsets. */
+/* Under the score: the section banner and the power-up chips, side by side on
+   one line. This used to be a column, which meant a gate section plus four
+   power-ups laid five stacked bars down the middle of the track — the run was
+   being played behind its own HUD. One row cannot grow into the play area. */
 .hud-centre {
   flex: none;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
+  flex-flow: row wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
   padding: 0 12px;
   pointer-events: none;
 }
@@ -350,40 +353,46 @@ body.running #game-canvas {
 
 .powerup-stack {
   display: flex;
-  flex-direction: column;
+  flex-flow: row wrap;
+  justify-content: center;
   gap: 6px;
-  width: min(240px, 62vw);
 }
 
+/* Icon and a draining bar, nothing else. The name used to ride along on every
+   chip, which is four lines of Korean over the track for the length of a
+   magnet; the icon carries the same meaning in a fifth of the width and the
+   name is still there for a screen reader. */
 .pw-chip {
+  position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-areas: "icon name" "icon track";
-  align-items: center;
-  column-gap: 8px;
-  padding: 5px 12px 6px;
-  border-radius: 12px;
+  justify-items: center;
+  row-gap: 3px;
+  width: 42px;
+  padding: 4px 5px 5px;
+  border-radius: 11px;
   background: rgba(7, 16, 24, 0.62);
-  border-left: 3px solid var(--pw, var(--gold));
+  border-bottom: 2px solid var(--pw, var(--gold));
   backdrop-filter: blur(8px);
   animation: chipIn 0.28s ease-out;
 }
 
 .pw-icon {
-  grid-area: icon;
   font-size: 20px;
+  line-height: 1;
 }
 
 .pw-name {
-  grid-area: name;
-  font-size: 13px;
-  color: var(--pw, var(--gold));
-  letter-spacing: 0.04em;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .pw-track {
-  grid-area: track;
-  height: 6px;
+  width: 100%;
+  height: 4px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.16);
   overflow: hidden;
@@ -399,7 +408,7 @@ body.running #game-canvas {
 @keyframes chipIn {
   from {
     opacity: 0;
-    transform: translateX(-14px);
+    transform: translateY(-8px) scale(0.9);
   }
   to {
     opacity: 1;
@@ -410,10 +419,11 @@ body.running #game-canvas {
 .near-miss {
   position: absolute;
   left: 50%;
-  /* Below the centre column at its tallest, and above the runner. The pixel
-     floor is what keeps it clear on a short screen, where a percentage of the
-     height lands inside the HUD instead of under it. */
-  top: max(56%, 400px);
+  /* The band between the HUD row and the runner. It used to be pushed down to
+     56% to clear the centre column, which put it on the runner's head now that
+     the column is one line. The pixel floor keeps it out of the HUD on a short
+     screen, where a percentage of the height lands inside it. */
+  top: max(40%, 250px);
   transform: translateX(-50%);
   font-family: var(--font-display);
   letter-spacing: 0.03em;
@@ -508,6 +518,12 @@ body.running #game-canvas {
 }
 
 #speed-toast {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Clear of the HUD row above and the runner below. Centred by the full-width
+     box rather than a transform, so the pop keyframes own `transform`. */
+  top: 30%;
   text-align: center;
   font-family: var(--font-display);
   font-size: clamp(32px, 7vw, 56px);
@@ -538,7 +554,7 @@ body.running #game-canvas {
   }
   100% {
     opacity: 0;
-    transform: translateX(-50%) scale(1.05);
+    transform: scale(1.05);
   }
 }
 
@@ -2190,22 +2206,23 @@ button.report-flag:disabled {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 5px;
-  min-width: 170px;
-  padding: 7px 16px 8px;
-  border-radius: 16px;
+  gap: 4px;
+  min-width: 96px;
+  max-width: 46vw;
+  padding: 4px 12px 5px;
+  border-radius: 12px;
   background: rgba(7, 16, 24, 0.8);
-  border: 2px solid var(--event, var(--gold));
+  border: 1.5px solid var(--event, var(--gold));
   color: var(--event, var(--gold));
   font-family: var(--font-display);
-  font-size: 17px;
-  letter-spacing: 0.04em;
+  font-size: 13px;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   backdrop-filter: blur(8px);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--event, #ffd24a) 45%, transparent);
-  animation:
-    eventIn 0.34s ease-out,
-    eventPulse 1.6s ease-in-out 0.34s infinite;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--event, #ffd24a) 35%, transparent);
+  /* The pulse was a second thing moving on an already moving screen. The
+     draining bar is what carries「끝나간다」; the banner just has to be read. */
+  animation: eventIn 0.34s ease-out;
 }
 
 .event-name {
@@ -2213,7 +2230,7 @@ button.report-flag:disabled {
 }
 
 .event-track {
-  height: 6px;
+  height: 4px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.18);
   overflow: hidden;
@@ -2226,18 +2243,6 @@ button.report-flag:disabled {
   border-radius: 99px;
   background: var(--event, var(--gold));
   transform-origin: left center;
-}
-
-/* Breathing, so it stays visible against a moving background without having to
-   be large enough to sit on top of the track. */
-@keyframes eventPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 14px color-mix(in srgb, var(--event, #ffd24a) 35%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 26px color-mix(in srgb, var(--event, #ffd24a) 65%, transparent);
-  }
 }
 
 @keyframes eventIn {
