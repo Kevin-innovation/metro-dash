@@ -26,6 +26,12 @@ export const COMBO_TIERS = [
   { at: 30, multiplier: 2, label: "UNREAL" },
 ];
 
+/** The best a combo alone can multiply by. Read by the run validator. */
+export const MAX_COMBO_MULTIPLIER = COMBO_TIERS.reduce(
+  (best, tier) => Math.max(best, tier.multiplier),
+  1,
+);
+
 export function comboTier(combo) {
   let tier = COMBO_TIERS[0];
   for (const candidate of COMBO_TIERS) if (combo >= candidate.at) tier = candidate;

@@ -221,10 +221,31 @@ export function tierStep(tier) {
   return 1 + Math.max(0, Math.min(MISSION_TIERS - 1, tier)) * 0.28;
 }
 
-export function missionReward(completedList, tier = 0) {
+/**
+ * The step a mission was actually dealt at, read back from its target.
+ *
+ * The target is the only record of it — the tier itself is not stored — and it
+ * is exactly what the mission card on the title screen reads to work out the
+ * payout it prints.
+ */
+export function dealtTier(entry) {
+  const index = entry?.def?.targets?.indexOf(entry.target) ?? -1;
+  return index < 0 ? 0 : index;
+}
+
+/**
+ * What a finished set pays.
+ *
+ * Each mission pays at the step *it* was dealt at, not at the player's step
+ * now. Those are the same number all day for most people and diverge the moment
+ * anyone levels up mid-set — and when they diverged, the card said 110 coins
+ * and the bank paid 264. It also made holding an easy mission until after a
+ * level-up the best-paying thing a player could do with it.
+ */
+export function missionReward(completedList) {
   return completedList.reduce(
     (acc, entry) => {
-      const pay = missionPay(entry.def, tier);
+      const pay = missionPay(entry.def, dealtTier(entry));
       return { coins: acc.coins + pay.coins, xp: acc.xp + pay.xp };
     },
     { coins: 0, xp: 0 },

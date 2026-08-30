@@ -1,6 +1,14 @@
 import { MAX_SPEED } from "./config.js";
+import { MAX_EVENT_MULTIPLIER } from "./events.js";
 import { speedAt } from "./pace.js";
-import { COIN_BASE, COIN_COMBO_CAP, DIST_SCORE_RATE, ROOF_RIDE_RATE } from "./scoring.js";
+import { DOUBLE_SCORE_MULTIPLIER } from "./powerups.js";
+import {
+  COIN_BASE,
+  COIN_COMBO_CAP,
+  DIST_SCORE_RATE,
+  MAX_COMBO_MULTIPLIER,
+  ROOF_RIDE_RATE,
+} from "./scoring.js";
 
 /**
  * Rules the leaderboard enforces on the server.
@@ -69,14 +77,29 @@ export function maxDistanceIn(seconds) {
 /**
  * Ceilings on what one metre and one coin can possibly be worth.
  *
- * Combo tier (×2) and the double-score power-up (×2) are the only multipliers,
- * and roof riding is the only per-metre bonus, so the best case is knowable.
+ * Three multipliers stack, not two: the combo tier (×2), the double-score
+ * power-up (×2) and the section running at the time (×2 during 코인 러시).
+ * Run.multiplier() has multiplied all three together since sections were added;
+ * this said 4 and so rejected the exact runs it should have been ranking — a
+ * strong combo through a coin rush with double score is eight times, and the
+ * board simply never heard about it. Worse, a rejected run does not lift the
+ * ledger either, so the best players were also the ones whose saves started
+ * being refused.
+ *
+ * Derived from the pieces rather than written as a number, so a fourth
+ * multiplier cannot be added without this following it.
  */
-export const MAX_MULTIPLIER = 4;
+export const MAX_MULTIPLIER = MAX_COMBO_MULTIPLIER * DOUBLE_SCORE_MULTIPLIER * MAX_EVENT_MULTIPLIER;
 const MAX_PER_METRE = (DIST_SCORE_RATE + ROOF_RIDE_RATE) * MAX_MULTIPLIER;
 const MAX_PER_COIN = (COIN_BASE + COIN_COMBO_CAP) * MAX_MULTIPLIER;
-/** Near-miss and mount bonuses, generously bounded per second of running. */
-const MAX_BONUS_PER_SECOND = 90;
+/**
+ * Near-miss and mount bonuses, generously bounded per second of running.
+ *
+ * Scales with the multiplier for the same reason the two above do: a near miss
+ * is worth 15 points times whatever is running, and the old flat 90 was written
+ * when that could only reach four.
+ */
+const MAX_BONUS_PER_SECOND = 22.5 * MAX_MULTIPLIER;
 
 /** Coins are spaced ~1.35m apart at the tightest, magnet pulls included. */
 const MAX_COINS_PER_METRE = 1 / 1.2;

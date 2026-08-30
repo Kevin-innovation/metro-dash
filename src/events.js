@@ -70,6 +70,12 @@ export function eventById(id) {
  *
  * @returns {{ event: object, elapsed: number, remaining: number } | null}
  */
+/** The best a section alone can multiply by. Read by the run validator. */
+export const MAX_EVENT_MULTIPLIER = EVENTS.reduce(
+  (best, event) => Math.max(best, event.scoreMultiplier ?? 1),
+  1,
+);
+
 export function eventAt(t) {
   if (!(t >= FIRST_EVENT_AT)) return null;
   const since = t - FIRST_EVENT_AT;

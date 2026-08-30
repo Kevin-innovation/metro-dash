@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.02";
+export const VERSION = "2.03";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "2.02";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.03",
+    date: "2026-08-30",
+    kind: "fix",
+    title: "좋은 판이 순위에 안 오르던 문제 · 미션 보상",
+    notes: [
+      "코인 러시 같은 배율 구간에서 점수 2배와 높은 콤보가 겹친 판이 「불가능한 기록」으로 걸러져 리더보드에 오르지 않던 문제를 고쳤어요. 잘 친 판일수록 걸리던 문제라, 제일 잘한 기록이 안 올라가고 있었습니다.",
+      "미션 보상이 미션 카드에 적힌 금액과 다르게 지급되던 것을 고쳤어요. 이제 카드에 보이는 그대로 받습니다.",
+      "역무원의 「획득 XP +25%」가 판 점수로 받는 XP에만 붙고 미션 XP에는 안 붙던 것을 고쳤어요. 이제 모든 XP에 붙습니다.",
+      "야근러의 「미션 보상 +30%」가 코인에만 붙고 XP에는 안 붙던 것을 고쳤어요. 미션 카드가 둘 다 보여 주니 둘 다 올라갑니다.",
+    ],
+  },
   {
     version: "2.02",
     date: "2026-08-30",

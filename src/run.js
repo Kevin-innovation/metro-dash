@@ -182,6 +182,17 @@ export class Run {
     return this.crowT > 0;
   }
 
+  /**
+   * Apply the character's experience perk.
+   *
+   * 「획득 XP +25%」 says experience, not run experience, and it was reaching
+   * only the score-derived half — so the character bought for XP did nothing
+   * for the missions, which is where a careful player gets most of theirs.
+   */
+  scaledXp(xp) {
+    return Math.round(xp * this.xpScale);
+  }
+
   addBoard() {
     this.metrics.boards += 1;
   }
@@ -236,7 +247,7 @@ export class Run {
     const score = this.score;
     const coinsDelta = this.coins - this.banked.coins;
     const distanceDelta = this.distance - this.banked.distance;
-    const earnedXp = Math.round(runXp(score) * this.xpScale);
+    const earnedXp = this.scaledXp(runXp(score));
     const xpDelta = earnedXp - this.banked.xp;
     const deltas = {};
     for (const key of Object.keys(this.metrics)) {
@@ -283,18 +294,23 @@ export class Run {
     });
 
     save.missions = missions;
-    // Read once and used for both payouts below, so the set and the bonus for
-    // finishing it can never be settled at two different difficulty steps.
+    // The all-clear bonus is settled at the player's step now, which is what
+    // the title card prints beside it. The individual missions are not — each
+    // is paid at the step it was dealt at, which is what *its* card prints.
     const tier = missionTier(save.xp, MISSION_TIERS);
     // The character's mission perk applies to the mission payout only, not to
     // the coins picked up during the run — those have their own multiplier.
     const missionBonus = perkFor(save.character).missionBonus ?? 1;
-    const reward = missionReward(completed, tier);
+    // Each mission at the step it was dealt at; see missionReward.
+    const reward = missionReward(completed);
     if (completed.length) {
       save.missionsDone += completed.length;
+      // Both halves of the payout. 「미션 보상 +30%」is printed beside a card
+      // that shows coins and XP, and the perk was reaching only the coins.
       reward.coins = Math.round(reward.coins * missionBonus);
+      reward.xp = Math.round(reward.xp * missionBonus);
       this.store.addCoins(reward.coins);
-      this.store.addXp(reward.xp);
+      this.store.addXp(this.scaledXp(reward.xp));
     }
 
     // Clearing the whole day's set pays on top. Guarded by the day it was paid
@@ -309,10 +325,11 @@ export class Run {
       // lost its perk on the largest mission payout of the day.
       const bonus = dailyBonus(tier);
       const coins = Math.round(bonus.coins * missionBonus);
+      const xp = Math.round(bonus.xp * missionBonus);
       this.store.addCoins(coins);
-      this.store.addXp(bonus.xp);
+      this.store.addXp(this.scaledXp(xp));
       reward.coins += coins;
-      reward.xp += bonus.xp;
+      reward.xp += xp;
       reward.dailyBonus = true;
     }
 
