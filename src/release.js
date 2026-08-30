@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.03";
+export const VERSION = "2.10";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "2.03";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.10",
+    date: "2026-08-30",
+    kind: "minor",
+    title: "코인 밸런스 정리",
+    notes: [
+      "레벨 10~25 구간의 레벨업 보상이 지나치게 컸던 것을 조정했어요. 레벨 9까지 필요한 경험치가 뚝 떨어지는 구간인데 보상은 그대로 2,000코인이라, 달리는 것보다 그 구간에 서 있는 편이 더 벌리는 상태였습니다. 이제 레벨업 보상은 그 레벨에 든 경험치에 비례합니다 — 레벨 9까지는 지금까지와 똑같고, 그 위로는 300~2,500코인입니다.",
+      "연속 출석 보상을 하루 최대 420코인에서 175코인으로 낮췄어요. 한 판 잘 달리면 300코인 안팎인데 출석만으로 그보다 더 받고 있었습니다. 기관사의 2배 특성은 그대로입니다.",
+      "상점에서 무언가를 사면 그 즉시 서버에 반영됩니다. 예전에는 다음 판이 끝날 때까지 기다렸다가 그 판 수익과 묶여서 올라갔어요.",
+      "이미 받은 보상은 그대로입니다. 앞으로 오를 레벨과 앞으로 찍을 출석에만 적용됩니다.",
+    ],
+  },
   {
     version: "2.03",
     date: "2026-08-30",

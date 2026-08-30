@@ -89,20 +89,44 @@ export const RANKS = buildRanks();
 /**
  * Coins paid for reaching a new rank.
  *
- * Scaled by the rank so the ladder keeps paying: the ranks are far apart by
- * design, and arriving at 「메트로 마스터」 for the same 250 coins as 「통근자」
- * would make the climb feel like it stopped mattering halfway up.
+ * The first nine keep the hand-set schedule they were always paid on — they
+ * are the first afternoon, they come to nine thousand coins in total, and every
+ * player who climbed them did it for these numbers.
  *
- * Flat above the ninth. With nine ranks the top payout was 2,000; carrying the
- * same rule to ninety-nine would have made one level-up worth 24,500 and the
- * whole ladder worth 1.2 million, against a shop that costs 113,700 to empty.
- * A ladder that pays for itself twelve times over is not a ladder, it is a tap.
+ * Above the ninth the payout follows the experience the level actually cost.
+ * It used to be flat at 2,000, which sounds even and was not: the experience
+ * curve restarts just above rank nine, so levelling from 9 to 10 costs 2,600
+ * experience where 8 to 9 cost 17,000 — and both paid 2,000. That made levels
+ * 10 to 25 worth about 0.7 coins for every point of experience, against the
+ * 0.13 that playing pays, and the fastest way to earn in the game was to stand
+ * on the cheapest rungs of the ladder. Paying a fixed fraction of what a level
+ * cost cannot have a sweet spot in it, because there is nothing left to vary.
  */
 export const RANK_UP_COINS = 250;
 
+/**
+ * Coins per point of experience a level cost.
+ *
+ * A quarter of what running pays for the same experience, so arriving somewhere
+ * is a garnish on the runs that got you there rather than a better way to earn
+ * than running.
+ */
+const RANK_COIN_RATE = 0.04;
+/** Floor, so the cheap early ranks above nine are still worth arriving at. */
+const RANK_COIN_MIN = 300;
+/** Ceiling, so the quarter-million-experience rungs are not a windfall. */
+const RANK_COIN_MAX = 2500;
+
 export function rankReward(level) {
-  const steps = Math.min(Math.max(0, Math.floor(level) - 1), EARLY_RANKS.length - 1);
-  return RANK_UP_COINS * steps;
+  const n = Math.floor(level);
+  if (n <= EARLY_RANKS.length) {
+    return RANK_UP_COINS * Math.min(Math.max(0, n - 1), EARLY_RANKS.length - 1);
+  }
+  const here = RANKS.find((rank) => rank.level === n);
+  const below = RANKS.find((rank) => rank.level === n - 1);
+  if (!here || !below) return RANK_COIN_MIN;
+  const cost = Math.max(0, here.xp - below.xp);
+  return Math.min(RANK_COIN_MAX, Math.max(RANK_COIN_MIN, Math.round(cost * RANK_COIN_RATE)));
 }
 
 /** Everything earned by crossing from one rank to another, ranks included. */

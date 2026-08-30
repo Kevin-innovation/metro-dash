@@ -16,16 +16,6 @@ import { levelOf, xpOf } from "./players.js";
 
 export const LEADERBOARD_LIMIT = 50;
 
-/**
- * Coins one run may add to the ledger beyond the ones it picked up.
- *
- * Everything the client is allowed to pay out around a run has to fit under
- * this, or an honest save gets refused: three missions at up to 190, a streak
- * bonus of up to 420, and a rank-up worth up to 2000. Loose on purpose — the
- * ledger exists to stop a save claiming a million coins, not to audit a run.
- */
-export const CLIENT_COINS_PER_RUN = 3000;
-
 /** Rows read beyond the page, so filtered-out accounts do not shorten it. */
 const FILTER_MARGIN = 16;
 
@@ -79,9 +69,22 @@ export const submit = mutation({
       patch.weekKey = week;
       patch.weekBest = Math.max(score, weekBest);
     }
-    // A validated run is the only thing that can pay coins out, so it is the
-    // only thing that lifts the ceiling on what a save may be worth.
-    patch.coinLedger = (player.coinLedger ?? 0) + Math.floor(args.coins) + CLIENT_COINS_PER_RUN;
+    // The ledger is not touched here.
+    //
+    // It used to grow by this run's coins plus a flat three thousand, meant to
+    // cover the missions, streak and rank-up a run can also pay out. Two things
+    // were wrong with that. The allowance was granted whether or not anything
+    // was actually earned, so a hundred quiet runs lifted the ceiling by three
+    // hundred thousand coins and the ledger stopped bounding anything; and it
+    // was still too small for the run that finishes all three missions at the
+    // top step, takes the daily bonus and levels up, which comes to over six
+    // thousand — so it was simultaneously useless and capable of refusing the
+    // best day a player ever has.
+    //
+    // players:save now reports what the client actually credited itself and the
+    // ledger grows by exactly that, which is both tighter and correct. Coins
+    // picked up in this run reach it the same way, so adding them here as well
+    // would count them twice.
     await ctx.db.patch(player._id, patch);
 
     if (score > player.best) {

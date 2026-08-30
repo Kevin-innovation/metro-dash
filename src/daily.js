@@ -27,7 +27,21 @@ export function isConsecutive(lastDay, today) {
 
 /** Longest streak the reward keeps growing for. Beyond it the bonus is flat. */
 export const STREAK_REWARD_CAP = 7;
-export const STREAK_COIN_STEP = 60;
+
+/**
+ * Coins per day of streak.
+ *
+ * The note above says the reward is deliberately small next to a good run. At
+ * sixty it was not: a seventh day paid 420, and a good run pays something like
+ * 300, so the best-paying thing a player could do was open the game. Doubled
+ * again by 기관사, showing up beat playing outright. At twenty-five a full week
+ * is 175 — noticeable, worth keeping, and still less than going and running.
+ *
+ * The character's doubling applies on top of this, which is what its card says
+ * and is left alone: 350 a day is a strong perk for a fourteen-thousand-coin
+ * runner and still under what a good run pays.
+ */
+export const STREAK_COIN_STEP = 25;
 
 /** Coins for showing up on day `streak` of a run of days. */
 export function streakReward(streak) {

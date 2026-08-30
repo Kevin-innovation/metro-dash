@@ -255,14 +255,35 @@ describe("rank progression", () => {
 
   /**
    * The reward was 250 × (level - 1), which was fine while nine was the top and
-   * would have paid 24,500 for one level-up at ninety-nine — against a shop
-   * that costs 113,700 to empty.
+   * would have paid 24,500 for one level-up at ninety-nine.
    */
   it("does not turn ninety more ranks into a coin tap", () => {
     expect(rankReward(2)).toBe(250);
     expect(rankReward(9)).toBe(2000);
-    expect(rankReward(99)).toBe(2000);
-    expect(rankUpBetween(1, 99).coins).toBeLessThan(200_000);
+    expect(rankUpBetween(1, 99).coins).toBeLessThan(150_000);
+  });
+
+  /**
+   * The property that actually matters, and the one a flat payout broke: no
+   * rung may pay better per point of experience than running does.
+   *
+   * The experience curve restarts just above rank nine — 8→9 costs 17,000 and
+   * 9→10 costs 2,600 — so a flat 2,000 made levels 10 to 25 pay around 0.7
+   * coins per point against the 0.13 that playing pays. Standing on the cheap
+   * rungs was the best-paying thing in the game.
+   */
+  it("never pays better per point of experience than playing does", () => {
+    const PLAY_RATE = 0.13;
+    for (let level = 10; level <= 99; level++) {
+      const cost = RANKS.find((r) => r.level === level).xp - RANKS.find((r) => r.level === level - 1).xp;
+      expect(rankReward(level) / cost, `level ${level}`).toBeLessThan(PLAY_RATE);
+    }
+  });
+
+  it("still pays something for every rung above the ninth", () => {
+    for (let level = 10; level <= 99; level++) {
+      expect(rankReward(level), `level ${level}`).toBeGreaterThan(0);
+    }
   });
 
   it("starts at level 1 and only ever climbs", () => {

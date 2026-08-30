@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { perkFor } from "../src/characters.js";
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
+import { STREAK_REWARD_CAP, streakReward } from "../src/daily.js";
 import {
   MISSION_DEFS,
   MISSION_TIERS,
-  applyMetrics,
+  dailyBonus,
   dealtTier,
   missionPay,
   missionReward,
@@ -151,5 +152,49 @@ describe("the mission perk reaches both halves of a mission reward", () => {
     const perked = banked("nightshift");
     expect(perked.coins).toBeGreaterThan(plain.coins);
     expect(perked.xp).toBeGreaterThan(plain.xp);
+  });
+});
+
+describe("the streak is an invitation, not a wage", () => {
+  it("pays less for a full week than a good run pays", () => {
+    // daily.js says the reward is deliberately small next to a good run. A
+    // real run in the screenshots picked up 272 coins; at 60 a day the seventh
+    // day paid 420, so opening the game beat playing it.
+    const GOOD_RUN_COINS = 272;
+    expect(streakReward(STREAK_REWARD_CAP)).toBeLessThan(GOOD_RUN_COINS);
+  });
+
+  it("stops growing after a week, however long the streak runs", () => {
+    const capped = streakReward(STREAK_REWARD_CAP);
+    for (const day of [8, 30, 365]) expect(streakReward(day)).toBe(capped);
+  });
+
+  it("still leaves 기관사 worth having, and still under a good run", () => {
+    const doubled = streakReward(STREAK_REWARD_CAP) * perkFor("driver").streakBonus;
+    expect(doubled).toBeGreaterThan(streakReward(STREAK_REWARD_CAP));
+    expect(doubled).toBeLessThan(400);
+  });
+
+  it("pays a first day, so a new player gets something", () => {
+    expect(streakReward(1)).toBeGreaterThan(0);
+  });
+});
+
+describe("what one run can legitimately pay out", () => {
+  it("the best possible day comfortably exceeds the old flat allowance", () => {
+    // The allowance removed from scores.js was 3,000. This is what a run that
+    // finishes all three missions at the top step, takes the daily bonus and
+    // levels up actually pays — it was over twice the allowance meant to cover
+    // it, so the honest player having their best day was the one refused.
+    const topMission = Math.max(
+      ...MISSION_DEFS.map((def) => missionPay(def, MISSION_TIERS - 1).coins),
+    );
+    const perk = perkFor("nightshift").missionBonus;
+    const best =
+      Math.round(topMission * 3 * perk) +
+      Math.round(dailyBonus(MISSION_TIERS - 1).coins * perk) +
+      streakReward(STREAK_REWARD_CAP) +
+      2500;
+    expect(best).toBeGreaterThan(3000);
   });
 });

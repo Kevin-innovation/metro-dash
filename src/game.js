@@ -828,6 +828,15 @@ export class Game {
     }
     this.screens.refreshShop(this.store.data);
     this.screens.refreshProfile(this.store.data);
+    // Reported now rather than folded into the next run's sync.
+    //
+    // Syncing only after a run meant a purchase and the following run's
+    // earnings reached the server netted together — 30,000 spent and 200 earned
+    // arrived as one number, and the server could not tell which part was
+    // which. The ledger it checks purchases against is built from what it was
+    // told was credited, so a purchase reported inside a credit is a purchase
+    // it never saw funded.
+    this.syncCoins();
   }
 
   openSettings() {
