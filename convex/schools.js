@@ -124,15 +124,27 @@ export async function leaveSchool(ctx, player) {
 // --- reads ------------------------------------------------------------------
 
 /**
- * Rows read beyond the ones asked for, so the excluded ones do not eat the page.
+ * Combine rows that were written before a shared school key existed.
  *
- * 일반부 sits near the top of `by_total` — its members are real players with
- * real scores — and dropping it after taking ten left nine schools on a board
- * with ten places. Anything filtered has to be filtered before the page is
- * cut, which means fetching past it first. The table has a row per school, so
- * reading a few extra costs nothing.
+ * Most school rows are already one row per key. DIS is the intentional
+ * exception: old `대구|초|국제`, `대구|중|국제`, and `대구|고|국제` rows must
+ * read as one school immediately, even before the staff migration removes the
+ * old physical rows.
  */
-const FILTER_MARGIN = 16;
+function groupedRows(rows, weekly, week) {
+  const grouped = new Map();
+  for (const row of rows) {
+    const figures = weekly ? weekOf(row, week) : { total: row.total, members: row.members };
+    if (isGeneral(row)) continue;
+
+    const key = schoolKey(row);
+    const held = grouped.get(key) ?? { key, label: schoolLabel(row), total: 0, members: 0 };
+    held.total += figures.total;
+    held.members += figures.members;
+    grouped.set(key, held);
+  }
+  return [...grouped.values()].sort((a, b) => b.total - a.total);
+}
 
 export const top = query({
   args: { limit: v.optional(v.number()), range: v.optional(v.string()) },
@@ -140,28 +152,23 @@ export const top = query({
     const take = Math.min(SCHOOL_LIMIT, Math.max(1, Math.floor(limit ?? 10)));
     const weekly = range === "week";
     const week = weekKey(Date.now());
-    const window = take + FILTER_MARGIN;
-
     const rows = weekly
       ? await ctx.db
           .query("schools")
           .withIndex("by_week_total", (q) => q.eq("weekKey", week))
           .order("desc")
-          .take(window)
-      : await ctx.db.query("schools").withIndex("by_total").order("desc").take(window);
+          .collect()
+      : await ctx.db.query("schools").withIndex("by_total").order("desc").collect();
 
-    return rows
-      // 일반부 is an affiliation, not a school: it belongs under a player's name
-      // on the individual board, not in a ranking of schools.
-      .map((row) => ({ row, figures: weekly ? weekOf(row, week) : { total: row.total, members: row.members } }))
-      .filter(({ row, figures }) => figures.total > 0 && !isGeneral(row))
+    return groupedRows(rows, weekly, week)
+      .filter((row) => row.total > 0)
       .slice(0, take)
-      .map(({ row, figures }, index) => ({
+      .map((row, index) => ({
         rank: index + 1,
         key: row.key,
         label: row.label,
-        total: figures.total,
-        members: figures.members,
+        total: row.total,
+        members: row.members,
       }));
   },
 });
@@ -176,28 +183,19 @@ export const standing = query({
 
     const weekly = range === "week";
     const week = weekKey(Date.now());
-    const row = await ctx.db
-      .query("schools")
-      .withIndex("by_key", (q) => q.eq("key", player.schoolKey))
-      .unique();
-    if (!row) return { rank: null, label: "", total: 0, members: 0 };
-
-    const mine = weekly ? weekOf(row, week) : { total: row.total, members: row.members };
-    if (mine.total <= 0) return { rank: null, label: row.label, total: 0, members: mine.members };
-
-    const above = weekly
+    const rows = weekly
       ? await ctx.db
           .query("schools")
-          .withIndex("by_week_total", (q) => q.eq("weekKey", week).gt("weekTotal", mine.total))
+          .withIndex("by_week_total", (q) => q.eq("weekKey", week))
           .collect()
-      : await ctx.db
-          .query("schools")
-          .withIndex("by_total", (q) => q.gt("total", mine.total))
-          .collect();
+      : await ctx.db.query("schools").withIndex("by_total").order("desc").collect();
 
-    // Counted the same way the board is, or a 일반부 total above this one would
-    // push every school below it down a place that does not exist on screen.
-    const ahead = above.filter((other) => !isGeneral(other)).length;
-    return { rank: ahead + 1, label: row.label, total: mine.total, members: mine.members };
+    const grouped = groupedRows(rows, weekly, week);
+    const mine = grouped.find((row) => row.key === schoolKey(player.school));
+    if (!mine) return { rank: null, label: schoolLabel(player.school), total: 0, members: 0 };
+    if (mine.total <= 0) return { rank: null, label: mine.label, total: 0, members: mine.members };
+
+    const ranked = grouped.filter((row) => row.total > 0);
+    return { rank: ranked.indexOf(mine) + 1, label: mine.label, total: mine.total, members: mine.members };
   },
 });

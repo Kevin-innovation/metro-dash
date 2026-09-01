@@ -34,8 +34,15 @@ async function loadTable() {
 export async function loadSchoolNames(region, level) {
   const table = await loadTable();
   const names = table?.[region]?.[level];
-  if (!Array.isArray(names)) return [];
-  return names;
+  const result = Array.isArray(names) ? [...names] : [];
+
+  // DIS is a K–12 school and is not consistently present in the NEIS list.
+  // Keep it available in all three menus as a search suggestion; school.js
+  // still validates and canonicalises the submitted value on the server.
+  if (region === "대구" && ["초", "중", "고"].includes(level) && !result.includes("=DIS")) {
+    result.unshift("=DIS");
+  }
+  return result;
 }
 
 /** Whether a usable list was bundled at all. */

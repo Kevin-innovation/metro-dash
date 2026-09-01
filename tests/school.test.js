@@ -72,6 +72,23 @@ describe("한 학교가 한 줄로 모이는지", () => {
     expect(ok("부산", "고", "대동남고").label).toBe("부산대동남고");
   });
 
+  it("DIS 는 초 · 중 · 고 어디서 검색해도 같은 표시 이름으로 정규화된다", () => {
+    for (const level of LEVELS) {
+      for (const name of ["DIS", "Daegu International School", "Daegu International School (대구국제학교)", "대구국제학교"]) {
+        const result = ok("대구", level.code, name);
+        expect(result.school).toMatchObject({ region: "대구", level: level.code, name: "국제" });
+        expect(result.label).toBe("DIS");
+        expect(schoolKey(result.school)).toBe("대구|DIS");
+      }
+    }
+  });
+
+  it("예전에 저장된 국제학교 표기도 DIS 공유 키로 되돌린다", () => {
+    const legacy = { region: "대구", level: "중", name: "국제학교", label: "대구국제학교" };
+    expect(schoolKey(legacy)).toBe("대구|DIS");
+    expect(schoolLabel(legacy)).toBe("DIS");
+  });
+
   it("대소문자와 공백으로는 학교가 갈라지지 않는다", () => {
     expect(keyOf("경기", "중", "ABC중")).toBe(keyOf("경기", "중", " abc 중학교 "));
   });
@@ -395,6 +412,14 @@ describe("미리보기", () => {
   it("입력하는 동안 저장될 이름을 그대로 보여준다", () => {
     expect(previewLabel({ region: "대구", level: "중", name: "동중" })).toBe("대구동중");
     expect(previewLabel({ region: "대구", level: "중", name: "동" })).toBe("대구동중");
+  });
+
+  it("DIS 검색어는 학교급과 관계없이 DIS로 미리 보여준다", () => {
+    for (const level of LEVELS) {
+      expect(previewLabel({ region: "대구", level: level.code, name: "Daegu International School (대구국제학교)" })).toBe(
+        "DIS",
+      );
+    }
   });
 
   it("아직 덜 골랐으면 아무것도 보여주지 않는다", () => {

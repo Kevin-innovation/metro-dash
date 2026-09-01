@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { weekKey, weekLabel, weekStart } from "../src/week.js";
+import { schoolLabel } from "../src/school.js";
 
 /**
  * The hall of fame: who won each week, kept for good.
@@ -50,7 +51,7 @@ async function rankWeek(ctx, from, to) {
   for (const entry of best.values()) {
     if (entry.school) continue;
     const player = await ctx.db.get(entry.playerId);
-    entry.school = player?.school?.label ?? "";
+    entry.school = player?.school ? schoolLabel(player.school) : "";
   }
 
   const players = [...best.values()]

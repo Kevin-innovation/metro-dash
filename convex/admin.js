@@ -328,7 +328,7 @@ export const schools = query({
     const rows = await ctx.db.query("schools").withIndex("by_total").order("desc").take(300);
     return rows.map((row) => ({
       key: row.key,
-      label: row.label,
+      label: schoolLabel(row),
       region: row.region,
       level: row.level,
       name: row.name,
@@ -380,7 +380,7 @@ export const mergeSchools = mutation({
     });
     await ctx.db.delete(from._id);
 
-    return { ok: true, moved: members.length, from: from.label, to: to.label };
+    return { ok: true, moved: members.length, from: schoolLabel(from), to: schoolLabel(to) };
   },
 });
 
@@ -504,7 +504,7 @@ export const recordRun = mutation({
     await ctx.db.insert("scores", {
       playerId: player._id,
       handle: player.handle,
-      school: player.school?.label ?? "",
+      school: player.school ? schoolLabel(player.school) : "",
       score,
       distance: 0,
       coins: 0,

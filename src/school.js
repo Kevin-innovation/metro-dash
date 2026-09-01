@@ -41,6 +41,37 @@ export const LEVELS = [
 export const GENERAL_LEVEL = "일";
 export const GENERAL = { region: "일반", level: GENERAL_LEVEL, name: "일반부", label: "일반부" };
 
+/**
+ * Daegu International School is a K–12 affiliation, so it must be findable
+ * from every school-level tab. Keep 「국제」 as the stored name for backwards
+ * compatibility, while accepting the names people are likely to search for.
+ */
+const DIS_CANONICAL_NAME = "국제";
+const DIS_SEARCH_NAMES = new Set([
+  "dis",
+  "daeguinternationalschool",
+  "대구국제",
+  "국제학교",
+  "대구국제학교",
+  "dis(대구국제학교)",
+  "대구국제학교(dis)",
+  "daeguinternationalschool(대구국제학교)",
+]);
+
+/** The leaderboard label is deliberately just the familiar abbreviation. */
+const DIS_SCHOOL_KEY = "대구|DIS";
+
+function isDISSchool(region, level, name) {
+  return region === "대구" && ["초", "중", "고"].includes(level) && foldHandle(name).collapsed === DIS_CANONICAL_NAME;
+}
+
+function normalizeKnownSchoolName(region, raw) {
+  if (region === "대구" && DIS_SEARCH_NAMES.has(foldHandle(raw).base)) {
+    return DIS_CANONICAL_NAME;
+  }
+  return raw;
+}
+
 /** @returns {boolean} true for the 일반부 affiliation rather than a real school. */
 export function isGeneral(school) {
   return school?.level === GENERAL_LEVEL;
@@ -236,7 +267,7 @@ export function validateSchool({ region, level, name } = {}) {
   if (!REGIONS.includes(region)) return fail(REJECT_SCHOOL.REGION);
   if (!LEVELS.some((entry) => entry.code === level)) return fail(REJECT_SCHOOL.LEVEL);
 
-  const split = resolve(name, level);
+  const split = resolve(normalizeKnownSchoolName(region, name), level);
   if (split.mismatch) return fail(REJECT_SCHOOL.MISMATCH);
 
   const { base, impliedLevel } = split;
@@ -253,7 +284,12 @@ export function validateSchool({ region, level, name } = {}) {
   // and nothing in the two strings tells them apart.
   const whole = impliedLevel === null && base.includes("학교");
   const name_ = stripRegion(region, level, aliasName(region, base));
-  const school = { region, level, name: name_, label: composeLabel(region, level, name_, whole) };
+  const school = {
+    region,
+    level,
+    name: name_,
+    label: schoolDisplayLabel(region, level, name_, composeLabel(region, level, name_, whole)),
+  };
   return { ok: true, school, label: school.label };
 }
 
@@ -274,9 +310,14 @@ function composeLabel(region, level, name, whole) {
   return `${region}${stem}${gender}${level}`;
 }
 
+function schoolDisplayLabel(region, level, name, fallback) {
+  return isDISSchool(region, level, normalizeKnownSchoolName(region, name)) ? "DIS" : fallback;
+}
+
 /**
  * Identity of a school. Takes a school that has already been through
- * `validateSchool`, never raw input.
+ * `validateSchool`, never raw input. DIS is intentionally one K–12 key rather
+ * than one row per selected school level.
  *
  * It deliberately does not strip a suffix again. 「서울당중초등학교」 is a real
  * school whose name is 「서울당중」, and stripping once more would file it as
@@ -284,7 +325,9 @@ function composeLabel(region, level, name, whole) {
  * name stored beside it.
  */
 export function schoolKey({ region, level, name }) {
-  return `${region}|${level}|${foldHandle(name).collapsed}`;
+  const canonicalName = normalizeKnownSchoolName(region, name);
+  if (isDISSchool(region, level, canonicalName)) return DIS_SCHOOL_KEY;
+  return `${region}|${level}|${foldHandle(canonicalName).collapsed}`;
 }
 
 /**
@@ -295,7 +338,8 @@ export function schoolKey({ region, level, name }) {
  */
 export function schoolLabel(school) {
   if (!school) return "";
-  return school.label || composeLabel(school.region, school.level, school.name, false);
+  const fallback = school.label || composeLabel(school.region, school.level, school.name, false);
+  return schoolDisplayLabel(school.region, school.level, school.name, fallback);
 }
 
 /**
@@ -314,14 +358,15 @@ export function schoolLabel(school) {
  */
 export function canonicalSchool({ region, level, name, label } = {}) {
   if (level === GENERAL_LEVEL) return { ...GENERAL };
-  const base = normalizeHandle(name);
+  const base = normalizeHandle(normalizeKnownSchoolName(region, name));
   const whole = label
     ? label.replace(/\s+/g, "") === `${region}${base}`
     : base.endsWith("학교");
   // Aliasing is idempotent — 「사대부」 does not match the pattern that produced
   // it — so a row already shortened passes through unchanged.
   const canonical = stripRegion(region, level, aliasName(region, base));
-  return { region, level, name: canonical, label: composeLabel(region, level, canonical, whole) };
+  const fallback = composeLabel(region, level, canonical, whole);
+  return { region, level, name: canonical, label: schoolDisplayLabel(region, level, canonical, fallback) };
 }
 
 /**
@@ -330,8 +375,9 @@ export function canonicalSchool({ region, level, name, label } = {}) {
  */
 export function previewLabel({ region, level, name }) {
   if (level === GENERAL_LEVEL) return GENERAL.label;
-  const { base, impliedLevel } = resolve(name, level);
+  const { base, impliedLevel } = resolve(normalizeKnownSchoolName(region, name), level);
   if (!region || !level || !base) return "";
   const whole = impliedLevel === null && base.includes("학교");
-  return composeLabel(region, level, stripRegion(region, level, aliasName(region, base)), whole);
+  const canonical = stripRegion(region, level, aliasName(region, base));
+  return schoolDisplayLabel(region, level, canonical, composeLabel(region, level, canonical, whole));
 }

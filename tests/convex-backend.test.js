@@ -996,6 +996,54 @@ describe("admin 학교 도구", () => {
     }
   });
 
+  it("DIS 초 · 중 · 고 분리 행을 하나의 학교로 합친다", async () => {
+    const t = backend();
+    const a = await signUp(t, "디스초", "1234", "d1");
+    const b = await signUp(t, "디스고", "1234", "d2");
+
+    await t.run(async (ctx) => {
+      const plant = async (handle, level, name, key, label, best) => {
+        const player = await ctx.db
+          .query("players")
+          .withIndex("by_handleKey", (q) => q.eq("handleKey", handle))
+          .unique();
+        await ctx.db.patch(player._id, {
+          best,
+          school: { region: "대구", level, name, label },
+          schoolKey: key,
+        });
+        await ctx.db.insert("schools", {
+          key,
+          region: "대구",
+          level,
+          name,
+          label,
+          members: 1,
+          total: best,
+          updatedAt: 0,
+        });
+      };
+      await plant("디스초", "초", "국제", "대구|초|국제", "대구국제초", 1200);
+      await plant("디스고", "고", "국제학교", "대구|고|국제학교", "대구국제학교", 2300);
+    });
+
+    expect(await t.query(api.admin.schools, { adminKey: ADMIN_KEY })).toHaveLength(2);
+    expect(await t.query(api.schools.top, {})).toMatchObject([
+      { key: "대구|DIS", label: "DIS", members: 2, total: 3500 },
+    ]);
+    const result = await t.mutation(api.admin.recomputeSchools, { adminKey: ADMIN_KEY });
+    expect(result).toMatchObject({ schools: 1, removed: 2, moved: 2 });
+
+    const rows = await t.query(api.admin.schools, { adminKey: ADMIN_KEY });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: "대구|DIS", label: "DIS", members: 2, total: 3500 });
+    expect(await t.query(api.schools.top, {})).toMatchObject([
+      { key: "대구|DIS", label: "DIS", members: 2, total: 3500 },
+    ]);
+    expect(await t.query(api.players.load, { token: a.token })).toMatchObject({ schoolLabel: "DIS" });
+    expect(await t.query(api.players.load, { token: b.token })).toMatchObject({ schoolLabel: "DIS" });
+  });
+
   it("관리자 목록에 학교가 함께 보인다", async () => {
     const t = backend();
     const { token } = await signUp(t, "소속있음");

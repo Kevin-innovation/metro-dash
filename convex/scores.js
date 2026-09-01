@@ -5,6 +5,7 @@ import { weekKey } from "../src/week.js";
 import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
 import { levelOf, xpOf } from "./players.js";
+import { schoolLabel } from "../src/school.js";
 
 /**
  * The leaderboard.
@@ -47,7 +48,7 @@ export const submit = mutation({
       handle: player.handle,
       // Stored with the run so a closed week can be ranked by school from this
       // table alone, without reading a save file per run.
-      school: player.school?.label ?? "",
+      school: player.school ? schoolLabel(player.school) : "",
       score,
       distance: Math.floor(args.distance),
       coins: Math.floor(args.coins),
@@ -141,7 +142,7 @@ export const top = query({
         character: player.profile?.character ?? "runner",
         // Shown under the name. Already rendered on the player document, so the
         // board stays a single read.
-        school: player.school?.label ?? "",
+        school: player.school ? schoolLabel(player.school) : "",
         level: levelOf(player),
       }));
   },
@@ -203,7 +204,7 @@ export const levelTop = query({
         handle: player.handle,
         level: levelOf(player),
         xp: xpOf(player),
-        school: player.school?.label ?? "",
+        school: player.school ? schoolLabel(player.school) : "",
       }));
   },
 });
