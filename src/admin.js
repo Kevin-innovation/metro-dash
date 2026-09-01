@@ -81,7 +81,7 @@ function renderSchools() {
   root.innerHTML = schools
     .map(
       (row) => `
-      <div class="admin-row">
+      <div class="admin-row admin-player-row">
         <div class="admin-row-main">
           <span class="admin-handle">${escapeHtml(row.label)}</span>
           <span class="admin-meta">${row.members}명 · ${row.total.toLocaleString()}점</span>

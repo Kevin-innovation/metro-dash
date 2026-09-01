@@ -3098,6 +3098,19 @@ body.admin {
   min-width: 0;
 }
 
+/* Player actions belong to a second, consistent row. Without this grid, the
+   shorter "학교 없음" cards can keep their buttons on the first row while
+   cards with a school wrap them underneath. */
+.admin-player-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.admin-player-row .admin-actions {
+  justify-content: flex-start;
+}
+
 .admin-handle {
   font-size: 17px;
   color: #eaf5fc;
