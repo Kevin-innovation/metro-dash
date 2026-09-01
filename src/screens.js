@@ -519,7 +519,7 @@ export class Screens {
         // A leading "=" marks a name that does not follow the usual pattern and
         // is therefore stored whole.
         const full = name.startsWith("=") ? name.slice(1) : `${name}${suffix}`;
-        const label = full === "DIS" ? "Daegu International School (대구국제학교)" : "";
+        const label = full === "DIS" ? "DIS (대구국제학교)" : "";
         return `<option value="${escapeHtml(full)}"${label ? ` label="${escapeHtml(label)}"` : ""}></option>`;
       })
       .join("");

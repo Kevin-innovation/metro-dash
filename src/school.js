@@ -47,6 +47,7 @@ export const GENERAL = { region: "일반", level: GENERAL_LEVEL, name: "일반�
  * compatibility, while accepting the names people are likely to search for.
  */
 const DIS_CANONICAL_NAME = "국제";
+const DIS_DISPLAY_LABEL = "DIS (대구국제학교)";
 const DIS_SEARCH_NAMES = new Set([
   "dis",
   "daeguinternationalschool",
@@ -311,7 +312,7 @@ function composeLabel(region, level, name, whole) {
 }
 
 function schoolDisplayLabel(region, level, name, fallback) {
-  return isDISSchool(region, level, normalizeKnownSchoolName(region, name)) ? "DIS" : fallback;
+  return isDISSchool(region, level, normalizeKnownSchoolName(region, name)) ? DIS_DISPLAY_LABEL : fallback;
 }
 
 /**

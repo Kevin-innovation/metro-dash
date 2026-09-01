@@ -1029,19 +1029,19 @@ describe("admin 학교 도구", () => {
 
     expect(await t.query(api.admin.schools, { adminKey: ADMIN_KEY })).toHaveLength(2);
     expect(await t.query(api.schools.top, {})).toMatchObject([
-      { key: "대구|DIS", label: "DIS", members: 2, total: 3500 },
+      { key: "대구|DIS", label: "DIS (대구국제학교)", members: 2, total: 3500 },
     ]);
     const result = await t.mutation(api.admin.recomputeSchools, { adminKey: ADMIN_KEY });
     expect(result).toMatchObject({ schools: 1, removed: 2, moved: 2 });
 
     const rows = await t.query(api.admin.schools, { adminKey: ADMIN_KEY });
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ key: "대구|DIS", label: "DIS", members: 2, total: 3500 });
+    expect(rows[0]).toMatchObject({ key: "대구|DIS", label: "DIS (대구국제학교)", members: 2, total: 3500 });
     expect(await t.query(api.schools.top, {})).toMatchObject([
-      { key: "대구|DIS", label: "DIS", members: 2, total: 3500 },
+      { key: "대구|DIS", label: "DIS (대구국제학교)", members: 2, total: 3500 },
     ]);
-    expect(await t.query(api.players.load, { token: a.token })).toMatchObject({ schoolLabel: "DIS" });
-    expect(await t.query(api.players.load, { token: b.token })).toMatchObject({ schoolLabel: "DIS" });
+    expect(await t.query(api.players.load, { token: a.token })).toMatchObject({ schoolLabel: "DIS (대구국제학교)" });
+    expect(await t.query(api.players.load, { token: b.token })).toMatchObject({ schoolLabel: "DIS (대구국제학교)" });
   });
 
   it("관리자 목록에 학교가 함께 보인다", async () => {

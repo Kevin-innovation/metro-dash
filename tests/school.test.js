@@ -77,7 +77,7 @@ describe("한 학교가 한 줄로 모이는지", () => {
       for (const name of ["DIS", "Daegu International School", "Daegu International School (대구국제학교)", "대구국제학교"]) {
         const result = ok("대구", level.code, name);
         expect(result.school).toMatchObject({ region: "대구", level: level.code, name: "국제" });
-        expect(result.label).toBe("DIS");
+        expect(result.label).toBe("DIS (대구국제학교)");
         expect(schoolKey(result.school)).toBe("대구|DIS");
       }
     }
@@ -86,7 +86,7 @@ describe("한 학교가 한 줄로 모이는지", () => {
   it("예전에 저장된 국제학교 표기도 DIS 공유 키로 되돌린다", () => {
     const legacy = { region: "대구", level: "중", name: "국제학교", label: "대구국제학교" };
     expect(schoolKey(legacy)).toBe("대구|DIS");
-    expect(schoolLabel(legacy)).toBe("DIS");
+    expect(schoolLabel(legacy)).toBe("DIS (대구국제학교)");
   });
 
   it("대소문자와 공백으로는 학교가 갈라지지 않는다", () => {
@@ -417,7 +417,7 @@ describe("미리보기", () => {
   it("DIS 검색어는 학교급과 관계없이 DIS로 미리 보여준다", () => {
     for (const level of LEVELS) {
       expect(previewLabel({ region: "대구", level: level.code, name: "Daegu International School (대구국제학교)" })).toBe(
-        "DIS",
+        "DIS (대구국제학교)",
       );
     }
   });
