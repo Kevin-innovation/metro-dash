@@ -40,6 +40,7 @@ export const LEVELS = [
  */
 export const GENERAL_LEVEL = "일";
 export const GENERAL = { region: "일반", level: GENERAL_LEVEL, name: "일반부", label: "일반부" };
+export const TEACHER = { region: "일반", level: GENERAL_LEVEL, name: "선생님", label: "선생님" };
 
 /**
  * Daegu International School is a K–12 affiliation, so it must be findable
@@ -76,6 +77,11 @@ function normalizeKnownSchoolName(region, raw) {
 /** @returns {boolean} true for the 일반부 affiliation rather than a real school. */
 export function isGeneral(school) {
   return school?.level === GENERAL_LEVEL;
+}
+
+/** @returns {boolean} true for the staff affiliation that is not a school. */
+export function isTeacher(school) {
+  return school?.level === GENERAL_LEVEL && school?.name === TEACHER.name;
 }
 
 /**
@@ -358,7 +364,7 @@ export function schoolLabel(school) {
  * name that is complete because it ends in 학교.
  */
 export function canonicalSchool({ region, level, name, label } = {}) {
-  if (level === GENERAL_LEVEL) return { ...GENERAL };
+  if (level === GENERAL_LEVEL) return name === TEACHER.name ? { ...TEACHER } : { ...GENERAL };
   const base = normalizeHandle(normalizeKnownSchoolName(region, name));
   const whole = label
     ? label.replace(/\s+/g, "") === `${region}${base}`

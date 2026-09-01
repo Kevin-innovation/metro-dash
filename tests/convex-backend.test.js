@@ -1051,6 +1051,25 @@ describe("admin 학교 도구", () => {
     const [row] = await t.query(api.admin.list, { adminKey: ADMIN_KEY });
     expect(row.school).toBe("대구동중");
   });
+
+  it("관리자가 Kevin을 일반부가 아닌 선생님으로 지정한다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "Kevin");
+
+    const result = await t.mutation(api.admin.setSchool, {
+      adminKey: ADMIN_KEY,
+      handle: "Kevin",
+      region: "일반",
+      level: "일",
+      name: "선생님",
+    });
+    expect(result.schoolLabel).toBe("선생님");
+    expect(await t.query(api.players.load, { token })).toMatchObject({ schoolLabel: "선생님" });
+
+    await t.mutation(api.scores.submit, { token, ...plausibleRun({ score: 1200 }) });
+    expect(await t.query(api.scores.top, {})).toMatchObject([{ handle: "Kevin", school: "선생님" }]);
+    expect(await t.query(api.schools.top, {})).toHaveLength(0);
+  });
 });
 
 describe("일반부", () => {

@@ -30,7 +30,7 @@ import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from 
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import { SaveStore, hasProgress, mergeProfiles, normalizeSave } from "./save.js";
-import { GENERAL } from "./school.js";
+import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
@@ -293,6 +293,7 @@ export class Game {
     const label = this.cloud.schoolLabel;
     if (!label) return "학교 미정";
     if (label === GENERAL.label) return "일반부";
+    if (label === TEACHER.label) return "선생님";
     return "기록 없음";
   }
 
@@ -762,6 +763,7 @@ export class Game {
     const label = this.cloud.schoolLabel;
     if (!label) return "학교를 정하면 순위가 나와요";
     if (label === GENERAL.label) return "일반부는 학교 랭킹에 오르지 않아요";
+    if (label === TEACHER.label) return "선생님은 학교 랭킹에 오르지 않아요";
     return this.boardRange === "week" ? "이번 주 우리 학교 기록이 없어요" : "아직 학교 순위가 없어요";
   }
 

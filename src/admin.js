@@ -162,9 +162,12 @@ async function refresh() {
  * see 「대구 동중학교」 rather than guessing at what 「동중」 becomes.
  */
 function askSchool(handle) {
-  const region = prompt(`${handle} 님의 지역\n(${REGIONS.join(" · ")})`, "");
+  const region = prompt(`${handle} 님의 지역\n(${[...REGIONS, "일반"].join(" · ")})`, "");
   if (!region) return null;
-  const level = prompt(`학교급\n${LEVELS.map((l) => `${l.code} = ${l.label}`).join(" · ")}`, "");
+  const level = prompt(
+    `학교급\n${LEVELS.map((l) => `${l.code} = ${l.label}`).join(" · ")} · 일 = 선생님`,
+    "",
+  );
   if (!level) return null;
   const name = prompt("학교 이름 (접미사는 붙여도 됩니다)", "");
   if (!name) return null;

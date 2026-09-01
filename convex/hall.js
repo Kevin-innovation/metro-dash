@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import { weekKey, weekLabel, weekStart } from "../src/week.js";
-import { schoolLabel } from "../src/school.js";
+import { GENERAL, TEACHER, schoolLabel } from "../src/school.js";
 
 /**
  * The hall of fame: who won each week, kept for good.
@@ -70,7 +70,7 @@ async function rankWeek(ctx, from, to) {
   const totals = new Map();
   for (const entry of best.values()) {
     // 일반부 is an affiliation rather than a school and never ranks as one.
-    if (!entry.school || entry.school === "일반부" || entry.score <= 0) continue;
+    if (!entry.school || entry.school === GENERAL.label || entry.school === TEACHER.label || entry.score <= 0) continue;
     const held = totals.get(entry.school) ?? { total: 0, members: 0 };
     held.total += entry.score;
     held.members += 1;

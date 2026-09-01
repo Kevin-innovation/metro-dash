@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { handleKey, validateHandle } from "../src/nickname.js";
-import { canonicalSchool, schoolKey, schoolLabel, validateSchool } from "../src/school.js";
+import { GENERAL_LEVEL, TEACHER, canonicalSchool, schoolKey, schoolLabel, validateSchool } from "../src/school.js";
 import { adjustSchool, adjustSchoolWeek, ensureSchool, joinSchool, leaveSchool } from "./schools.js";
 import { endAllSessions } from "./session.js";
 import { weekKey, weekStart } from "../src/week.js";
@@ -295,7 +295,10 @@ export const setSchool = mutation({
   },
   handler: async (ctx, { adminKey, handle, region, level, name }) => {
     requireAdmin(adminKey);
-    const check = validateSchool({ region, level, name });
+    const check =
+      level === GENERAL_LEVEL && name === TEACHER.name
+        ? { ok: true, school: { ...TEACHER }, label: TEACHER.label }
+        : validateSchool({ region, level, name });
     if (!check.ok) throw new ConvexError(check.message);
 
     const player = await byHandle(ctx, handle);
