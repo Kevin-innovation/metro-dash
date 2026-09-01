@@ -4,7 +4,7 @@ import { ConvexClient } from "convex/browser";
 // it guards are both on screen at once.
 import "./style.css";
 import { escapeHtml } from "./ui.js";
-import { LEVELS, REGIONS, previewLabel, validateSchool } from "./school.js";
+import { GENERAL_LEVEL, LEVELS, REGIONS, TEACHER, validateSchool } from "./school.js";
 
 /**
  * Teacher tools, as a page rather than a set of CLI commands.
@@ -169,15 +169,21 @@ function askSchool(handle) {
     "",
   );
   if (!level) return null;
-  const name = prompt("학교 이름 (접미사는 붙여도 됩니다)", "");
+  const name = prompt(
+    level === GENERAL_LEVEL ? "소속 이름 (선생님)" : "학교 이름 (접미사는 붙여도 됩니다)",
+    level === GENERAL_LEVEL ? TEACHER.name : "",
+  );
   if (!name) return null;
 
-  const check = validateSchool({ region, level, name });
+  const check =
+    level === GENERAL_LEVEL && name === TEACHER.name
+      ? { ok: true, school: { ...TEACHER }, label: TEACHER.label }
+      : validateSchool({ region, level, name });
   if (!check.ok) {
     toast(check.message, "bad");
     return null;
   }
-  if (!confirm(`이렇게 저장됩니다:\n\n${previewLabel({ region, level, name })}\n\n계속할까요?`)) {
+  if (!confirm(`이렇게 저장됩니다:\n\n${check.label}\n\n계속할까요?`)) {
     return null;
   }
   return { region, level, name };
