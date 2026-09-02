@@ -3,8 +3,15 @@ import { POWERUPS, POWERUP_IDS, POWERUP_MAX_LEVEL, powerupDuration } from "./pow
 
 export { CHARACTERS, characterById };
 
-/** Cost to reach level N (index 0 is unused — everyone starts at level 1). */
-export const UPGRADE_COSTS = [0, 0, 500, 1200, 2400, 4200];
+/**
+ * Cost to reach level N (index 0 is unused — everyone starts at level 1).
+ *
+ * The first five are what they always were. The three above them climb far
+ * faster than the duration they buy does, which is the point: they exist so
+ * that a player who has finished everything else still has somewhere for coins
+ * to go, and they should read as the last thing you buy rather than the next.
+ */
+export const UPGRADE_COSTS = [0, 0, 500, 1200, 2400, 4200, 6500, 9500, 14000];
 
 /**
  * A hoverboard eats the crash that would have ended the run, once per run.

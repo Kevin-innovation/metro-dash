@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.20";
+export const VERSION = "2.21";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "2.20";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.21",
+    date: "2026-09-02",
+    kind: "minor",
+    title: "파워업 강화 8단계까지",
+    notes: [
+      "파워업 강화가 5단계에서 8단계로 늘었어요. 다 올리는 데 33,200코인이면 끝나서, 그 뒤로는 코인을 캐릭터 말고 쓸 데가 없었습니다.",
+      "6단계부터는 오르는 폭이 절반쯤으로 줄고 값은 크게 뜁니다. 자석 16→19초, 점수 2배와 슈퍼 스니커즈 20→23.8초예요. 마지막에 사는 물건이지 다음에 살 물건은 아닙니다.",
+      "제트팩만 12→13.5초로 가장 조금 오릅니다. 나는 동안은 아무것도 못 건드리니까요.",
+      "1~5단계는 값도 지속시간도 지금까지와 똑같습니다.",
+    ],
+  },
   {
     version: "2.20",
     date: "2026-09-02",

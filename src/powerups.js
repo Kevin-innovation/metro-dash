@@ -12,6 +12,7 @@ export const POWERUPS = {
     colour: "#b388ff",
     base: MAGNET_TIME,
     perLevel: 2,
+    latePerLevel: 1,
     blurb: "주변 코인을 끌어당깁니다",
   },
   jetpack: {
@@ -21,6 +22,11 @@ export const POWERUPS = {
     colour: "#ff7a3c",
     base: 6,
     perLevel: 1.5,
+    // The smallest late step of the four, on purpose. Flying is not a bonus on
+    // top of running, it is a pause from it: nothing on the ground can touch
+    // you. Every other power-up makes a run better and this one makes a stretch
+    // of it free, so it is the one whose length must not keep climbing.
+    latePerLevel: 0.5,
     blurb: `고도 ${JETPACK_ALTITUDE}m로 날아 장애물을 넘습니다`,
   },
   double: {
@@ -30,6 +36,7 @@ export const POWERUPS = {
     colour: "#ffd24a",
     base: 10,
     perLevel: 2.5,
+    latePerLevel: 1.25,
     blurb: "획득 점수가 두 배가 됩니다",
   },
   sneakers: {
@@ -39,12 +46,29 @@ export const POWERUPS = {
     colour: "#14d4b8",
     base: 10,
     perLevel: 2.5,
+    latePerLevel: 1.25,
     blurb: "점프가 높아집니다 (게이트는 못 넘습니다)",
   },
 };
 
 export const POWERUP_IDS = Object.keys(POWERUPS);
-export const POWERUP_MAX_LEVEL = 5;
+
+/**
+ * Where the upgrade track ends, and where it changes gear.
+ *
+ * It used to end at five, which cost 33,200 coins for all four — a fortnight of
+ * play, against a character list that costs 279,500. Everyone who got through
+ * it spent the rest of the game with nothing to buy but skins.
+ *
+ * The three levels above five are deliberately a different shape. The first
+ * five double every duration; carrying that rate to eight would put the magnet
+ * on for twenty-six seconds and the jetpack for nineteen, and a run spent
+ * mostly inside a power-up is a run the player is watching rather than playing.
+ * Above five each step is worth about half of one below it and costs several
+ * times as much: a long tail for coins to go into, priced as the luxury it is.
+ */
+export const POWERUP_BASE_LEVELS = 5;
+export const POWERUP_MAX_LEVEL = 8;
 export const DOUBLE_SCORE_MULTIPLIER = 2;
 
 /** Seconds a pickup lasts at the given shop level (1-based). */
@@ -52,7 +76,9 @@ export function powerupDuration(id, level = 1) {
   const spec = POWERUPS[id];
   if (!spec) return 0;
   const clamped = Math.min(POWERUP_MAX_LEVEL, Math.max(1, Math.floor(level)));
-  return spec.base + (clamped - 1) * spec.perLevel;
+  const base = Math.min(clamped, POWERUP_BASE_LEVELS);
+  const late = Math.max(0, clamped - POWERUP_BASE_LEVELS);
+  return spec.base + (base - 1) * spec.perLevel + late * (spec.latePerLevel ?? spec.perLevel);
 }
 
 /**

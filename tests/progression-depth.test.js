@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { MISSION_DEFS, MISSION_TIERS, missionPay, tierStep } from "../src/missions.js";
 import { RANKS, missionTier } from "../src/progression.js";
+import {
+  POWERUP_BASE_LEVELS,
+  POWERUP_IDS,
+  POWERUP_MAX_LEVEL,
+  powerupDuration,
+} from "../src/powerups.js";
 import { COMBO_TIERS, comboMultiplier } from "../src/scoring.js";
+import { UPGRADE_COSTS, profileWorth, upgradeCost } from "../src/shop.js";
 import { MAX_MULTIPLIER, maxDistanceIn, validateRun } from "../src/leaderboard-rules.js";
 
 const xpFor = (level) => RANKS.find((r) => r.level === level).xp;
@@ -133,5 +140,75 @@ describe("the generated mission targets", () => {
     const targetGrowth = def.targets[MISSION_TIERS - 1] / def.targets[0];
     const payGrowth = tierStep(MISSION_TIERS - 1) / tierStep(0);
     expect(payGrowth).toBeLessThan(targetGrowth);
+  });
+});
+
+describe("the upgrade track has a late game", () => {
+  it("goes past the level everyone was finishing", () => {
+    expect(POWERUP_MAX_LEVEL).toBeGreaterThan(POWERUP_BASE_LEVELS);
+  });
+
+  it("leaves the first five levels exactly as they were", () => {
+    // Anyone part-way up this track paid these prices for these durations.
+    expect(UPGRADE_COSTS.slice(0, 6)).toEqual([0, 0, 500, 1200, 2400, 4200]);
+    expect(powerupDuration("magnet", 5)).toBe(16);
+    expect(powerupDuration("jetpack", 5)).toBe(12);
+    expect(powerupDuration("double", 5)).toBe(20);
+    expect(powerupDuration("sneakers", 5)).toBe(20);
+  });
+
+  it("costs more per level than it did, and buys less", () => {
+    for (const id of POWERUP_IDS) {
+      const earlyGain = powerupDuration(id, 5) - powerupDuration(id, 4);
+      const lateGain = powerupDuration(id, 8) - powerupDuration(id, 7);
+      expect(lateGain, id).toBeLessThan(earlyGain);
+    }
+    for (let level = POWERUP_BASE_LEVELS + 1; level <= POWERUP_MAX_LEVEL; level++) {
+      expect(UPGRADE_COSTS[level]).toBeGreaterThan(UPGRADE_COSTS[level - 1]);
+    }
+  });
+
+  it("keeps every duration climbing, so a level is never wasted", () => {
+    for (const id of POWERUP_IDS) {
+      for (let level = 2; level <= POWERUP_MAX_LEVEL; level++) {
+        expect(powerupDuration(id, level), `${id} @ ${level}`).toBeGreaterThan(
+          powerupDuration(id, level - 1),
+        );
+      }
+    }
+  });
+
+  it("holds the jetpack shortest of the four", () => {
+    // Flying is a pause from the game rather than a better version of it, so
+    // it is the one duration that must not keep climbing.
+    const top = (id) => powerupDuration(id, POWERUP_MAX_LEVEL);
+    for (const id of POWERUP_IDS.filter((x) => x !== "jetpack")) {
+      expect(top("jetpack")).toBeLessThan(top(id));
+    }
+    // And it grew least of all across the new levels.
+    const grew = (id) => powerupDuration(id, POWERUP_MAX_LEVEL) - powerupDuration(id, POWERUP_BASE_LEVELS);
+    for (const id of POWERUP_IDS.filter((x) => x !== "jetpack")) {
+      expect(grew("jetpack")).toBeLessThan(grew(id));
+    }
+  });
+
+  it("stops at the cap, however high a save claims to be", () => {
+    expect(powerupDuration("magnet", 99)).toBe(powerupDuration("magnet", POWERUP_MAX_LEVEL));
+    expect(upgradeCost(POWERUP_MAX_LEVEL)).toBeNull();
+  });
+
+  it("gives the shop somewhere for late-game coins to go", () => {
+    const perPowerup = UPGRADE_COSTS.slice(2, POWERUP_MAX_LEVEL + 1).reduce((a, b) => a + b, 0);
+    expect(perPowerup * POWERUP_IDS.length).toBeGreaterThan(120_000);
+  });
+
+  it("counts the new levels toward what a profile is worth", () => {
+    const maxed = {};
+    for (const id of POWERUP_IDS) maxed[id] = POWERUP_MAX_LEVEL;
+    const base = {};
+    for (const id of POWERUP_IDS) base[id] = POWERUP_BASE_LEVELS;
+    expect(profileWorth({ coins: 0, upgrades: maxed })).toBeGreaterThan(
+      profileWorth({ coins: 0, upgrades: base }),
+    );
   });
 });
