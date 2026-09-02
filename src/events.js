@@ -78,8 +78,3 @@ export const MAX_EVENT_MULTIPLIER = EVENTS.reduce(
   1,
 );
 
-
-/** Score multiplier from the section alone, 1 when none is running. */
-export function eventMultiplierAt(t) {
-  return eventAt(t)?.event.scoreMultiplier ?? 1;
-}
