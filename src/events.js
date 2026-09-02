@@ -10,9 +10,11 @@
  * Gates with nothing but gates. Roof to roof with the ground given up. The
  * skill is the same; what the run is asking for is not.
  *
- * Timed rather than random, and identical for everyone at the same second of a
- * run — a leaderboard where one player got three coin rushes and another got
- * none is not measuring the same thing twice.
+ * The order and the exact second are the run's own; see RunSchedule. What is
+ * not the run's own is the *mix* — the schedule shuffles this table rather than
+ * sampling from it, so every player still meets each section the same number of
+ * times. A leaderboard where one player got three coin rushes and another got
+ * none would not be measuring the same thing twice, and it still isn't.
  *
  * Pure: no Three.js, no DOM. The spawner reads `patterns`, the Run reads
  * `scoreMultiplier`, and Game shows the banner.
@@ -76,18 +78,6 @@ export const MAX_EVENT_MULTIPLIER = EVENTS.reduce(
   1,
 );
 
-export function eventAt(t) {
-  if (!(t >= FIRST_EVENT_AT)) return null;
-  const since = t - FIRST_EVENT_AT;
-  const elapsed = since % EVENT_PERIOD;
-
-  const index = Math.floor(since / EVENT_PERIOD) % EVENTS.length;
-  const event = EVENTS[index];
-  const seconds = event.seconds ?? EVENT_SECONDS;
-  if (elapsed >= seconds) return null;
-
-  return { event, elapsed, seconds, remaining: seconds - elapsed };
-}
 
 /** Score multiplier from the section alone, 1 when none is running. */
 export function eventMultiplierAt(t) {

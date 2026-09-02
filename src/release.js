@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.23";
+export const VERSION = "2.30";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,20 @@ export const VERSION = "2.23";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.30",
+    date: "2026-09-02",
+    kind: "major",
+    title: "판마다 다른 코스",
+    notes: [
+      "터널이 언제 오는지, 코인 러시가 몇 초에 시작하는지가 매 판 달라집니다. 지금까지는 모든 판에서 터널이 정확히 34초, 첫 구간이 42초에 왔어요. 외워서 대비하면 그만큼 유리했습니다.",
+      "구간(지상·터널·역 구내·고가·야간)의 순서와 길이가 판마다 새로 정해집니다. 야간으로 시작할 수도, 고가에서 터널로 바로 들어갈 수도 있어요.",
+      "코인 러시·게이트 회랑·지붕 하이웨이가 나오는 순서도 매번 섞입니다.",
+      "파워업이 나오는 순서도 섞였어요. 제트팩이 늘 다섯 번째 드롭이던 것이 이제는 언제 나올지 모릅니다. 까마귀 알이 나오는 간격도 흔들립니다.",
+      "다만 한 판에 나오는 구간의 종류와 횟수, 파워업의 구성은 모두에게 똑같습니다. 순서만 바뀌지, 누구는 코인 러시를 세 번 받고 누구는 못 받는 일은 없어요.",
+      "긴 판이 계속 밤이던 것도 고쳤습니다. 130초 뒤로는 영원히 야간이었어요.",
+    ],
+  },
   {
     version: "2.23",
     date: "2026-09-02",

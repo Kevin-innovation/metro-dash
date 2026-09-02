@@ -23,7 +23,7 @@ export const ZONE_FADE = 4;
 /**
  * @typedef {object} Zone
  * @property {string} id
- * @property {number} from      seconds into the run
+ * @property {number} seconds   how long a stretch of it lasts
  * @property {string} name      shown on the phase chip
  * @property {number[]} sky     [top, bottom] gradient
  * @property {number} fogColor
@@ -40,13 +40,18 @@ export const ZONE_FADE = 4;
  */
 
 /**
- * The zones, in order. `from` matches the pace phases so the picture changes on
- * the same beat as the speed does.
+ * The zones.
+ *
+ * They used to carry the second of the run they began at — 지상 at 0, 터널 at
+ * 34, and so on — which meant every run was the same run to look at and, more
+ * to the point, the slide-heavy tunnel arrived at the same moment every time.
+ * Now each one states only how long a stretch of it lasts; RunSchedule decides
+ * the order and where the boundaries fall, differently for every run.
  */
 export const ZONES = [
   {
     id: "surface",
-    from: 0,
+    seconds: 34,
     name: "지상",
     sky: [0x8fc6e6, 0xd9eefb],
     fogColor: 0xbfe0f2,
@@ -63,7 +68,7 @@ export const ZONES = [
   },
   {
     id: "tunnel",
-    from: 34,
+    seconds: 22,
     name: "터널",
     // Almost no sky to see; what light there is comes off the walls.
     sky: [0x141c26, 0x1b242f],
@@ -88,7 +93,7 @@ export const ZONES = [
   },
   {
     id: "station",
-    from: 56,
+    seconds: 28,
     name: "역 구내",
     sky: [0x2c3644, 0x46596d],
     fogColor: 0x3b4a5c,
@@ -107,7 +112,7 @@ export const ZONES = [
   },
   {
     id: "viaduct",
-    from: 84,
+    seconds: 46,
     name: "고가",
     // Back out into the open, and higher than before — the release after the
     // tunnel is the point of putting one here.
@@ -126,7 +131,7 @@ export const ZONES = [
   },
   {
     id: "night",
-    from: 130,
+    seconds: 40,
     name: "야간",
     sky: [0x0b1220, 0x1d2b45],
     fogColor: 0x121b2c,
@@ -143,37 +148,7 @@ export const ZONES = [
   },
 ];
 
-/** The zone in force at `t` seconds. */
-export function zoneAt(t) {
-  let current = ZONES[0];
-  for (const zone of ZONES) if (t >= zone.from) current = zone;
-  return current;
-}
-
-/** The zone after `zone`, or the same one at the end of the list. */
-export function nextZone(zone) {
-  const i = ZONES.indexOf(zone);
-  return i >= 0 && i < ZONES.length - 1 ? ZONES[i + 1] : zone;
-}
-
-/**
- * Where the run sits between two zones.
- *
- * The change is spread over ZONE_FADE seconds *before* the boundary, so the
- * light is already shifting as the tunnel mouth comes into view rather than
- * snapping the moment the runner crosses a line.
- *
- * @returns {{ from: Zone, to: Zone, k: number }} k is 0 at `from`, 1 at `to`
- */
-export function zoneBlend(t) {
-  const current = zoneAt(t);
-  const next = nextZone(current);
-  if (next === current) return { from: current, to: current, k: 0 };
-
-  const start = next.from - ZONE_FADE;
-  if (t <= start) return { from: current, to: next, k: 0 };
-  return { from: current, to: next, k: Math.min(1, (t - start) / ZONE_FADE) };
-}
+export const ZONE_BY_ID = Object.fromEntries(ZONES.map((zone) => [zone.id, zone]));
 
 /** Linear blend of two numbers. */
 export function mix(a, b, k) {
@@ -224,15 +199,13 @@ export const OPEN_CEILING = 9.6;
  * @returns {{ at: number, seconds: number } | null} null when the next section
  *   is open sky, or when we are already inside one
  */
-export function nextCeilingAt(t) {
-  const current = zoneAt(t);
-  const next = nextZone(current);
-  if (next === current || current.ceiling !== null || next.ceiling === null) return null;
-  return { at: next.from, seconds: next.from - t };
-}
-
-export function lookAt(t) {
-  const { from, to, k } = zoneBlend(t);
+/**
+ * The look between two zones. `k` is 0 at `from` and 1 at `to`.
+ *
+ * Pure, and the only part of a zone's presentation that has to be: which zones
+ * these are and when the change happens belongs to the run's own schedule.
+ */
+export function blendLook(from, to, k) {
   // Treating open sky as a very high ceiling rather than as no ceiling at all.
   //
   // The previous version only produced a ceiling when *both* zones had one, so

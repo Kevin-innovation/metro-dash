@@ -26,11 +26,10 @@ import {
   SNEAKER_JUMP_MULT,
   START_SPEED,
 } from "../src/config.js";
-import { eventAt } from "../src/events.js";
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "../src/pace.js";
 import { SLIDE_DEAD_BAND, describeRows, requiredGapSeconds } from "../src/patterns.js";
 import { Spawner } from "../src/spawner.js";
-import { lookAt } from "../src/zones.js";
+import { RunSchedule } from "../src/schedule.js";
 
 const AIRTIME = (2 * JUMP_V) / -GRAVITY;
 const BOOSTED_AIRTIME = (2 * JUMP_V * SNEAKER_JUMP_MULT) / -GRAVITY;
@@ -84,6 +83,9 @@ function simulate(seconds, seed) {
         return item;
       },
     };
+    // A different course per audited run, the way a player now gets one. Seeded
+    // from the same number the rest of this run is, so a failure replays.
+    const schedule = new RunSchedule(seed);
     const spawner = new Spawner(pool, {
       onOncoming: (item) => {
         item.oncoming = true;
@@ -92,6 +94,7 @@ function simulate(seconds, seed) {
       },
     });
 
+    spawner.reset(seed);
     spawner.seed(40, 5, 30, { speed: START_SPEED, phaseId: 0, tutorial: true, nextSpawn: 155 });
 
     while (time < seconds) {
@@ -103,9 +106,9 @@ function simulate(seconds, seed) {
         phaseId,
         reaction: reactionAt(time),
         pressure: pressureAt(time),
-        slideBias: lookAt(time).slideBias,
+        slideBias: schedule.lookAt(time).slideBias,
         oncomingSpeed: oncomingSpeedAt(phaseId),
-        eventPatterns: eventAt(time)?.event.patterns ?? null,
+        eventPatterns: schedule.eventAt(time)?.event.patterns ?? null,
         tutorial: true,
       });
       time += STEP;

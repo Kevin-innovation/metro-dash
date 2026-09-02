@@ -22,7 +22,7 @@ import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
 import { MISSION_SLOTS, MISSION_TIERS, ensureMissions, rollMissions } from "./missions.js";
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
-import { lookAt, nextCeilingAt } from "./zones.js";
+import { RunSchedule } from "./schedule.js";
 
 import { POWERUPS, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
@@ -34,11 +34,11 @@ import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
+import { randomSeed } from "./rng.js";
 import { Spawner } from "./spawner.js";
 import { characterById } from "./shop.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
-import { eventAt } from "./events.js";
 import { applyLook, applyWorldQuality, createWorld, placeMouth, syncWorld } from "./world.js";
 
 
@@ -174,6 +174,10 @@ export class Game {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, this.quality.drawDistance);
+
+    // The run's own layout: which zone is where, which section starts when.
+    // Replaced at the start of every run, so no two are the same course.
+    this.schedule = new RunSchedule(randomSeed());
 
     this.world = createWorld(this.scene, this.quality);
 
@@ -1013,6 +1017,10 @@ export class Game {
     this.shake = 0;
 
     resetPlayer(this.player, 0);
+    // A fresh layout for this run: different zone order, different section
+    // order, different boundaries. Drawn before the track is seeded, since the
+    // opening patterns are dealt against this run's first zone.
+    this.schedule = new RunSchedule(randomSeed());
     // Read once per run rather than per frame, and after resetPlayer, which
     // returns the runner to its defaults.
     const perk = perkFor(this.store.data.character);
@@ -1197,7 +1205,7 @@ export class Game {
     // any business being overhead yet.
     placeMouth(
       this.world,
-      this.state === "playing" ? nextCeilingAt(this.runTime) : null,
+      this.state === "playing" ? this.schedule.nextCeilingAt(this.runTime) : null,
       this.player.z,
       this.speed,
     );
@@ -1239,7 +1247,7 @@ export class Game {
    * cast its shadow before you reach it; only the geometry waits.
    */
   lookNow() {
-    const look = lookAt(this.state === "playing" ? this.runTime : 0);
+    const look = this.schedule.lookAt(this.state === "playing" ? this.runTime : 0);
     const mouthAhead = this.world?.mouthZ != null && this.world.mouthZ > this.player.z;
     return mouthAhead ? { ...look, ceiling: null, wall: 0 } : look;
   }
@@ -1445,7 +1453,7 @@ export class Game {
     // Sections: for fifteen seconds the run asks for something else. Tracked
     // here rather than in the spawner so the banner, the multiplier and the
     // layouts all turn over on the same tick.
-    const section = eventAt(this.runTime);
+    const section = this.schedule.eventAt(this.runTime);
     const sectionId = section?.event.id ?? null;
     if (sectionId !== this.sectionId) {
       this.sectionId = sectionId;
@@ -1613,9 +1621,9 @@ export class Game {
       oncomingSpeed: this.oncomingSpeed(),
       // The tunnel's low roof has to mean something, so it leans the pattern
       // pick towards the gates you can only get under by sliding.
-      slideBias: playing ? lookAt(this.runTime).slideBias : 0,
+      slideBias: playing ? this.schedule.lookAt(this.runTime).slideBias : 0,
       // While a section runs, its layouts are the only ones dealt.
-      eventPatterns: playing ? (eventAt(this.runTime)?.event.patterns ?? null) : null,
+      eventPatterns: playing ? (this.schedule.eventAt(this.runTime)?.event.patterns ?? null) : null,
       tutorial: playing,
     });
   }

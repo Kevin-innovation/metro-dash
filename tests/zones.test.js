@@ -1,46 +1,141 @@
 import { describe, expect, it } from "vitest";
-import { PHASES } from "../src/pace.js";
-import { ZONES, ZONE_FADE, lookAt, mixColor, nextZone, zoneAt, zoneBlend } from "../src/zones.js";
+import { EVENTS } from "../src/events.js";
+import { RunSchedule } from "../src/schedule.js";
+import { ZONES, ZONE_FADE, mixColor } from "../src/zones.js";
+
+/** A run's layout, pinned to a seed so a failure can be reproduced. */
+const run = (seed = 7) => new RunSchedule(seed);
+
+/** The first stretch of `id` in a run, as `{ zone, from, to }`. */
+function firstSpan(schedule, id, until = 900) {
+  schedule.extendZones(until);
+  return schedule.zones.find((span) => span.zone.id === id) ?? null;
+}
+
+/** The span before it, so a boundary can be approached from the right side. */
+function spanBefore(schedule, span) {
+  return schedule.zones[schedule.zones.indexOf(span) - 1] ?? null;
+}
 
 describe("구간 전환", () => {
-  it("시작은 지상이다", () => {
-    expect(zoneAt(0).id).toBe("surface");
-    expect(zoneAt(-5).id).toBe("surface");
+  it("어느 판이든 지상에서 시작한다", () => {
+    // The opening is the tutorial patterns and a player's first look at the
+    // game; it is the one stretch that is not shuffled.
+    for (let seed = 0; seed < 40; seed++) {
+      expect(run(seed).zoneAt(0).id, `seed ${seed}`).toBe("surface");
+      expect(run(seed).zoneAt(-5).id, `seed ${seed}`).toBe("surface");
+    }
   });
 
-  it("시간이 지나면 순서대로 넘어간다", () => {
-    expect(ZONES.map((zone) => zoneAt(zone.from).id)).toEqual(ZONES.map((zone) => zone.id));
+  it("끝나지 않고 계속 이어진다", () => {
+    // The last zone used to run forever, so a long run was night for minutes.
+    const schedule = run();
+    expect(schedule.zoneAt(10_000)).toBeTruthy();
+    schedule.extendZones(10_000);
+    expect(schedule.zones.length).toBeGreaterThan(50);
   });
 
-  it("마지막 구간 뒤로는 넘어가지 않는다", () => {
-    const last = ZONES[ZONES.length - 1];
-    expect(zoneAt(10_000).id).toBe(last.id);
-    expect(nextZone(last)).toBe(last);
-  });
-
-  it("구간 경계가 페이즈 경계와 맞는다", () => {
-    // The picture changing on a different beat from the speed would read as two
-    // unrelated things happening near each other.
-    const phaseTimes = new Set(PHASES.map((phase) => phase.t));
-    for (const zone of ZONES) {
-      expect(phaseTimes.has(zone.from), `${zone.name} (${zone.from}s)`).toBe(true);
+  it("같은 구간이 연달아 오지 않는다", () => {
+    // Two adjacent stretches of the same zone read as the boundary having
+    // failed rather than as a choice.
+    for (let seed = 0; seed < 60; seed++) {
+      const schedule = run(seed);
+      schedule.extendZones(900);
+      for (let i = 1; i < schedule.zones.length; i++) {
+        expect(schedule.zones[i].zone, `seed ${seed} @${i}`).not.toBe(schedule.zones[i - 1].zone);
+      }
     }
   });
 
   it("경계 전에 미리 섞이기 시작한다", () => {
-    const tunnel = ZONES.find((zone) => zone.id === "tunnel");
-    // Already changing as the tunnel mouth comes into view, not at the line.
-    expect(zoneBlend(tunnel.from - ZONE_FADE - 1).k).toBe(0);
-    expect(zoneBlend(tunnel.from - ZONE_FADE / 2).k).toBeCloseTo(0.5, 5);
-    expect(zoneBlend(tunnel.from - 0.001).k).toBeCloseTo(1, 3);
+    const schedule = run();
+    const tunnel = firstSpan(schedule, "tunnel");
+    const before = spanBefore(schedule, tunnel);
+    expect(before).toBeTruthy();
 
-    // At the line the pair flips to tunnel→station and k restarts, so the
-    // reading to check is the look itself: it must arrive exactly on the
-    // tunnel's own numbers and not jump.
-    const arrived = lookAt(tunnel.from);
-    expect(arrived.sun).toBeCloseTo(tunnel.sun, 6);
-    expect(arrived.ceiling).toBe(tunnel.ceiling);
-    expect(lookAt(tunnel.from - 0.001).sun).toBeCloseTo(tunnel.sun, 2);
+    // Already changing as the tunnel mouth comes into view, not at the line.
+    expect(schedule.zoneBlend(tunnel.from - ZONE_FADE - 1).k).toBe(0);
+    expect(schedule.zoneBlend(tunnel.from - ZONE_FADE / 2).k).toBeCloseTo(0.5, 5);
+    expect(schedule.zoneBlend(tunnel.from - 0.001).k).toBeCloseTo(1, 3);
+
+    // At the line the pair flips to the one after and k restarts, so the
+    // reading to check is the look itself: it must arrive on the tunnel's own
+    // numbers and not jump.
+    const arrived = schedule.lookAt(tunnel.from);
+    expect(arrived.sun).toBeCloseTo(tunnel.zone.sun, 6);
+    expect(arrived.ceiling).toBe(tunnel.zone.ceiling);
+    expect(schedule.lookAt(tunnel.from - 0.001).sun).toBeCloseTo(tunnel.zone.sun, 2);
+  });
+});
+
+describe("판마다 다른 코스", () => {
+  const layout = (seed) => {
+    const schedule = run(seed);
+    schedule.extendZones(600);
+    schedule.extendSections(600);
+    return {
+      zones: schedule.zones.map((z) => `${z.zone.id}@${Math.round(z.from)}`).join(" "),
+      sections: schedule.sections.map((x) => `${x.event.id}@${Math.round(x.from)}`).join(" "),
+    };
+  };
+
+  it("두 판의 구간 순서가 같지 않다", () => {
+    // The whole point: the tunnel used to arrive at 34 seconds of every run
+    // ever played, so the course could be learned and then recited.
+    const seen = new Set();
+    for (let seed = 0; seed < 50; seed++) seen.add(layout(seed).zones);
+    expect(seen.size).toBeGreaterThan(45);
+  });
+
+  it("두 판의 섹션 순서와 시각이 같지 않다", () => {
+    const seen = new Set();
+    for (let seed = 0; seed < 50; seed++) seen.add(layout(seed).sections);
+    expect(seen.size).toBeGreaterThan(45);
+  });
+
+  it("같은 시드는 같은 판이다", () => {
+    // A run has to be replayable: the fairness audit sweeps seeds, and a bug
+    // report is one number.
+    expect(layout(1234)).toEqual(layout(1234));
+  });
+
+  it("섹션 배분은 모두에게 같다", () => {
+    // Shuffling rather than sampling is what keeps this fair. A leaderboard
+    // where one player got three coin rushes and another got none would not be
+    // measuring the same thing twice.
+    const counts = {};
+    for (let seed = 0; seed < 400; seed++) {
+      const schedule = run(seed);
+      schedule.extendSections(900);
+      for (const s of schedule.sections) counts[s.event.id] = (counts[s.event.id] ?? 0) + 1;
+    }
+    const seen = EVENTS.map((e) => counts[e.id] ?? 0);
+    const spread = (Math.max(...seen) - Math.min(...seen)) / Math.max(...seen);
+    expect(spread).toBeLessThan(0.1);
+  });
+
+  it("같은 섹션이 연달아 오지 않는다", () => {
+    for (let seed = 0; seed < 60; seed++) {
+      const schedule = run(seed);
+      schedule.extendSections(900);
+      for (let i = 1; i < schedule.sections.length; i++) {
+        expect(schedule.sections[i].event, `seed ${seed}`).not.toBe(
+          schedule.sections[i - 1].event,
+        );
+      }
+    }
+  });
+
+  it("섹션이 서로 겹치지 않는다", () => {
+    for (let seed = 0; seed < 60; seed++) {
+      const schedule = run(seed);
+      schedule.extendSections(900);
+      for (let i = 1; i < schedule.sections.length; i++) {
+        expect(schedule.sections[i].from, `seed ${seed}`).toBeGreaterThan(
+          schedule.sections[i - 1].to,
+        );
+      }
+    }
   });
 });
 
@@ -54,9 +149,10 @@ describe("보간", () => {
   });
 
   it("어느 시점에서도 값이 튀지 않는다", () => {
-    let previous = lookAt(0);
-    for (let t = 0.25; t <= 260; t += 0.25) {
-      const now = lookAt(t);
+    const schedule = run();
+    let previous = schedule.lookAt(0);
+    for (let t = 0.25; t <= 600; t += 0.25) {
+      const now = schedule.lookAt(t);
       // A quarter second must never move the light more than a hair, or the
       // transition reads as a flicker rather than a change of place.
       expect(Math.abs(now.sun - previous.sun), `t=${t}`).toBeLessThan(0.12);
@@ -70,8 +166,9 @@ describe("보간", () => {
     // The bug this replaces: for the four seconds of a surface→tunnel fade the
     // walls rose with no roof above them, so a jump went up past the wall tops
     // into open sky — and with no ceiling there was nothing to stop it either.
-    for (let t = 0; t <= 260; t += 0.1) {
-      const look = lookAt(t);
+    const schedule = run();
+    for (let t = 0; t <= 600; t += 0.1) {
+      const look = schedule.lookAt(t);
       if (look.wall > 0.02) {
         expect(look.ceiling, `t=${t.toFixed(1)} 벽=${look.wall.toFixed(2)}`).not.toBeNull();
       }
@@ -79,28 +176,41 @@ describe("보간", () => {
   });
 
   it("천장이 열린 하늘에서 내려와 자리를 잡는다", () => {
-    const tunnel = ZONES.find((zone) => zone.id === "tunnel");
-    const early = lookAt(tunnel.from - ZONE_FADE * 0.75).ceiling;
-    const mid = lookAt(tunnel.from - ZONE_FADE * 0.4).ceiling;
+    // A seed whose first tunnel is entered from open sky, which is the case
+    // the descending roof exists for.
+    for (let seed = 0; seed < 60; seed++) {
+      const schedule = run(seed);
+      const tunnel = firstSpan(schedule, "tunnel");
+      const before = spanBefore(schedule, tunnel);
+      if (!before || before.zone.ceiling !== null) continue;
 
-    // Descending, not appearing.
-    expect(early).toBeGreaterThan(mid);
-    expect(mid).toBeGreaterThan(tunnel.ceiling);
-    expect(lookAt(tunnel.from).ceiling).toBeCloseTo(tunnel.ceiling, 5);
+      const early = schedule.lookAt(tunnel.from - ZONE_FADE * 0.75).ceiling;
+      const mid = schedule.lookAt(tunnel.from - ZONE_FADE * 0.4).ceiling;
+      // Descending, not appearing.
+      expect(early).toBeGreaterThan(mid);
+      expect(mid).toBeGreaterThan(tunnel.zone.ceiling);
+      expect(schedule.lookAt(tunnel.from).ceiling).toBeCloseTo(tunnel.zone.ceiling, 5);
+      return;
+    }
+    throw new Error("no seed entered a tunnel from open sky");
   });
 
   it("트인 구간에서는 천장이 없다", () => {
-    for (const zone of ZONES) {
-      if (zone.ceiling !== null) continue;
+    const schedule = run();
+    schedule.extendZones(900);
+    for (const span of schedule.zones) {
+      if (span.zone.ceiling !== null) continue;
       // Well clear of the fades on either side.
-      expect(lookAt(zone.from + ZONE_FADE).ceiling).toBeNull();
+      const mid = (span.from + span.to) / 2;
+      expect(schedule.lookAt(mid).ceiling, `${span.zone.name} @${mid.toFixed(0)}`).toBeNull();
     }
   });
 
-  it("실내에서 실내로 갈 때는 천장 높이만 바뀐다", () => {
+  it("실내에서 실내로 갈 때는 천장 높이만 바뀐다", async () => {
+    const { blendLook } = await import("../src/zones.js");
     const tunnel = ZONES.find((zone) => zone.id === "tunnel");
     const station = ZONES.find((zone) => zone.id === "station");
-    const mid = lookAt(station.from - ZONE_FADE / 2).ceiling;
+    const mid = blendLook(tunnel, station, 0.5).ceiling;
     expect(mid).toBeGreaterThan(tunnel.ceiling);
     expect(mid).toBeLessThan(station.ceiling);
   });

@@ -1,3 +1,4 @@
+import { makeRng, randomSeed, shuffled } from "./rng.js";
 import {
   CLEARANCE_SECONDS_EASY,
   CLEARANCE_SECONDS_HARD,
@@ -27,7 +28,15 @@ const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
  */
 const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
 
-/** Power-ups are dealt on a cadence; the jetpack stays the rare one. */
+/**
+ * Power-ups are dealt on a cadence; the jetpack stays the rare one.
+ *
+ * Shuffled per run rather than dealt in the order written here. Written order
+ * meant the jetpack was always the fifth drop of a run and always the twelfth,
+ * which is a thing to be counted rather than met. Shuffling a deck still deals
+ * one jetpack per seven drops, so what a run contains has not changed — only
+ * when it turns up.
+ */
 const POWERUP_DECK = ["magnet", "double", "sneakers", "magnet", "jetpack", "double", "sneakers"];
 const POWERUP_EVERY = 6;
 
@@ -43,6 +52,8 @@ const POWERUP_EVERY = 6;
  */
 const HAZARD_EVERY = 17;
 const HAZARD_AFTER = 14;
+/** How far either side of that cadence an egg may fall. */
+const HAZARD_SPREAD = 6;
 
 /**
  * Metres two patterns' hazards must keep between them, whatever the timing
@@ -92,7 +103,11 @@ export class Spawner {
     this.reset();
   }
 
-  reset() {
+  /** @param {number} [seed] so a run's draws can be replayed exactly */
+  reset(seed = randomSeed()) {
+    this.rng = makeRng(seed);
+    this.powerupDeck = [];
+    this.hazardIn = HAZARD_EVERY;
     this.patternCount = 0;
     /**
      * The last hazard actually placed, wherever it came from. Tracked across
@@ -295,13 +310,16 @@ export class Spawner {
     }
 
     if (this.patternCount % POWERUP_EVERY === 0) {
-      const index = ((this.patternCount / POWERUP_EVERY) | 0) % POWERUP_DECK.length;
-      return POWERUP_PATTERNS[POWERUP_DECK[index]](z, context.lane);
+      if (!this.powerupDeck.length) this.powerupDeck = shuffled(this.rng, POWERUP_DECK);
+      return POWERUP_PATTERNS[this.powerupDeck.shift()](z, context.lane);
     }
 
     // Checked after the power-ups, so on the rare draw where both cadences
-    // land on the same pattern the player gets the good one.
-    if (this.patternCount >= HAZARD_AFTER && this.patternCount % HAZARD_EVERY === 0) {
+    // land on the same pattern the player gets the good one. Counted down with
+    // a jitter rather than tested against a fixed multiple, so an egg cannot be
+    // predicted by counting layouts.
+    if (this.patternCount >= HAZARD_AFTER && --this.hazardIn <= 0) {
+      this.hazardIn = HAZARD_EVERY + Math.floor(this.rng() * HAZARD_SPREAD * 2) - HAZARD_SPREAD;
       return crowEggPattern(z, context);
     }
 
