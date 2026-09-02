@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.10";
+export const VERSION = "2.20";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "2.10";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.20",
+    date: "2026-09-02",
+    kind: "minor",
+    title: "콤보와 미션이 끝까지 자랍니다",
+    notes: [
+      "콤보가 30에서 멈추지 않습니다. 60에서 ×2.25, 100에서 ×2.5로 한 단계씩 더 올라가요. 지금까지는 콤보 138을 이어도 31일 때와 점수가 똑같았습니다.",
+      "미션 난이도가 레벨 7에서 멈추던 것을 레벨 52까지 이어지도록 늘렸어요. 레벨 8이든 99든 똑같은 목표를 똑같은 보상으로 받고 있었습니다.",
+      "미션 목표가 4단계 늘었습니다. 가장 높은 단계는 한 판에 코인 375개, 콤보 215, 12,000m, 179,000점이에요. 보상도 그만큼 함께 올라갑니다.",
+      "레벨 1~7 구간의 미션은 지금까지와 똑같습니다. 진행 중인 미션의 목표치도 바뀌지 않아요.",
+    ],
+  },
   {
     version: "2.10",
     date: "2026-08-30",

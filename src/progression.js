@@ -154,17 +154,29 @@ export function nextRankAt(xp) {
   return RANKS.find((rank) => rank.xp > xp) ?? null;
 }
 
+/** Ranks that get a difficulty step each, one for one. The first afternoon. */
+const TIER_PER_RANK_UNTIL = 7;
+/** Ranks per step after that. The ladder is long; the mission table is not. */
+const RANKS_PER_TIER = 15;
+
 /**
  * Difficulty step the next mission is dealt at.
  *
- * Deliberately still counted off the first nine ranks. The ladder above them is
- * a long climb for its own sake; the mission table has seven steps and its
- * hardest targets were written for a player who has been at this a while, not
- * for one who has been at it a year. Mapping seven steps across ninety-nine
- * ranks would hand a Lv.20 player the targets a Lv.99 one is meant to face.
+ * Two rates, because the ladder has two halves. The first seven ranks are a
+ * player's first afternoon and get a step each, so the missions grow as fast as
+ * they do. Above that a rank is a week rather than an evening, and a step every
+ * fifteen ranks keeps the targets moving without asking a Lv.12 player for what
+ * a Lv.50 one is meant to face.
+ *
+ * It used to be one step per rank and nothing else, which capped out at rank
+ * seven: every player from Lv.8 to Lv.99 was dealt identical targets for
+ * identical pay, for ninety-one levels of the ladder.
  */
 export function missionTier(xp, tiers) {
-  return Math.min(tiers - 1, Math.max(0, rankAt(xp).level - 1));
+  const level = rankAt(xp).level;
+  if (level <= TIER_PER_RANK_UNTIL) return Math.min(tiers - 1, Math.max(0, level - 1));
+  const beyond = Math.floor((level - TIER_PER_RANK_UNTIL) / RANKS_PER_TIER) + 1;
+  return Math.min(tiers - 1, TIER_PER_RANK_UNTIL - 1 + beyond);
 }
 
 /** Progress towards the next rank, 0..1. Maxed ranks report 1. */

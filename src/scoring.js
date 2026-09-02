@@ -24,6 +24,15 @@ export const COMBO_TIERS = [
   { at: 5, multiplier: 1.25, label: "HOT" },
   { at: 15, multiplier: 1.5, label: "BLAZING" },
   { at: 30, multiplier: 2, label: "UNREAL" },
+  // Above thirty the chain used to pay nothing at all. A player holding a
+  // hundred and thirty was taking the same risk on every near miss and roof
+  // hop as one holding thirty-one and being paid the same for it, which makes
+  // the back half of a good run a formality. The steps are deliberately
+  // smaller than the ones below: this is the stretch where a chain is already
+  // worth a great deal, and doubling it again would make the top of the board
+  // a single lucky run rather than a good one.
+  { at: 60, multiplier: 2.25, label: "GODLIKE" },
+  { at: 100, multiplier: 2.5, label: "IMMORTAL" },
 ];
 
 /** The best a combo alone can multiply by. Read by the run validator. */

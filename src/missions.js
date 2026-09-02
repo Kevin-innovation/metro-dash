@@ -10,8 +10,56 @@
  *
  * `metric` names a counter the run reports (see Game#trackMission).
  */
-/** Difficulty steps every mission is written for. */
-export const MISSION_TIERS = 7;
+/**
+ * Difficulty steps every mission is written for.
+ *
+ * The table below authors seven by hand; the rest continue each mission's own
+ * curve (see extendTargets). Eleven rather than seven because the rank ladder
+ * runs to ninety-nine and the missions used to stop growing at rank seven —
+ * so a Lv.8 player and a Lv.99 player were handed the same three targets for
+ * the same three payouts, for ninety-one levels.
+ *
+ * Eleven and not more because a target has to stay reachable. The eleventh step
+ * asks for 366 coins, a 198 combo and 172,000 points in one run, which is a
+ * very good run and not an impossible one. A twelfth would be asking for a
+ * record every day.
+ */
+export const MISSION_TIERS = 11;
+
+/** Steps written out by hand in the table below. The rest are continued. */
+const AUTHORED_TIERS = 7;
+
+/**
+ * Round a generated target to something a player can read back.
+ *
+ * A mission that asks for 1,437 metres reads as a number the game happened to
+ * land on. One that asks for 1,400 reads as a number somebody chose.
+ */
+function readableTarget(value) {
+  if (value < 100) return Math.round(value);
+  if (value < 1000) return Math.round(value / 5) * 5;
+  if (value < 10000) return Math.round(value / 100) * 100;
+  return Math.round(value / 1000) * 1000;
+}
+
+/**
+ * Continue a mission's authored steps to MISSION_TIERS.
+ *
+ * Each table decelerates — coins go 1.67, 1.60, 1.50, 1.42, 1.35, 1.30 — so the
+ * continuation carries on decelerating from wherever that table left off rather
+ * than applying one growth rate to all twenty. Generated rather than written
+ * out because twenty tables times four more steps is eighty numbers nobody
+ * would ever check, and the curve is already stated by the seven above.
+ */
+function extendTargets(targets) {
+  const out = [...targets];
+  let ratio = out[out.length - 1] / out[out.length - 2];
+  while (out.length < MISSION_TIERS) {
+    ratio = Math.max(1.2, ratio - 0.02);
+    out.push(readableTarget(out[out.length - 1] * ratio));
+  }
+  return out;
+}
 
 /**
  * Mission table.
@@ -23,7 +71,7 @@ export const MISSION_TIERS = 7;
  * Every entry carries one target per difficulty step, so the same mission grows
  * with the player instead of being retired.
  */
-export const MISSION_DEFS = [
+const AUTHORED_DEFS = [
   // --- single-run goals ---------------------------------------------------
   { id: "coins-run", metric: "coins", scope: "run",
     targets: [15, 25, 40, 60, 85, 115, 150], label: "한 판에 코인 {t}개 모으기", coins: 110, xp: 85 },
@@ -68,6 +116,12 @@ export const MISSION_DEFS = [
   { id: "coins-total", metric: "coinsTotal", scope: "total",
     targets: [200, 500, 1000, 1800, 3000, 4800, 7500], label: "코인 {t}개 모으기", coins: 200, xp: 160 },
 ];
+
+/** The table as the game uses it: authored steps plus the continued ones. */
+export const MISSION_DEFS = AUTHORED_DEFS.map((def) => ({
+  ...def,
+  targets: extendTargets(def.targets),
+}));
 
 export const MISSION_SLOTS = 3;
 
