@@ -2,6 +2,7 @@ import { GRAVITY, JETPACK_ALTITUDE, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from
 
 /** Seconds a jump spends off the deck: up and back down again. */
 const JUMP_AIRTIME = (2 * JUMP_V) / -GRAVITY;
+import { shuffled } from "./rng.js";
 import { SPEC } from "./specs.js";
 
 export const ALL_LANES = [-1, 0, 1];
@@ -217,10 +218,10 @@ export const PATTERNS = [
     minPhase: 2,
     weight: 2,
     late: 2,
-    build: ({ z, lanes }) => [
-      { type: "bus", lane: lanes[0], z },
+    build: ({ z, lanes, either, count }) => [
+      { type: either("bus", "train"), lane: lanes[0], z },
       { type: "bus", lane: lanes[1], z },
-      ...coinLine(lanes[0], z - 2, 4, 1.35, 2.55),
+      ...coinLine(lanes[0], z - 2, count(4), 1.35, 2.55),
     ],
   },
   {
@@ -228,13 +229,13 @@ export const PATTERNS = [
     minPhase: 2,
     weight: 2,
     late: 3,
-    build: ({ z, lanes, gap }) => {
+    build: ({ z, lanes, gap, either, count }) => {
       const step = gap(0.6, 12, 0.42);
       return [
         { type: "bus", lane: lanes[0], z },
-        { type: "bus", lane: lanes[1], z: z + step },
-        ...coinLine(lanes[0], z - 2, 4, 1.35, 2.55),
-        ...coinLine(lanes[1], z + step - 2, 4, 1.35, 2.55),
+        { type: either("bus", "train"), lane: lanes[1], z: z + step },
+        ...coinLine(lanes[0], z - 2, count(4), 1.35, 2.55),
+        ...coinLine(lanes[1], z + step - 2, count(4), 1.35, 2.55),
       ];
     },
   },
@@ -257,12 +258,16 @@ export const PATTERNS = [
     minPhase: 3,
     weight: 2,
     late: 3,
-    build: ({ z, gap }) => {
-      const step = gap(0.62, 14, 0.44);
+    build: ({ z, gap, rng, either }) => {
+      // Each rung its own gap and its own vehicle. It used to be train, bus,
+      // train at one spacing, in that order, every single time.
+      const first = gap(0.62, 14, 0.44);
+      const second = gap(0.62, 14, 0.44);
+      const order = shuffled(rng, ALL_LANES);
       return [
-        { type: "train", lane: -1, z },
-        { type: "bus", lane: 0, z: z + step },
-        { type: "train", lane: 1, z: z + step * 2 },
+        { type: either("train", "bus"), lane: order[0], z },
+        { type: either("bus", "train"), lane: order[1], z: z + first },
+        { type: either("train", "bus"), lane: order[2], z: z + first + second },
       ];
     },
   },
@@ -441,7 +446,7 @@ export const POWERUP_PATTERNS = {
  */
 export function crowEggPattern(z, context) {
   const lane = context.lane;
-  const detour = lane === 0 ? (Math.random() < 0.5 ? -1 : 1) : 0;
+  const detour = lane === 0 ? context.either(-1, 1) : 0;
   const eggZ = z + 6.6;
   // Where a jump taken at the egg puts the runner back on the deck. Measured in
   // seconds of travel rather than metres, because a jump covers twelve metres

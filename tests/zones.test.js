@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { EVENTS } from "../src/events.js";
+import { PATTERNS } from "../src/patterns.js";
+import { makeRng } from "../src/rng.js";
 import { RunSchedule } from "../src/schedule.js";
+import { Spawner, patternContext } from "../src/spawner.js";
 import { ZONES, ZONE_FADE, mixColor } from "../src/zones.js";
 
 /** A run's layout, pinned to a seed so a failure can be reproduced. */
@@ -330,6 +333,48 @@ describe("천장이 게임을 막지 않는가", () => {
       if (zone.ceiling === null) continue;
       const head = zone.ceiling - CEILING_CLEARANCE + PLAYER_HEIGHT;
       expect(head, `${zone.name} 머리끝`).toBeLessThan(zone.ceiling);
+    }
+  });
+});
+
+describe("같은 패턴도 뽑을 때마다 다르다", () => {
+  const draw = (id, seed) => {
+    const pattern = PATTERNS.find((p) => p.id === id);
+    const ctx = patternContext({ z: 0, speed: 40, pressure: 0.5, rng: makeRng(seed) });
+    return pattern
+      .build(ctx)
+      .map((r) => `${r.type}:${r.lane}:${Math.round(r.z * 2) / 2}:${r.y ?? 0}`)
+      .join("|");
+  };
+
+  it("간격이 뽑을 때마다 달라진다", () => {
+    // The only thing that used to change between two draws of a layout was
+    // which lane was which — a layout you meet once and solve forever.
+    const shapes = new Set();
+    for (let seed = 0; seed < 200; seed++) shapes.add(draw("zigzag", seed));
+    expect(shapes.size).toBeGreaterThan(150);
+  });
+
+  it("같은 시드는 같은 배치다", () => {
+    expect(draw("zigzag", 42)).toBe(draw("zigzag", 42));
+    expect(draw("bus-hop", 42)).toBe(draw("bus-hop", 42));
+  });
+
+  it("한 패턴 안에서 같은 간격 요청은 같은 값을 받는다", () => {
+    // Patterns place a row across lanes with repeated calls; drawing fresh each
+    // time split one row into two with no lane through both.
+    const ctx = patternContext({ z: 0, speed: 40, pressure: 0.4, rng: makeRng(9) });
+    expect(ctx.gap(0.6, 12, 0.42)).toBe(ctx.gap(0.6, 12, 0.42));
+    expect(ctx.gap(0.62, 14, 0.44)).toBe(ctx.gap(0.62, 14, 0.44));
+  });
+
+  it("간격은 넓어지기만 한다", () => {
+    // The floor a gap eases towards is the tightest a jump can finish in.
+    // Wobbling it downwards cost 75 unclearable placements in the audit.
+    for (let seed = 0; seed < 300; seed++) {
+      const ctx = patternContext({ z: 0, speed: 40, pressure: 1, rng: makeRng(seed) });
+      const floor = Spawner.gapFor(40, 1, 0.6, 12, 0.42);
+      expect(ctx.gap(0.6, 12, 0.42), `seed ${seed}`).toBeGreaterThanOrEqual(floor);
     }
   });
 });

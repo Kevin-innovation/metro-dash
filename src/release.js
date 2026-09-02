@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.30";
+export const VERSION = "2.40";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,19 @@ export const VERSION = "2.30";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.40",
+    date: "2026-09-02",
+    kind: "major",
+    title: "같은 배치가 두 번 나오지 않습니다",
+    notes: [
+      "앞 업데이트에서 구간과 섹션의 순서를 섞었는데, 장애물 배치 자체는 그대로였어요. 지그재그는 언제나 열차·버스·열차가 똑같은 간격으로 놓였고, 두 번 뽑아도 달라지는 건 레인뿐이었습니다. 한 번 풀면 영원히 풀리는 배치였어요.",
+      "이제 배치마다 간격이 달라집니다. 같은 패턴을 200번 뽑으면 150가지 이상 다른 모양이 나옵니다.",
+      "차량 종류도 섞입니다. 버스가 있던 자리에 열차가 올 수 있어요 — 길이가 다르니 넘는 방법도 달라집니다.",
+      "코인 줄 길이도 조금씩 달라집니다.",
+      "간격은 넓어지는 쪽으로만 흔들립니다. 좁아지는 쪽으로도 흔들었더니 넘을 수 없는 배치가 생겼어요.",
+    ],
+  },
   {
     version: "2.30",
     date: "2026-09-02",

@@ -1,4 +1,4 @@
-import { makeRng, randomSeed, shuffled } from "./rng.js";
+import { jitter, makeRng, pickFrom, randomSeed, shuffled } from "./rng.js";
 import {
   CLEARANCE_SECONDS_EASY,
   CLEARANCE_SECONDS_HARD,
@@ -56,6 +56,18 @@ const HAZARD_AFTER = 14;
 const HAZARD_SPREAD = 6;
 
 /**
+ * How far a pattern's own spacing may open up, as a share of itself.
+ *
+ * Upward only, and that is not a detail. The gap a layout asks for already
+ * eases towards a floor as the run winds up — that floor is the tightest a
+ * jump can finish in — so a wobble that multiplies the whole figure takes the
+ * floor with it. Wobbling both ways cost 231 unclearable placements in the
+ * fairness audit at the first attempt: rows 0.02 seconds apart that needed
+ * 0.22. Opening a gap can never make a layout unclearable; closing one can.
+ */
+const GAP_WOBBLE = 0.3;
+
+/**
  * Metres two patterns' hazards must keep between them, whatever the timing
  * rules say.
  *
@@ -73,16 +85,6 @@ const HAZARD_SPREAD = 6;
  */
 const MIN_PATTERN_SEPARATION = 12;
 
-const pick = (arr) => arr[(Math.random() * arr.length) | 0];
-
-function shuffle(a) {
-  const b = a.slice();
-  for (let i = b.length - 1; i > 0; i--) {
-    const j = (Math.random() * (i + 1)) | 0;
-    [b[i], b[j]] = [b[j], b[i]];
-  }
-  return b;
-}
 
 /**
  * Turns the pattern table into live entities and decides when the next layout
@@ -92,6 +94,53 @@ function shuffle(a) {
  * layouts can never overlap and a full-lane wall never lands right on top of a
  * vehicle the player might still be riding.
  */
+/**
+ * Everything a pattern's `build` is handed.
+ *
+ * Exported because the tests and the fairness audit have to build the same
+ * context the spawner does. They each used to write their own copy of it, and a
+ * copy is a thing that drifts: the moment the spawner grew `rng`, `count` and
+ * `either`, every test that had copied the old shape started calling undefined.
+ *
+ * @param {{ z: number, speed: number, pressure: number, rng: () => number }} of
+ */
+export function patternContext({ z, speed, pressure = 0, rng }) {
+  /** This pattern's own gap wobbles, keyed by what was asked for. */
+  const wobbles = {};
+  const context = {
+    z,
+    rng,
+    lane: pickFrom(rng, [-1, 0, 1]),
+    lanes: shuffled(rng, [-1, 0, 1]),
+    /**
+     * Spacing, with a wobble.
+     *
+     * Every gap in the table is drawn through this one call, so one wobble
+     * here varies all thirty layouts. Without it a zigzag was always three
+     * vehicles at exactly the same spacing, and the only thing that changed
+     * between two draws of a pattern was which lane was which — a layout you
+     * meet once and solve forever.
+     *
+     * One wobble per distinct gap, not per call: patterns lean on two calls
+     * with the same arguments coming back with the same number, which is how a
+     * row that spans lanes is placed. Drawing fresh each time turned a single
+     * row into two rows two hundredths of a second apart with no lane through
+     * both, which the fairness audit caught 75 times.
+     */
+    gap: (seconds, min, floor) => {
+      const key = `${seconds}|${min}|${floor}`;
+      if (!(key in wobbles)) wobbles[key] = 1 + rng() * GAP_WOBBLE;
+      return Spawner.gapFor(speed, pressure, seconds, min, floor, wobbles[key]);
+    },
+    /** A count that varies, for coin runs and rows of the same thing. */
+    count: (base, spread = 1) => base + Math.round(jitter(rng, spread)),
+    /** One of two, so a row is not always made of the same thing. */
+    either: (a, b) => (rng() < 0.5 ? a : b),
+  };
+  context.others = [-1, 0, 1].filter((l) => l !== context.lane);
+  return context;
+}
+
 export class Spawner {
   /**
    * @param {import("./entities.js").EntityPool} pool
@@ -130,9 +179,9 @@ export class Spawner {
    * differs — a jump has to finish before a slide wall arrives, a lane change
    * does not.
    */
-  static gapFor(speed, pressure, seconds, minMetres, floorSeconds = seconds) {
+  static gapFor(speed, pressure, seconds, minMetres, floorSeconds = seconds, wobble = 1) {
     const eased = seconds + (floorSeconds - seconds) * pressure;
-    return Math.max(minMetres, speed * eased);
+    return Math.max(minMetres, speed * eased * wobble);
   }
 
   /** Fill the track ahead before a run or a title-screen preview starts. */
@@ -273,13 +322,7 @@ export class Spawner {
     slideBias = 0,
     eventPatterns = null,
   }) {
-    const context = {
-      z,
-      lane: pick([-1, 0, 1]),
-      lanes: shuffle([-1, 0, 1]),
-      gap: (seconds, min, floor) => Spawner.gapFor(speed, pressure, seconds, min, floor),
-    };
-    context.others = [-1, 0, 1].filter((l) => l !== context.lane);
+    const context = patternContext({ z, speed, pressure, rng: this.rng });
 
     if (tutorial && this.patternCount <= TUTORIAL.length) {
       const wanted = TUTORIAL[this.patternCount - 1];
@@ -296,7 +339,7 @@ export class Spawner {
     if (this.leavingEvent && !inEvent) {
       this.leavingEvent = false;
       const breather = AFTER_EVENT.map((id) => patternById(id)).filter(Boolean);
-      if (breather.length) return pick(breather).build(context);
+      if (breather.length) return pickFrom(this.rng, breather).build(context);
     }
 
     // A section overrides the draw entirely, including the phase gate: its
@@ -306,7 +349,7 @@ export class Spawner {
       const chosen = eventPatterns
         .map((id) => patternById(id))
         .filter((pattern) => pattern && typeof pattern.build === "function");
-      if (chosen.length) return pick(chosen).build(context);
+      if (chosen.length) return pickFrom(this.rng, chosen).build(context);
     }
 
     if (this.patternCount % POWERUP_EVERY === 0) {
@@ -323,6 +366,6 @@ export class Spawner {
       return crowEggPattern(z, context);
     }
 
-    return pick(candidatesFor(phaseId, slideBias)).build(context);
+    return pickFrom(this.rng, candidatesFor(phaseId, slideBias)).build(context);
   }
 }

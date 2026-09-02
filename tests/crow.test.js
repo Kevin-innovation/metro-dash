@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CROW_TIME } from "../src/config.js";
 import { crowVeil } from "../src/crow.js";
 import { crowEggPattern } from "../src/patterns.js";
+import { makeRng } from "../src/rng.js";
+import { patternContext } from "../src/spawner.js";
 import { HAZARD_PICKUPS, SPEC } from "../src/specs.js";
 import { POWERUP_IDS } from "../src/powerups.js";
 import { Run } from "../src/run.js";
@@ -55,10 +57,10 @@ describe("crow egg as a pickup", () => {
 });
 
 describe("crow egg pattern", () => {
-  /** The spawner's own gap helper, at a mid-run speed. */
-  const context = (speed = 40) => ({
+  /** The real context the spawner hands a pattern, at a mid-run speed. */
+  const context = (speed = 40, seed = 1) => ({
+    ...patternContext({ z: 0, speed, pressure: 0, rng: makeRng(seed) }),
     lane: 0,
-    gap: (seconds, min) => Math.max(min, speed * seconds),
   });
   const placements = () => crowEggPattern(0, context());
 

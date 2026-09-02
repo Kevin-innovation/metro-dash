@@ -14,16 +14,26 @@ import {
   requiredLeadSeconds,
 } from "../src/patterns.js";
 import { POWERUP_IDS } from "../src/powerups.js";
+import { makeRng } from "../src/rng.js";
+import { patternContext } from "../src/spawner.js";
 import { SPEC } from "../src/specs.js";
 
-const contextAt = (z, speed, pressure = 0) => ({
-  z,
+/**
+ * The real thing the spawner hands a pattern, not a copy of it.
+ *
+ * This used to mirror Spawner.gapFor by hand, which held until the context
+ * grew a seeded rng and the helpers that vary a layout — at which point every
+ * pattern that used one was calling undefined inside a test that still passed
+ * its own idea of the shape.
+ *
+ * Pinned to a seed so a failing layout can be reproduced; `lane: 0` is restored
+ * because several of these tests are written against the middle lane.
+ */
+const contextAt = (z, speed, pressure = 0, seed = 1) => ({
+  ...patternContext({ z, speed, pressure, rng: makeRng(seed) }),
   lane: 0,
   lanes: [-1, 0, 1],
   others: [-1, 1],
-  // Mirrors Spawner.gapFor, including the pressure compression.
-  gap: (seconds, min, floor = seconds) =>
-    Math.max(min, speed * (seconds + (floor - seconds) * pressure)),
 });
 
 const buildAll = (speed, pressure = 0) =>
