@@ -148,8 +148,6 @@ export const ZONES = [
   },
 ];
 
-export const ZONE_BY_ID = Object.fromEntries(ZONES.map((zone) => [zone.id, zone]));
-
 /** Linear blend of two numbers. */
 export function mix(a, b, k) {
   return a + (b - a) * k;
