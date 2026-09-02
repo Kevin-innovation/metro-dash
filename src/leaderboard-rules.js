@@ -155,12 +155,4 @@ export function validateRun(run) {
   return { ok: true };
 }
 
-/** Sanity bound used by the schema: nothing above this is worth storing. */
-export const MAX_PLAUSIBLE_SCORE = Math.ceil(
-  (maxDistanceIn(MAX_RUN_SECONDS) * MAX_PER_METRE +
-    maxDistanceIn(MAX_RUN_SECONDS) * MAX_COINS_PER_METRE * MAX_PER_COIN +
-    MAX_RUN_SECONDS * MAX_BONUS_PER_SECOND) *
-    SLACK,
-);
-
 export { MAX_SPEED };
