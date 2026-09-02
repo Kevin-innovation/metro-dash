@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.40";
+export const VERSION = "2.50";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "2.40";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.50",
+    date: "2026-09-02",
+    kind: "minor",
+    title: "코인은 서버가 셉니다",
+    notes: [
+      "코인과 XP는 이제 서버가 직접 계산합니다. 판을 끝내면 서버가 그 판을 검사하고, 주운 코인과 오른 레벨을 스스로 계산해서 지급해요. 브라우저가 말하는 숫자를 그대로 받지 않습니다.",
+      "게임 화면에 보이는 숫자는 그대로입니다. 판이 끝나는 순간 바로 보여 주고, 서버 답이 오면 그것으로 맞춥니다.",
+      "미션과 출석 보상은 브라우저가 계산하는 것이라 그대로 두되, 하루에 받을 수 있는 총량에 상한을 뒀습니다. 정상적으로 플레이하면 닿을 일이 없는 값이에요.",
+      "브라우저 저장 파일을 고쳐서 코인을 늘릴 수 있던 경로를 막았습니다.",
+    ],
+  },
   {
     version: "2.40",
     date: "2026-09-02",

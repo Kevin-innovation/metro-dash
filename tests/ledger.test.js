@@ -4,6 +4,8 @@ import { convexTest } from "convex-test";
 import schema from "../convex/schema.js";
 import { api } from "../convex/_generated/api.js";
 import { CHARACTERS } from "../src/characters.js";
+import { maxDistanceIn } from "../src/leaderboard-rules.js";
+import { CLIENT_COINS_PER_DAY } from "../convex/scores.js";
 import { UPGRADE_COSTS } from "../src/shop.js";
 
 const modules = import.meta.glob("../convex/**/*.*s");
@@ -19,21 +21,29 @@ const signUp = (t, profile = { coins: 0, best: 0 }) =>
 
 const NEON = CHARACTERS.find((c) => c.id === "neon");
 
-/** Earn `n` coins in 5,000-coin syncs, the most the server accepts at a time. */
+/**
+ * Earn `n` coins the only way there is: by submitting runs the server accepts.
+ *
+ * This used to report deltas to players:save, which paid them out on the
+ * browser's word. It does not any more, which is the point of the whole
+ * exercise — so the fixture has to play the game like everybody else.
+ */
 async function earn(t, token, n) {
   let coins = 0;
-  let earned = 0;
-  while (earned < n) {
-    const step = Math.min(5000, n - earned);
-    coins += step;
-    earned += step;
-    const r = await t.mutation(api.players.save, {
+  while (coins < n) {
+    const seconds = 60;
+    const take = Math.min(400, n - coins);
+    const run = await t.mutation(api.scores.submit, {
       token,
-      profile: { coins, earned },
-      coinsDelta: step,
-      coinsEarned: step,
+      score: 4000,
+      distance: Math.floor(maxDistanceIn(seconds) * 0.6),
+      coins: take,
+      comboMax: 12,
+      seconds,
+      character: "runner",
     });
-    expect(r.ok, `while earning ${earned}`).toBe(true);
+    expect(run.ok, `while earning ${coins}`).toBe(true);
+    coins = run.coins;
   }
   return coins;
 }
@@ -179,12 +189,110 @@ describe("stating a balance outright", () => {
   it("still carries what a guest session legitimately earned", async () => {
     const t = backend();
     const { token } = await signUp(t);
-    await earn(t, token, 10000);
+    const held = await earn(t, token, 4000);
     const result = await t.mutation(api.players.save, {
       token,
-      profile: { coins: 10300, earned: 10300 },
+      profile: { coins: held + 300, earned: held + 300 },
       coinsAbsolute: true,
     });
-    expect(result).toMatchObject({ ok: true, coins: 10300 });
+    expect(result).toMatchObject({ ok: true, coins: held + 300 });
+  });
+});
+
+describe("only a validated run pays", () => {
+  const run = (over = {}) => ({
+    score: 4000,
+    distance: Math.floor(maxDistanceIn(60) * 0.6),
+    coins: 40,
+    comboMax: 12,
+    seconds: 60,
+    character: "runner",
+    ...over,
+  });
+
+  it("credits the coins the run actually picked up", async () => {
+    const t = backend();
+    const { token } = await signUp(t);
+    const result = await t.mutation(api.scores.submit, { token, ...run({ coins: 137 }) });
+    expect(result.coins).toBe(137);
+  });
+
+  it("pays the character's coin perk on top", async () => {
+    const t = backend();
+    const { token } = await signUp(t);
+    const plain = await t.mutation(api.scores.submit, { token, ...run({ coins: 100 }) });
+    const perked = await t.mutation(api.scores.submit, {
+      token,
+      ...run({ coins: 100, character: "mono" }),
+    });
+    expect(perked.coins - plain.coins).toBeGreaterThan(100);
+  });
+
+  it("pays nothing at all for a run it refuses", async () => {
+    const t = backend();
+    const { token } = await signUp(t);
+    const impossible = await t.mutation(api.scores.submit, {
+      token,
+      ...run({ distance: maxDistanceIn(60) * 9, coins: 9999 }),
+    });
+    expect(impossible.ok).toBe(false);
+    const loaded = await t.query(api.players.load, { token });
+    expect(loaded.coins).toBe(0);
+  });
+
+  it("works the rank-up out itself rather than being told", async () => {
+    const t = backend();
+    const { token } = await signUp(t);
+    // A score big enough to cross the first rank, which pays on arrival.
+    const seconds = 300;
+    const big = await t.mutation(api.scores.submit, {
+      token,
+      score: 400_000,
+      distance: Math.floor(maxDistanceIn(seconds) * 0.7),
+      coins: 200,
+      comboMax: 40,
+      seconds,
+      character: "runner",
+      claimedCoins: 0,
+      claimedXp: 0,
+    });
+    expect(big.ok).toBe(true);
+    // Coins beyond the 200 picked up can only have come from the rank-ups the
+    // server worked out from the experience it holds.
+    expect(big.coins).toBeGreaterThan(200);
+  });
+
+  it("honours the browser's mission claim, up to a day's worth", async () => {
+    const t = backend();
+    const { token } = await signUp(t);
+    const first = await t.mutation(api.scores.submit, {
+      token,
+      ...run({ coins: 0 }),
+      claimedCoins: 1000,
+    });
+    expect(first.coins).toBe(1000);
+
+    // Everything after the day's allowance is dropped, however often it is
+    // asked for. A per-run allowance is farmed by submitting runs.
+    for (let i = 0; i < 8; i++) {
+      await t.mutation(api.scores.submit, { token, ...run({ coins: 0 }), claimedCoins: 5000 });
+    }
+    // Read off the column rather than off the balance: rank-ups are paid from
+    // experience the server owns and are not part of this allowance.
+    const player = await t.run(async (ctx) => await ctx.db.query("players").first());
+    expect(player.payoutCoinsToday).toBe(CLIENT_COINS_PER_DAY);
+  });
+
+  it("refuses a negative or absurd claim without going backwards", async () => {
+    const t = backend();
+    const { token } = await signUp(t);
+    const result = await t.mutation(api.scores.submit, {
+      token,
+      ...run({ coins: 50 }),
+      claimedCoins: -999999,
+      claimedXp: Number.NaN,
+    });
+    expect(result.coins).toBe(50);
+    expect(result.xp).toBeGreaterThanOrEqual(0);
   });
 });

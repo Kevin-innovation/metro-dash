@@ -1,10 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { perkFor } from "../src/characters.js";
 import { validateRun } from "../src/leaderboard-rules.js";
+import { rankAt, rankUpBetween, runXp } from "../src/progression.js";
+import { dayKey } from "../src/daily.js";
 import { weekKey } from "../src/week.js";
 import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
-import { levelOf, xpOf } from "./players.js";
+import { coinsOf, levelOf, xpOf } from "./players.js";
 import { schoolLabel } from "../src/school.js";
 
 /**
@@ -20,6 +23,29 @@ export const LEADERBOARD_LIMIT = 50;
 /** Rows read beyond the page, so filtered-out accounts do not shorten it. */
 const FILTER_MARGIN = 16;
 
+/**
+ * Coins the browser may be paid in one day for things the server cannot check.
+ *
+ * Missions and the streak are worked out in the browser — mission progress
+ * reads counters no run submission carries, and moving that whole table up here
+ * is a migration of its own. So they stay a claim, and the claim is bounded by
+ * what a day can actually pay: three missions at the hardest step with the
+ * mission character equipped (2,090), the all-clear bonus on top (1,394), and a
+ * seventh-day streak with the streak character (350).
+ *
+ * Per day rather than per run, which is the point. A per-run allowance is
+ * farmed by submitting runs; a day's missions can only be finished once.
+ */
+export const CLIENT_COINS_PER_DAY = 3900;
+/** The same, for experience. Mission XP at the hardest step, plus the bonus. */
+export const CLIENT_XP_PER_DAY = 3000;
+
+/** A claim, taken at face value up to what is left and never below zero. */
+function clampClaim(claimed, remaining) {
+  const asked = Math.trunc(Number(claimed) || 0);
+  return Math.max(0, Math.min(asked, Math.max(0, remaining)));
+}
+
 export const submit = mutation({
   args: {
     token: v.string(),
@@ -29,6 +55,14 @@ export const submit = mutation({
     comboMax: v.number(),
     seconds: v.number(),
     character: v.string(),
+    /**
+     * Coins and experience the browser paid itself around this run for things
+     * this mutation cannot verify: missions finished, the day's all-clear
+     * bonus, the attendance streak. A claim, capped per day — see
+     * CLIENT_COINS_PER_DAY.
+     */
+    claimedCoins: v.optional(v.number()),
+    claimedXp: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const player = await requirePlayer(ctx, args.token);
@@ -37,6 +71,7 @@ export const submit = mutation({
     if (!check.ok) {
       // Rejected quietly: the run simply does not reach the board. Telling the
       // client which bound it broke would only help someone tune around it.
+      // Nothing is paid for a run that did not happen.
       return { ok: false, reason: check.reason };
     }
 
@@ -70,22 +105,49 @@ export const submit = mutation({
       patch.weekKey = week;
       patch.weekBest = Math.max(score, weekBest);
     }
-    // The ledger is not touched here.
+    // --- what this run pays -------------------------------------------------
     //
-    // It used to grow by this run's coins plus a flat three thousand, meant to
-    // cover the missions, streak and rank-up a run can also pay out. Two things
-    // were wrong with that. The allowance was granted whether or not anything
-    // was actually earned, so a hundred quiet runs lifted the ceiling by three
-    // hundred thousand coins and the ledger stopped bounding anything; and it
-    // was still too small for the run that finishes all three missions at the
-    // top step, takes the daily bonus and levels up, which comes to over six
-    // thousand — so it was simultaneously useless and capable of refusing the
-    // best day a player ever has.
-    //
-    // players:save now reports what the client actually credited itself and the
-    // ledger grows by exactly that, which is both tighter and correct. Coins
-    // picked up in this run reach it the same way, so adding them here as well
-    // would count them twice.
+    // This is the only place a run can pay anything. It used to be
+    // players:save, which took the browser's word for how much it had earned
+    // and granted up to five thousand coins per call — no run required, and a
+    // call is a line of JavaScript. Everything below is either checked against
+    // the run just validated or worked out from a column the server owns.
+    const perk = perkFor(args.character);
+
+    // Picked up during the run. `validateRun` has already bounded this against
+    // the distance the speed curve allows, so it is as true as the run is.
+    const runCoins = Math.round(Math.floor(args.coins) * (perk.coinBonus ?? 1));
+
+    // Experience is a fixed fraction of the score, and the score is bounded by
+    // the same check. Nothing is taken from the client here at all.
+    const earnedXp = Math.round(runXp(score) * (perk.xpBonus ?? 1));
+
+    // Reaching a rank pays, and the server owns the experience that decides it,
+    // so it can work the payment out exactly rather than be told.
+    const heldXp = xpOf(player);
+    const rankCoins = rankUpBetween(rankAt(heldXp).level, rankAt(heldXp + earnedXp).level).coins;
+
+    // Missions and the streak are the browser's to compute; see
+    // CLIENT_COINS_PER_DAY. Whatever is left of today's allowance is honoured
+    // and the rest is dropped — quietly, because an honest player never reaches
+    // it and telling anyone else where the line is only helps them.
+    const today = dayKey(now);
+    const spentToday = player.payoutDay === today ? (player.payoutCoinsToday ?? 0) : 0;
+    const spentXpToday = player.payoutDay === today ? (player.payoutXpToday ?? 0) : 0;
+    const claimCoins = clampClaim(args.claimedCoins, CLIENT_COINS_PER_DAY - spentToday);
+    const claimXp = clampClaim(args.claimedXp, CLIENT_XP_PER_DAY - spentXpToday);
+
+    patch.coins = Math.max(0, coinsOf(player) + runCoins + rankCoins + claimCoins);
+    patch.xp = Math.max(0, heldXp + earnedXp + claimXp);
+    patch.pendingCoins = 0;
+    patch.payoutDay = today;
+    patch.payoutCoinsToday = spentToday + claimCoins;
+    patch.payoutXpToday = spentXpToday + claimXp;
+
+    // The ledger bounds what a save may claim to have *bought*, so it grows by
+    // everything just paid out.
+    patch.coinLedger = (player.coinLedger ?? 0) + runCoins + rankCoins + claimCoins;
+
     await ctx.db.patch(player._id, patch);
 
     if (score > player.best) {
@@ -102,7 +164,15 @@ export const submit = mutation({
       });
     }
 
-    return { ok: true, best: Math.max(score, player.best) };
+    // The balance and the experience go back with the record, so the card the
+    // player is looking at can show what the server actually paid rather than
+    // what the browser hoped it would.
+    return {
+      ok: true,
+      best: Math.max(score, player.best),
+      coins: patch.coins,
+      xp: patch.xp,
+    };
   },
 });
 

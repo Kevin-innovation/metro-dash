@@ -253,12 +253,34 @@ describe("players:save", () => {
     const t = backend();
     const { token } = await signUp(t, "저장하기");
 
-    // The balance is decided by the delta, not by the blob — so the blob comes
-    // back with the server's figure in it, and everything else as it was sent.
+    // The blob is stored as sent, except the balance — which is the server's
+    // and is written into the copy so a fresh device restores the right one.
+    // Saving does not pay: a browser claiming 120 coins it never earned gets
+    // its save kept and its balance left alone.
     await t.mutation(api.players.save, { token, profile: { coins: 120, runs: 4 }, coinsDelta: 120 });
     const loaded = await t.query(api.players.load, { token });
-    expect(loaded.profile).toMatchObject({ coins: 120, runs: 4 });
-    expect(loaded.coins).toBe(120);
+    expect(loaded.profile).toMatchObject({ runs: 4 });
+    expect(loaded.coins).toBe(0);
+    expect(loaded.profile.coins).toBe(0);
+  });
+
+  it("cannot pay itself by saving", async () => {
+    // The hole this closes: players:save used to credit whatever the browser
+    // said it had earned, up to five thousand a call, with no run required.
+    const t = backend();
+    const { token } = await signUp(t, "지갑");
+
+    for (let i = 0; i < 5; i++) {
+      await t.mutation(api.players.save, {
+        token,
+        profile: { coins: 5000 * (i + 1) },
+        coinsDelta: 5000,
+        xpDelta: 60000,
+      });
+    }
+    const loaded = await t.query(api.players.load, { token });
+    expect(loaded.coins).toBe(0);
+    expect(loaded.level).toBe(1);
   });
 
   it("cannot raise the score the leaderboard ranks on", async () => {
@@ -298,7 +320,7 @@ describe("players:save", () => {
     expect(synced).toMatchObject({ ok: true, best: 4200 });
   });
 
-  it("adds the experience a browser reports instead of taking its total", async () => {
+  it("a device that was merely opened cannot drag the rank backwards", async () => {
     const t = backend();
     const phone = await signUp(t, "경험치두기기", "1234", "phone");
     const desktop = await t.mutation(api.players.signIn, {
@@ -307,33 +329,21 @@ describe("players:save", () => {
       deviceId: "desktop",
     });
 
-    await t.mutation(api.players.save, {
-      token: phone.token,
-      profile: { coins: 0, xp: 5000 },
-      xpDelta: 5000,
-    });
+    // The phone plays an afternoon. Experience comes from the run, not from
+    // what the browser says it has.
+    const run = await t.mutation(api.scores.submit, { token: phone.token, ...plausibleRun() });
+    expect(run.xp).toBeGreaterThan(0);
 
-    // The desktop has not played since, so its profile still says 0. Reporting
-    // what it earned rather than what it holds is what stops it from undoing
-    // the afternoon the phone had — this used to drag the rank backwards on a
-    // device that was merely opened.
+    // The desktop has not played since, so its profile still says 0. Saving is
+    // not a claim on the total any more, so opening it changes nothing.
     const stale = await t.mutation(api.players.save, {
       token: desktop.token,
       profile: { coins: 0, xp: 0 },
-      xpDelta: 0,
     });
-    expect(stale).toMatchObject({ ok: true, xp: 5000 });
-
-    // And a second device that did play adds to it rather than replacing it.
-    const played = await t.mutation(api.players.save, {
-      token: desktop.token,
-      profile: { coins: 0, xp: 300 },
-      xpDelta: 300,
-    });
-    expect(played.xp).toBe(5300);
+    expect(stale).toMatchObject({ ok: true, xp: run.xp });
 
     const loaded = await t.query(api.players.load, { token: phone.token });
-    expect(loaded.level).toBe(rankAt(5300).level);
+    expect(loaded.level).toBe(rankAt(run.xp).level);
   });
 
   it("keeps a correction typed in by staff", async () => {
@@ -459,7 +469,10 @@ describe("scores:submit", () => {
     const { token } = await signUp(t, "성실이");
 
     const result = await t.mutation(api.scores.submit, { token, ...plausibleRun() });
-    expect(result).toEqual({ ok: true, best: 4000 });
+    // The balance and the experience ride back with the record: this is now the
+    // only thing that pays, so it has to say what it paid.
+    expect(result).toMatchObject({ ok: true, best: 4000, coins: 40 });
+    expect(result.xp).toBeGreaterThan(0);
 
     const board = await t.query(api.scores.top, {});
     expect(board[0]).toMatchObject({ rank: 1, handle: "성실이", best: 4000 });

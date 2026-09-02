@@ -87,6 +87,8 @@ export class Run {
     this.banked = { coins: 0, distance: 0, xp: 0, ...this.metrics };
     this.runCounted = false;
     this.runClosed = false;
+    /** Client-computed payouts this run, for the server to bound. */
+    this.claimed = { coins: 0, xp: 0 };
     clearPowerups(this.powerups);
   }
 
@@ -334,6 +336,11 @@ export class Run {
     }
 
     this.store.flush();
+    // What the browser paid itself for things the server cannot check — the
+    // missions and the day's bonus. Reported so it can be bounded rather than
+    // silently kept; see CLIENT_COINS_PER_DAY.
+    this.claimed.coins += reward.coins;
+    this.claimed.xp += reward.xp;
     return { completed, reward };
   }
 

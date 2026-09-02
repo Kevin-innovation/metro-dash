@@ -51,6 +51,19 @@ export default defineSchema({
      * LEDGER_VERSION in players.js.
      */
     ledgerV: v.optional(v.number()),
+    /**
+     * The day the browser's own payouts were last counted, and how much of
+     * that day's allowance has gone.
+     *
+     * Missions and the streak are worked out in the browser, so what they pay
+     * is a claim. It is honoured up to what a day can actually pay and no
+     * further — per day rather than per run, because a per-run allowance is
+     * farmed by submitting runs and a day's missions finish once.
+     */
+    payoutDay: v.optional(v.number()),
+    payoutCoinsToday: v.optional(v.number()),
+    payoutXpToday: v.optional(v.number()),
+
     /** Set when a save was refused for exceeding the ledger, for staff to see. */
     flagged: v.optional(v.boolean()),
 

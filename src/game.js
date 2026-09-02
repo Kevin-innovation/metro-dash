@@ -239,6 +239,11 @@ export class Game {
 
     // Offered rather than forced, and only where a reload costs nothing: a
     // player mid-run would lose the run to a banner they did not ask for.
+    /**
+     * Payouts made between runs — the attendance streak — waiting for a run to
+     * report them with. Cleared once the server has taken them.
+     */
+    this.pendingClaim = { coins: 0, xp: 0 };
     this.updateReady = false;
     this.update = watchForUpdate(() => {
       this.updateReady = true;
@@ -720,6 +725,22 @@ export class Game {
   }
 
   /**
+   * Take the balance the server settled on.
+   *
+   * The browser pays itself as a run ends so the card is not waiting on the
+   * network, but what it works out is a prediction. This is the answer.
+   */
+  adoptCoins(coins) {
+    if (typeof coins !== "number" || !Number.isFinite(coins)) return;
+    const next = Math.max(0, Math.floor(coins));
+    this.store.set("syncedCoins", next);
+    this.store.set("syncedEarned", this.store.data.earned);
+    if (next === this.store.data.coins) return;
+    this.store.set("coins", next);
+    this.screens.refreshProfile(this.store.data);
+  }
+
+  /**
    * Where that run left the player, on both boards.
    *
    * Waits for the submission first: asking before the score is recorded returns
@@ -795,12 +816,23 @@ export class Game {
         comboMax: this.run.comboMax,
         seconds: Math.floor(this.run.seconds),
         character: this.store.data.character,
+        // The missions and the streak this browser paid itself for. The run
+        // coins are not in here — the server takes those from the run it just
+        // validated rather than from anything we say.
+        claimedCoins: Math.round(this.run.claimed.coins + this.pendingClaim.coins),
+        claimedXp: Math.round(this.run.claimed.xp + this.pendingClaim.xp),
       })
       // The server answers with the record after the run, which is the figure
       // the board is about to rank — so the card and the board agree without
       // waiting for the next sync.
       .then((result) => {
-        if (result?.ok) this.adoptBest(result.best);
+        if (!result?.ok) return result;
+        this.adoptBest(result.best);
+        // The server has settled the balance and the experience; the numbers
+        // the browser was showing were a prediction of these.
+        this.adoptXp(result.xp);
+        this.adoptCoins(result.coins);
+        this.pendingClaim = { coins: 0, xp: 0 };
         return result;
       });
     this.syncCoins();
@@ -912,6 +944,8 @@ export class Game {
     this.store.data.bestStreak = Math.max(this.store.data.bestStreak ?? 0, visit.streak);
     const reward = Math.round(visit.reward * (perkFor(this.store.data.character).streakBonus ?? 1));
     this.store.addCoins(reward);
+    // Paid before there is a run to report it with, so it rides the next one.
+    this.pendingClaim.coins += reward;
     this.screens.showToast(`${visit.streak}일 연속 출석 · 🪙 +${reward}`);
     this.audio.purchase();
   }
@@ -925,6 +959,9 @@ export class Game {
     // A rank was climbed and nothing said so. The bar under the nickname moved
     // and that was the whole event, which is a strange way to treat the one
     // number a player spends a week pushing.
+    // Shown and paid locally so the card is not waiting on the network. The
+    // server works the same figure out from the experience it owns and its
+    // answer replaces this one; it is not claimed, because it is not a claim.
     const promotion = after > before ? rankUpBetween(before, after) : null;
     if (promotion?.coins) this.store.addCoins(promotion.coins);
 

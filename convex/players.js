@@ -80,7 +80,7 @@ export function levelOf(player) {
   return rankAt(xpOf(player)).level;
 }
 
-function coinsOf(player) {
+export function coinsOf(player) {
   if (typeof player.coins === "number") return Math.max(0, Math.floor(player.coins));
   const stored = Math.max(0, Math.floor(player.profile?.coins ?? 0));
   return stored + Math.max(0, Math.floor(player.pendingCoins ?? 0));
@@ -342,24 +342,25 @@ export const save = mutation({
       return { ok: false, reason: "ledger" };
     }
 
+    // Nothing is paid here any more.
+    //
+    // This used to credit whatever the browser said it had earned since its
+    // last sync, up to five thousand coins and sixty thousand experience a
+    // call — and a call costs nothing to make. Every coin now comes from a run
+    // the server validated (scores:submit) or from staff, so the balance is no
+    // longer something a browser can state.
+    //
+    // The one exception is the sign-in merge, which is a browser reporting what
+    // a guest session earned before there was an account to earn it into. That
+    // is bounded by the same wall it always was.
     const held = coinsOf(player);
-    const delta = Math.trunc(coinsDelta ?? 0);
-    // Absolute is the sign-in merge stating a total. It is still bounded by the
-    // same wall as a delta: left unbounded it was a way for any client to set
-    // its own balance to anything, which is a larger hole than the one the
-    // ledger beside it exists to close.
+    const heldXp = xpOf(player);
     const coins = coinsAbsolute
       ? Math.max(0, Math.min(Math.floor(profile?.coins ?? 0), held + MAX_COIN_GAIN_PER_SYNC))
-      : Math.max(0, held + Math.min(delta, MAX_COIN_GAIN_PER_SYNC));
-
-    // Settled the same way, and deliberately not from `profile.xp` — a client
-    // that has been away states an old total, and stating totals is what let a
-    // browser drag the rank backwards by being opened.
-    const heldXp = xpOf(player);
-    const gainedXp = Math.trunc(xpDelta ?? 0);
+      : held;
     const xp = xpAbsolute
       ? Math.max(0, Math.min(Math.floor(profile?.xp ?? 0), heldXp + MAX_XP_GAIN_PER_SYNC))
-      : Math.max(0, heldXp + Math.min(gainedXp, MAX_XP_GAIN_PER_SYNC));
+      : heldXp;
 
     await ctx.db.patch(player._id, {
       // The blob keeps a copy so a fresh device restoring it starts correct,
