@@ -1,4 +1,7 @@
 import { GRAVITY, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from "./config.js";
+
+/** Seconds a jump spends off the deck: up and back down again. */
+const JUMP_AIRTIME = (2 * JUMP_V) / -GRAVITY;
 import { SPEC } from "./specs.js";
 
 export const ALL_LANES = [-1, 0, 1];
@@ -444,15 +447,37 @@ export const POWERUP_PATTERNS = {
  * Both outs are moves the game has already taught: change lane, or jump it
  * (a 2.9m apex clears a coin-height pickup comfortably).
  */
-export function crowEggPattern(z, lane) {
+export function crowEggPattern(z, context) {
+  const lane = context.lane;
   const detour = lane === 0 ? (Math.random() < 0.5 ? -1 : 1) : 0;
+  const eggZ = z + 6.6;
+  // Where a jump taken at the egg puts the runner back on the deck. Measured in
+  // seconds of travel rather than metres, because a jump covers twelve metres
+  // at the start of a run and forty-one at the end — a fixed number would make
+  // this pattern a different pattern at either end of the same run.
+  const landing = context.gap(JUMP_AIRTIME * 1.06, 14);
+
   return [
     ...coinLine(lane, z, 4),
-    { type: "crowEgg", lane, z: z + 6.6, y: 0.75 },
-    ...coinLine(lane, z + 9.4, 4),
-    // The way out, and it pays. Starts before the egg so it is visible as an
-    // alternative while there is still time to take it.
-    ...coinLine(detour, z + 4.2, 5),
+    { type: "crowEgg", lane, z: eggZ, y: 0.75 },
+
+    // Three coins arcing over the egg, at the height an ordinary jump reaches
+    // and just above what can be taken from the ground. This is what makes the
+    // egg a decision rather than a spot check: the line can be kept, if you can
+    // clear the thing sitting in it.
+    { type: "coin", lane, z: eggZ - 2.2, y: 2.2 },
+    { type: "coin", lane, z: eggZ, y: 2.6 },
+    { type: "coin", lane, z: eggZ + 2.2, y: 2.2 },
+
+    // The line resumes where that jump lands. It used to resume 2.8m past the
+    // egg, which at speed is still mid-air — so clearing the trap cost you the
+    // whole rest of the line, and the only play the pattern actually had was to
+    // leave the lane.
+    ...coinLine(lane, eggZ + landing, 4),
+
+    // The cautious line, and it pays about the same. Starts before the egg so
+    // it is visible as an alternative while there is still time to take it.
+    ...coinLine(detour, z + 4.2, 7),
   ];
 }
 

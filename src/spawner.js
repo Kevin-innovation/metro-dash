@@ -302,7 +302,7 @@ export class Spawner {
     // Checked after the power-ups, so on the rare draw where both cadences
     // land on the same pattern the player gets the good one.
     if (this.patternCount >= HAZARD_AFTER && this.patternCount % HAZARD_EVERY === 0) {
-      return crowEggPattern(z, context.lane);
+      return crowEggPattern(z, context);
     }
 
     return pick(candidatesFor(phaseId, slideBias)).build(context);

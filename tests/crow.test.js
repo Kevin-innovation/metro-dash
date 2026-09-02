@@ -55,7 +55,12 @@ describe("crow egg as a pickup", () => {
 });
 
 describe("crow egg pattern", () => {
-  const placements = () => crowEggPattern(0, 0);
+  /** The spawner's own gap helper, at a mid-run speed. */
+  const context = (speed = 40) => ({
+    lane: 0,
+    gap: (seconds, min) => Math.max(min, speed * seconds),
+  });
+  const placements = () => crowEggPattern(0, context());
 
   it("drops exactly one egg", () => {
     const eggs = placements().filter((p) => p.type === "crowEgg");
@@ -86,6 +91,40 @@ describe("crow egg pattern", () => {
   it("keeps the egg at coin height, so an ordinary jump clears it", () => {
     const egg = placements().find((p) => p.type === "crowEgg");
     expect(egg.y).toBeLessThan(1);
+  });
+
+  it("arcs coins over the egg, so clearing it is paid rather than merely safe", () => {
+    const all = placements();
+    const egg = all.find((p) => p.type === "crowEgg");
+    const arc = all.filter((p) => p.type === "coin" && p.lane === egg.lane && p.y > 1.5);
+    expect(arc.length).toBeGreaterThan(0);
+    // Above what can be reached from the deck, or the jump buys nothing.
+    for (const coin of arc) expect(coin.y).toBeGreaterThan(2.1);
+  });
+
+  it("resumes the line where that jump lands, at any speed", () => {
+    // It used to resume 2.8m past the egg — still mid-air at speed, so clearing
+    // the trap cost the whole rest of the line and the only play was to leave.
+    for (const speed of [20, 40, 56]) {
+      const all = crowEggPattern(0, context(speed));
+      const egg = all.find((p) => p.type === "crowEgg");
+      const after = all
+        .filter((p) => p.type === "coin" && p.lane === egg.lane && p.y < 1 && p.z > egg.z)
+        .sort((a, b) => a.z - b.z)[0];
+      const airborne = speed * ((2 * 16.2) / 44);
+      expect(after.z - egg.z, `speed ${speed}`).toBeGreaterThan(airborne);
+      // And not so far past it that the line reads as a separate pattern.
+      expect(after.z - egg.z, `speed ${speed}`).toBeLessThan(airborne * 1.4);
+    }
+  });
+
+  it("pays the cautious line about what the greedy one pays", () => {
+    // Otherwise dodging is a penalty for having been careful.
+    const all = placements();
+    const egg = all.find((p) => p.type === "crowEgg");
+    const detour = all.filter((p) => p.type === "coin" && p.lane !== egg.lane).length;
+    const through = all.filter((p) => p.type === "coin" && p.lane === egg.lane).length;
+    expect(detour).toBeGreaterThanOrEqual(through / 2);
   });
 });
 

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.21";
+export const VERSION = "2.22";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "2.21";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.22",
+    date: "2026-09-02",
+    kind: "minor",
+    title: "까마귀 알을 넘어갈 수 있게",
+    notes: [
+      "까마귀 알 위로 코인 3개가 아치를 그리며 놓입니다. 점프로 알을 넘으면 그 코인을 먹고, 착지하는 자리에서 코인 줄이 다시 이어져요. 이제 알은 「피해라」가 아니라 「넘을 수 있으면 넘어라」입니다.",
+      "예전에는 알 2.8m 뒤에서 줄이 다시 시작했는데, 빠른 속도에서는 아직 공중이라 넘고 나면 남은 코인을 전부 놓쳤습니다. 알을 피하는 유일한 방법이 레인을 버리는 것뿐이었어요.",
+      "옆 레인으로 피하는 길의 코인도 5개에서 7개로 늘렸습니다. 조심한 것이 손해가 되지 않도록요.",
+      "아치 코인은 땅에서는 손이 닿지 않는 높이입니다. 점프해야만 먹을 수 있어요.",
+    ],
+  },
   {
     version: "2.21",
     date: "2026-09-02",
