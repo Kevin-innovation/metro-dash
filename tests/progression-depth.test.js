@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { JETPACK_ALTITUDE } from "../src/config.js";
 import { MISSION_DEFS, MISSION_TIERS, missionPay, tierStep } from "../src/missions.js";
+import { POWERUP_PATTERNS } from "../src/patterns.js";
 import { RANKS, missionTier } from "../src/progression.js";
 import {
   POWERUP_BASE_LEVELS,
@@ -210,5 +212,40 @@ describe("the upgrade track has a late game", () => {
     expect(profileWorth({ coins: 0, upgrades: maxed })).toBeGreaterThan(
       profileWorth({ coins: 0, upgrades: base }),
     );
+  });
+});
+
+describe("coin trails read as trails", () => {
+  const climb = () => POWERUP_PATTERNS.jetpack(0, 0).filter((p) => p.type === "coin");
+
+  it("climbs to the altitude the jetpack actually flies at", () => {
+    const coins = climb();
+    expect(coins[0].y).toBeLessThan(coins[coins.length - 1].y);
+    expect(coins[coins.length - 1].y).toBeCloseTo(JETPACK_ALTITUDE, 5);
+  });
+
+  it("widens each step as it recedes, so the gaps hold on screen", () => {
+    // Evenly spaced in metres is not evenly spaced to look at: a gap further
+    // away is a smaller gap, so the trail closed up as it climbed.
+    const z = climb().map((c) => c.z);
+    const steps = z.slice(1).map((v, i) => v - z[i]);
+    for (let i = 1; i < steps.length; i++) {
+      expect(steps[i], `step ${i}`).toBeGreaterThan(steps[i - 1]);
+    }
+  });
+
+  it("keeps a constant angle, so it reads as one straight climb", () => {
+    const coins = climb();
+    const slopes = coins.slice(1).map((c, i) => (c.y - coins[i].y) / (c.z - coins[i].z));
+    for (const slope of slopes) expect(slope).toBeCloseTo(slopes[0], 6);
+  });
+
+  it("never puts two coins inside each other", () => {
+    // A coin is 0.72m across.
+    const coins = climb();
+    for (let i = 1; i < coins.length; i++) {
+      const d = Math.hypot(coins[i].z - coins[i - 1].z, coins[i].y - coins[i - 1].y);
+      expect(d).toBeGreaterThan(0.72);
+    }
   });
 });

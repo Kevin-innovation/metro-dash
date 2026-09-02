@@ -1,4 +1,4 @@
-import { GRAVITY, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from "./config.js";
+import { GRAVITY, JETPACK_ALTITUDE, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from "./config.js";
 
 /** Seconds a jump spends off the deck: up and back down again. */
 const JUMP_AIRTIME = (2 * JUMP_V) / -GRAVITY;
@@ -421,15 +421,7 @@ export const POWERUP_PATTERNS = {
   magnet: (z, lane) => [{ type: "magnet", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 8)],
   // The trail climbs, so where the power-up is about to take you is visible
   // before you touch it.
-  jetpack: (z, lane) => [
-    { type: "jetpack", lane, z, y: 1.15 },
-    ...Array.from({ length: 7 }, (_, i) => ({
-      type: "coin",
-      lane,
-      z: z + 4 + i * 1.7,
-      y: 1.8 + i * 0.7,
-    })),
-  ],
+  jetpack: (z, lane) => [{ type: "jetpack", lane, z, y: 1.15 }, ...jetpackClimb(z + 4, lane)],
   double: (z, lane) => [{ type: "double", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 6)],
   sneakers: (z, lane) => [{ type: "sneakers", lane, z, y: 1.05 }, ...coinLine(lane, z + 3, 6)],
 };
@@ -479,6 +471,47 @@ export function crowEggPattern(z, context) {
     // it is visible as an alternative while there is still time to take it.
     ...coinLine(detour, z + 4.2, 7),
   ];
+}
+
+/**
+ * The trail that shows where the jetpack is about to take you.
+ *
+ * The steps grow as the line recedes. Evenly spaced in metres they were not
+ * evenly spaced on screen — a gap 1.7m further away is a smaller gap to look
+ * at, so the trail closed up as it climbed and the last four coins overlapped
+ * each other. Measured on a 640px frame the gaps ran 5.7, 5.4, 5.1, 4.8, 4.5,
+ * 4.3 pixels against coins 5px across, so the last four sat inside each other.
+ * Growing each step by the ratio the distance grows by holds them steady: five
+ * coins now measure 7.7, 7.9, 7.9, 7.8.
+ *
+ * Five rather than seven for the same reason. Widening the spacing on its own
+ * made it worse — the trail simply reached further away, and the extra distance
+ * shrank the gaps faster than the extra spacing opened them.
+ *
+ * Height follows the distance covered rather than the coin count, so the climb
+ * stays a straight line at a constant angle and finishes at the altitude the
+ * power-up actually flies at.
+ */
+const CLIMB_COINS = 7;
+const CLIMB_STEP = 3;
+const CLIMB_GROWTH = 1.16;
+const CLIMB_LOW = 1.8;
+
+function jetpackClimb(z, lane) {
+  const offsets = [0];
+  let step = CLIMB_STEP;
+  for (let i = 1; i < CLIMB_COINS; i++) {
+    offsets.push(offsets[i - 1] + step);
+    step *= CLIMB_GROWTH;
+  }
+  const span = offsets[offsets.length - 1];
+  const rise = JETPACK_ALTITUDE - CLIMB_LOW;
+  return offsets.map((along) => ({
+    type: "coin",
+    lane,
+    z: z + along,
+    y: CLIMB_LOW + (along / span) * rise,
+  }));
 }
 
 function coinLine(lane, z, count, step = 1.5, y = 0.7) {

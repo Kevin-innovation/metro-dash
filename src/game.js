@@ -58,8 +58,21 @@ const $ = (id) => document.getElementById(id);
  */
 const SNEAKER_COIN_LOW = 2.2;
 const SNEAKER_COIN_RISE = 2.0;
-const SNEAKER_ARC = 5;
-const SNEAKER_ARC_SPACING = 26;
+/**
+ * Three coins, not five.
+ *
+ * The arc is symmetric, so on a five-coin arc the two shoulders sit at the same
+ * height and differ only in depth — and depth is what a camera behind the
+ * runner cannot show. Measured on a 640px frame the middle gaps were 5 pixels
+ * between coins 6 pixels across: the arc read as a lump. Four is worse still,
+ * putting the pair either side of the peak 0.1 pixels apart. Three samples the
+ * shape the arc is there to communicate — low, high, low — and nothing hides
+ * behind anything.
+ */
+const SNEAKER_ARC = 3;
+const SNEAKER_ARC_HALF = 4.6;
+/** Closer together, so three coins an arc still pays about what five did. */
+const SNEAKER_ARC_SPACING = 20;
 /** Long enough to fly to, like the jetpack trail. */
 const SNEAKER_LANE_RUN = 78;
 
@@ -1302,7 +1315,7 @@ export class Game {
         this.pool.spawn(
           "coin",
           lane,
-          this.sneakerCoinZ + along * 3.2,
+          this.sneakerCoinZ + along * SNEAKER_ARC_HALF,
           SNEAKER_COIN_LOW + Math.cos(along * (Math.PI / 2)) * SNEAKER_COIN_RISE,
         );
       }

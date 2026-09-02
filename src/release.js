@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.22";
+export const VERSION = "2.23";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,17 @@ export const VERSION = "2.22";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.23",
+    date: "2026-09-02",
+    kind: "fix",
+    title: "코인 줄이 겹쳐 보이던 것",
+    notes: [
+      "제트팩 코인 줄이 위로 올라갈수록 코인끼리 겹쳐 보이던 것을 고쳤어요. 멀어질수록 간격을 넓혀서 화면에서는 일정하게 보입니다.",
+      "슈퍼 스니커즈 코인 아치가 가운데에서 뭉쳐 보이던 것도 고쳤습니다. 아치는 좌우 대칭이라 같은 높이의 코인 두 개가 앞뒤로만 떨어져 있었는데, 뒤에서 보는 화면에서는 그게 그냥 겹쳐 보였어요.",
+      "아치 코인이 5개에서 3개로 줄고, 대신 아치가 더 자주 나옵니다. 총 획득량은 비슷해요.",
+    ],
+  },
   {
     version: "2.22",
     date: "2026-09-02",
