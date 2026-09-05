@@ -437,40 +437,87 @@ export function makeCrowEgg() {
  * gem in a coloured ring) or obviously bad (soot and a warning stripe), and a
  * player decides in about a fifth of a second at fifty metres per second.
  *
- * So: white and faceted rather than tinted, on a pale ring that matches none of
- * the four power-ups. It looks valuable and it looks like nothing else, which
- * is the whole of what it needs to say — the counter in the corner explains the
- * rest the first time one is taken.
+ * The first version was a pale gem on the shared power-up halo, and at speed it
+ * was the super sneakers: same single flat ring, same near-white body, same
+ * cyan-ish cast. Two pickups that need different decisions cannot look like
+ * each other from forty metres.
+ *
+ * So it shares nothing with them now. Three things do the work, in the order
+ * the eye gets them:
+ *
+ *   Size — half again as large as anything else on the track.
+ *   Light — MeshBasicMaterial, which ignores the lights entirely and so stays
+ *     at full brightness through a tunnel, through dusk, and through the
+ *     crow's gloom. Every power-up is Lambert and dims with the world; this one
+ *     does not, which is a difference you read before you read a shape.
+ *   Silhouette — two rings crossed at right angles instead of one flat halo.
+ *     The power-ups all wear the same disc seen edge-on; a cage is a different
+ *     outline at any distance and from any angle.
  */
 export function makeDiamond() {
-  const g = powerupShell(0xe0f2fe, 0x38bdf8);
+  const g = new THREE.Group();
 
-  // Two cones back to back rather than an octahedron: a brilliant cut has a
-  // shallow crown over a deep pavilion, and the asymmetry is what stops this
-  // reading as the magnet's gem in a different colour.
+  // Lit, but with an emissive floor so high it barely matters — bright through
+  // a tunnel and through the crow's gloom, and still shaded enough that the
+  // eight facets read as facets. Fully unlit was brighter and turned the stone
+  // into a flat white triangle: every face the same value, no form at all.
   const facets = new THREE.MeshLambertMaterial({
-    color: 0xf0f9ff,
-    emissive: 0x7dd3fc,
-    emissiveIntensity: 0.75,
+    color: 0xf2fbff,
+    emissive: 0x9fdcff,
+    emissiveIntensity: 0.95,
   });
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.22, 8), facets);
-  crown.position.y = 0.34;
+  // A brilliant cut is a shallow crown over a deep pavilion. The asymmetry is
+  // what stops this reading as the magnet's octahedron at a different size.
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.3, 8), facets);
+  crown.position.y = 0.52;
   g.add(crown);
 
-  const pavilion = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.42, 8), facets);
+  const pavilion = new THREE.Mesh(new THREE.ConeGeometry(0.46, 0.62, 8), facets);
   pavilion.rotation.x = Math.PI;
-  pavilion.position.y = 0.02;
+  pavilion.position.y = 0.06;
   g.add(pavilion);
 
-  // A thin bright girdle where the two meet, which is the line the eye
-  // actually catches when the thing is spinning.
+  // The girdle, a shade cooler so the two halves separate rather than reading
+  // as one white lump.
   const girdle = new THREE.Mesh(
-    new THREE.TorusGeometry(0.33, 0.03, 6, 16),
-    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    new THREE.TorusGeometry(0.47, 0.05, 6, 18),
+    new THREE.MeshBasicMaterial({ color: 0x7dd3fc }),
   );
   girdle.rotation.x = Math.PI / 2;
-  girdle.position.y = 0.23;
+  girdle.position.y = 0.37;
   g.add(girdle);
+
+  // The cage: two rings at right angles. This is the silhouette, and it is the
+  // part that is not a power-up.
+  for (const [rx, rz] of [
+    [Math.PI / 2, 0],
+    [0, 0],
+  ]) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.78, 0.045, 6, 26),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8 }),
+    );
+    ring.rotation.set(rx, 0, rz);
+    ring.position.y = 0.37;
+    g.add(ring);
+  }
+
+  // Four sparks on the ring's axis. Small, unlit, and the thing that catches
+  // the eye first while the whole group is turning.
+  for (const [x, y, z] of [
+    [0, 1.16, 0],
+    [0, -0.42, 0],
+    [0.9, 0.37, 0],
+    [-0.9, 0.37, 0],
+  ]) {
+    const spark = new THREE.Mesh(
+      new THREE.BoxGeometry(0.11, 0.11, 0.11),
+      new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    );
+    spark.position.set(x, y, z);
+    spark.rotation.set(0.6, 0.6, 0);
+    g.add(spark);
+  }
 
   return g;
 }
@@ -515,6 +562,10 @@ export class EntityPool {
       this.scene.add(mesh);
     }
     mesh.visible = true;
+    // Reset, because the pool hands the same mesh back. The diamond is drawn
+    // with a pulsing scale, and one returned to the pool mid-pulse would come
+    // back out at whatever size it happened to be parked at.
+    mesh.scale.setScalar(1);
     const x = LANES[lane + 1];
     // Pickups float at the requested height; obstacles always sit on the deck.
     const lift = spec.lethal ? 0 : y;

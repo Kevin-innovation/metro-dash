@@ -1938,6 +1938,18 @@ export class Game {
     for (const item of this.pool.live) {
       if (item.type === "coin") {
         item.mesh.rotation.y += dt * 5;
+      } else if (item.token === "diamond") {
+        // Faster and wider than the power-ups, and breathing.
+        //
+        // The old one did not move at all — `token` is not `powerup`, so it
+        // fell through this branch and sat there — which on a track where
+        // everything else is turning is the strongest possible cue that a
+        // thing is scenery. Now it is the only object out there that changes
+        // size, and motion is read before colour at speed.
+        item.mesh.rotation.y += dt * 4.2;
+        const t = this.player.runT * 3 + item.z;
+        item.mesh.position.y = item.y + Math.sin(t) * 0.22;
+        item.mesh.scale.setScalar(1 + Math.sin(t * 1.7) * 0.1);
       } else if (item.powerup) {
         item.mesh.rotation.y += dt * 2.4;
         item.mesh.position.y = item.y + Math.sin(this.player.runT * 4 + item.z) * 0.14;
