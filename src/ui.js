@@ -209,6 +209,7 @@ function hudNodes() {
     boardFill: boardWrap?.querySelector(".board-fill") ?? null,
     boardCount: $("board-count"),
     antidote: $("antidote-chip"),
+    antidoteCount: $("antidote-count"),
     diamond: $("diamond-chip"),
     diamondCount: $("diamond-count"),
     pace: $("pace-chip"),
@@ -276,6 +277,7 @@ export function renderHud(state) {
   if (el.antidote && state.antidotes !== last.antidotes) {
     const had = last.antidotes;
     last.antidotes = state.antidotes;
+    if (el.antidoteCount) el.antidoteCount.textContent = String(state.antidotes);
     if (state.antidotes > 0) {
       el.antidote.classList.remove("hidden", "spent");
     } else if (had > 0) {

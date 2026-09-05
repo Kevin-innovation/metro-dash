@@ -599,22 +599,52 @@ body.running #game-canvas {
   pointer-events: auto;
 }
 
+/**
+ * The three things you are carrying, in the bottom-right corner.
+ *
+ * One size, written once. They grew separately and ended up three different
+ * shapes: the diamond counter was 40 tall and as wide as its text, the antidote
+ * a 40px square with no number on it at all, the board 44 tall and wider again.
+ * Stacked in a corner that is read at a glance while the track is moving, three
+ * sizes read as three unrelated things rather than as one inventory.
+ *
+ * Bigger and darker than they were, too. They sit over the track — over a lit
+ * sky in the opening zone and over white lane markings for the whole run — and
+ * a 60% ground was not enough to keep a number legible against either.
+ */
+.board-wrap .antidote-chip,
+.board-wrap .diamond-chip,
+.board-wrap #btn-board {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 86px;
+  height: 52px;
+  padding: 0;
+  border-radius: 16px;
+  border-width: 2px;
+  border-style: solid;
+  /* Nearly opaque. The blur behind it is what keeps it from reading as a
+     sticker; the ground is what keeps the number readable. */
+  background: rgba(4, 10, 16, 0.86);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font: 800 20px/1 "Jua", sans-serif;
+  letter-spacing: 0;
+}
+
 /* Sits above the board button in the same corner. Not a button: nothing about
    it is chosen, it simply either fires or it does not. */
 .antidote-chip {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
-  border: 2px solid rgba(20, 212, 184, 0.6);
-  background: rgba(7, 16, 24, 0.6);
-  backdrop-filter: blur(8px);
+  border-color: rgba(20, 212, 184, 0.75);
   animation: chipIn 0.28s ease-out;
 }
 
 .antidote-icon {
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1;
 }
 
@@ -642,25 +672,17 @@ body.running #game-canvas {
 }
 
 #btn-board {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border: 2px solid rgba(255, 61, 113, 0.55);
-  border-radius: 16px;
-  background: rgba(7, 16, 24, 0.6);
-  color: white;
-  font: 700 16px/1 "Jua", sans-serif;
+  border-color: rgba(255, 61, 113, 0.75);
   cursor: pointer;
-  backdrop-filter: blur(8px);
 }
 
 .board-icon {
-  font-size: 20px;
+  font-size: 24px;
+  line-height: 1;
 }
 
 .board-track {
-  width: 76px;
+  width: 86px;
   height: 5px;
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.15);
@@ -675,7 +697,12 @@ body.running #game-canvas {
 
 .board-wrap.riding #btn-board {
   border-color: #ff3d71;
-  box-shadow: 0 0 18px rgba(255, 61, 113, 0.55);
+  /* The glow *and* the drop shadow the chip already had — replacing it would
+     lose the edge that keeps the button legible over a bright lane marking at
+     exactly the moment it is doing something. */
+  box-shadow:
+    0 0 18px rgba(255, 61, 113, 0.55),
+    0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
 .board-fill {
@@ -3395,24 +3422,13 @@ body.admin {
    and the wheel is its own full-screen layer because it stops the run. */
 
 .diamond-chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 40px;
-  padding: 0 11px;
-  border-radius: 14px;
-  border: 2px solid rgba(125, 211, 252, 0.65);
-  background: rgba(7, 16, 24, 0.6);
-  backdrop-filter: blur(8px);
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  border-color: rgba(125, 211, 252, 0.8);
   color: #e0f2fe;
   animation: chipIn 0.28s ease-out;
 }
 
 .diamond-icon {
-  font-size: 17px;
+  font-size: 24px;
   line-height: 1;
 }
 
