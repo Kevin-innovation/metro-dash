@@ -11,6 +11,9 @@ import {
   lockoutSeconds,
   maxDistanceIn,
   validateRun,
+  RUNS_PER_WINDOW,
+  RUN_WINDOW_MS,
+  runThrottle,
 } from "../src/leaderboard-rules.js";
 
 const reasonFor = (run) => {
@@ -149,5 +152,58 @@ describe("validateRun rejects impossible runs", () => {
     expect(reasonFor({ seconds: 1, distance: 20, coins: 2, score: 999999 })).toBe(
       REJECT_RUN.SCORE,
     );
+  });
+});
+
+describe("runThrottle", () => {
+  const now = 1_000_000;
+
+  it("lets a first-ever run through and opens a window", () => {
+    expect(runThrottle({}, now)).toEqual({
+      ok: true,
+      runWindowStart: now,
+      runsInWindow: 1,
+    });
+  });
+
+  it("tolerates a burst, which is what dying twice in a row looks like", () => {
+    let player = {};
+    for (let i = 1; i <= RUNS_PER_WINDOW; i++) {
+      const result = runThrottle(player, now);
+      expect(result.ok).toBe(true);
+      expect(result.runsInWindow).toBe(i);
+      player = result;
+    }
+  });
+
+  it("refuses the run after the allowance is spent", () => {
+    const spent = { runWindowStart: now, runsInWindow: RUNS_PER_WINDOW };
+    expect(runThrottle(spent, now + 1).ok).toBe(false);
+  });
+
+  it("does not spend more of the allowance on a refused run", () => {
+    const spent = { runWindowStart: now, runsInWindow: RUNS_PER_WINDOW };
+    const result = runThrottle(spent, now + 1);
+    expect(result.runsInWindow).toBe(RUNS_PER_WINDOW);
+    expect(result.runWindowStart).toBe(now);
+  });
+
+  it("opens a fresh window once the old one has run out", () => {
+    const spent = { runWindowStart: now, runsInWindow: RUNS_PER_WINDOW };
+    const result = runThrottle(spent, now + RUN_WINDOW_MS);
+    expect(result).toEqual({ ok: true, runWindowStart: now + RUN_WINDOW_MS, runsInWindow: 1 });
+  });
+
+  it("does not strand an account whose clock went backwards", () => {
+    // A window stamped in the future is a clock problem, not a cheat, and
+    // locking the player out until real time caught up would be the worse
+    // answer.
+    const future = { runWindowStart: now + 60_000, runsInWindow: RUNS_PER_WINDOW };
+    expect(runThrottle(future, now).ok).toBe(true);
+  });
+
+  it("allows far more runs a minute than a person can play", () => {
+    // The shortest run anyone submits still has to be played and dismissed.
+    expect(RUNS_PER_WINDOW).toBeGreaterThanOrEqual(12);
   });
 });

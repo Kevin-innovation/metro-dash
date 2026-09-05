@@ -29,6 +29,7 @@ import {
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "../src/pace.js";
 import { SLIDE_DEAD_BAND, describeRows, requiredGapSeconds } from "../src/patterns.js";
 import { Spawner } from "../src/spawner.js";
+import { MAX_TIER } from "../src/tiers.js";
 import { RunSchedule } from "../src/schedule.js";
 
 const AIRTIME = (2 * JUMP_V) / -GRAVITY;
@@ -106,6 +107,13 @@ function simulate(seconds, seed) {
         phaseId,
         reaction: reactionAt(time),
         pressure: pressureAt(time),
+        // Swept rather than played out. A real run reaches a tier by scoring,
+        // and a simulated runner has no score — so the audit walks the whole
+        // ladder across the run instead, which is the only way the layouts
+        // gated behind `minTier` are ever checked at all. Without this the
+        // hardest patterns in the table would ship having been audited zero
+        // times, which is exactly the failure this script exists to prevent.
+        tier: Math.min(MAX_TIER, Math.floor((time / seconds) * (MAX_TIER + 1))),
         slideBias: schedule.lookAt(time).slideBias,
         oncomingSpeed: oncomingSpeedAt(phaseId),
         eventPatterns: schedule.eventAt(time)?.event.patterns ?? null,

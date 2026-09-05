@@ -11,6 +11,7 @@ import {
 import { CROW_TIME } from "./config.js";
 import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
+import { tierAt } from "./tiers.js";
 import {
   COMBO_WINDOW,
   NEAR_MISS_BONUS,
@@ -49,6 +50,18 @@ export class Run {
     this.scoreDist = 0;
     this.scoreCoins = 0;
     this.scoreBonus = 0;
+    /**
+     * The same points with every multiplier stripped out, which is what the
+     * difficulty tiers read — see tiers.js.
+     *
+     * Deliberately not `score`. The combo tier, the double-score power-up and a
+     * coin rush multiply together up to ten times, so a player who picks up
+     * double score mid-run would cross two or three tier boundaries in the
+     * seconds it takes to run through the coins behind it. The game would get
+     * harder because they collected a reward, which reads as a bug however it
+     * is explained. Raw points climb smoothly no matter what is running.
+     */
+    this.baseScore = 0;
     this.coins = 0;
     /** Set by Game while a section is running; 1 the rest of the time. */
     this.eventMultiplier = 1;
@@ -96,6 +109,11 @@ export class Run {
     return totalScore(this.scoreDist, this.scoreCoins, this.scoreBonus);
   }
 
+  /** The difficulty tier this run has climbed to. */
+  get tier() {
+    return tierAt(this.baseScore);
+  }
+
   /** Combo tier times any power-up bonus, times the section running now. */
   multiplier() {
     const base = scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
@@ -113,10 +131,14 @@ export class Run {
     this.seconds += dt;
     this.distance += travelled;
     const multiplier = this.multiplier();
-    this.scoreDist += distanceGain(travelled) * multiplier;
+    const distGain = distanceGain(travelled);
+    this.scoreDist += distGain * multiplier;
+    this.baseScore += distGain;
     // Riding a roof is the risky line, so it pays on top of plain distance.
     if (mounted) {
-      this.scoreDist += roofRideGain(travelled) * multiplier;
+      const roofGain = roofRideGain(travelled);
+      this.scoreDist += roofGain * multiplier;
+      this.baseScore += roofGain;
       this.roofDistance += travelled;
     }
 
@@ -132,13 +154,17 @@ export class Run {
   addCoin() {
     this.bumpCombo();
     this.coins += 1;
-    const gain = coinGain(this.combo) * this.multiplier();
+    const raw = coinGain(this.combo);
+    const gain = raw * this.multiplier();
     this.scoreCoins += gain;
+    this.baseScore += raw;
     return gain;
   }
 
   addMount(isHop) {
-    this.scoreBonus += mountBonus(isHop) * this.multiplier();
+    const raw = mountBonus(isHop);
+    this.scoreBonus += raw * this.multiplier();
+    this.baseScore += raw;
     this.bumpCombo();
     if (!isHop) this.metrics.mounts += 1;
   }
@@ -147,6 +173,7 @@ export class Run {
     this.metrics.nearMisses += 1;
     this.bumpCombo();
     this.scoreBonus += NEAR_MISS_BONUS * this.multiplier();
+    this.baseScore += NEAR_MISS_BONUS;
   }
 
   addPowerup(id, level) {

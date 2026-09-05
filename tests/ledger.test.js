@@ -1,5 +1,5 @@
 // @vitest-environment edge-runtime
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../convex/schema.js";
 import { api } from "../convex/_generated/api.js";
@@ -31,6 +31,12 @@ const NEON = CHARACTERS.find((c) => c.id === "neon");
 async function earn(t, token, n) {
   let coins = 0;
   while (coins < n) {
+    // A minute of wall clock per run, because that is roughly what a run costs
+    // to play and because scores:submit only banks so many runs a minute. A
+    // fixture that earned fifty thousand coins inside one millisecond was
+    // modelling something no player can do, and the throttle was right to say
+    // so — see RUNS_PER_WINDOW.
+    vi.setSystemTime(new Date(Date.now() + 61_000));
     const seconds = 60;
     const take = Math.min(400, n - coins);
     const run = await t.mutation(api.scores.submit, {
@@ -49,6 +55,16 @@ async function earn(t, token, n) {
 }
 
 describe("the coin ledger", () => {
+  // Only Date is faked: convex-test drives its own scheduler off real timers,
+  // and replacing those would hang the suite rather than speed it up.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-03-02T09:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("lets an honest player spend what they earned", async () => {
     // The case that was permanently refused: sign up with nothing, earn a lot,
     // buy one character. Spending had grown past a ledger frozen at signup.

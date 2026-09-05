@@ -4,11 +4,20 @@ import {
   MAX_SPEED,
   PRESSURE_FULL_AT,
   PRESSURE_STARTS_AT,
+  OPENING_GRACE_GAP,
+  OPENING_GRACE_SECONDS,
   REACTION_EASY,
   REACTION_HARD,
   START_SPEED,
 } from "../src/config.js";
-import { PHASES, phaseAt, pressureAt, reactionAt, speedAt } from "../src/pace.js";
+import {
+  PHASES,
+  openingGraceAt,
+  phaseAt,
+  pressureAt,
+  reactionAt,
+  speedAt,
+} from "../src/pace.js";
 
 describe("speedAt", () => {
   it("starts at the run's opening speed", () => {
@@ -94,7 +103,13 @@ describe("pressure", () => {
 
 describe("reactionAt", () => {
   it("shrinks from the easy value to the hard one", () => {
-    expect(reactionAt(0)).toBeCloseTo(REACTION_EASY, 5);
+    // The opening carries a grace on top of the easy value; by the time the
+    // grace has run out the curve is the one it always was.
+    expect(reactionAt(0)).toBeCloseTo(REACTION_EASY + OPENING_GRACE_GAP, 5);
+    expect(reactionAt(OPENING_GRACE_SECONDS)).toBeCloseTo(
+      REACTION_EASY + (REACTION_HARD - REACTION_EASY) * pressureAt(OPENING_GRACE_SECONDS),
+      5,
+    );
     expect(reactionAt(PRESSURE_FULL_AT)).toBeCloseTo(REACTION_HARD, 5);
   });
 
@@ -105,6 +120,18 @@ describe("reactionAt", () => {
       expect(r).toBeLessThanOrEqual(previous + 1e-9);
       previous = r;
     }
+  });
+
+  it("gives the opening extra room, and gives it back by ninety seconds", () => {
+    // The bottom of the leaderboard was players dying before the run had taught
+    // them anything, so the first ninety seconds get more track between
+    // patterns — and only the first ninety.
+    expect(openingGraceAt(0)).toBeCloseTo(OPENING_GRACE_GAP, 5);
+    expect(openingGraceAt(OPENING_GRACE_SECONDS / 2)).toBeCloseTo(OPENING_GRACE_GAP / 2, 5);
+    expect(openingGraceAt(OPENING_GRACE_SECONDS)).toBe(0);
+    expect(openingGraceAt(600)).toBe(0);
+    // Never negative, however it is called.
+    expect(openingGraceAt(-10)).toBeCloseTo(OPENING_GRACE_GAP, 5);
   });
 
   it("still leaves the runner time to read a pattern at top speed", () => {

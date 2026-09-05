@@ -320,6 +320,7 @@ export class Spawner {
     tutorial = false,
     pressure = 0,
     slideBias = 0,
+    tier = 0,
     eventPatterns = null,
   }) {
     const context = patternContext({ z, speed, pressure, rng: this.rng });
@@ -366,6 +367,6 @@ export class Spawner {
       return crowEggPattern(z, context);
     }
 
-    return pickFrom(this.rng, candidatesFor(phaseId, slideBias)).build(context);
+    return pickFrom(this.rng, candidatesFor(phaseId, slideBias, tier)).build(context);
   }
 }

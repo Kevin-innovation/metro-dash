@@ -3,6 +3,8 @@ import {
   ONCOMING_SPEED,
   LATE_PRESSURE_AT,
   MAX_SPEED,
+  OPENING_GRACE_GAP,
+  OPENING_GRACE_SECONDS,
   PRESSURE_FULL_AT,
   PRESSURE_STARTS_AT,
   REACTION_EASY,
@@ -29,11 +31,18 @@ export const PHASES = [
   { id: 6, t: 190, name: "CHAOS", toast: "쉴 틈 없다!" },
   // Past this point speed and pressure have both topped out, so the run used to
   // become the same minute repeating forever — hardest on the players who got
-  // there, which is backwards. These bring new layouts rather than new numbers:
-  // `weightAt` keeps handing more of the pile to the gauntlets, and the two
-  // rows below unlock the sections built for exactly this stretch.
+  // there, which is backwards. The rows below bring new layouts rather than new
+  // numbers: `weightAt` keeps handing more of the pile to the gauntlets, and
+  // each unlocks patterns written for that stretch. The score tiers in tiers.js
+  // do the rest, and do it for the player rather than for the stopwatch.
   { id: 7, t: 250, name: "SURGE", toast: "한계 돌파!" },
   { id: 8, t: 330, name: "MAYHEM", toast: "여기서부터는 기록이다" },
+  // The table used to stop here, and FULL_PHASE stopped three phases earlier
+  // still, so a run past five and a half minutes was dealt the same pile
+  // forever. These two carry the drift to its end and unlock the layouts
+  // written for a run that has already gone this far.
+  { id: 9, t: 420, name: "TERMINAL", toast: "아무도 여기까지 못 왔다" },
+  { id: 10, t: 540, name: "BEYOND", toast: "기록의 영역" },
 ];
 
 export function phaseAt(t) {
@@ -84,9 +93,21 @@ export function oncomingSpeedAt(phaseId) {
   return ONCOMING_SPEED + (9 + Math.max(0, phaseId) * 1.4) * 0.2;
 }
 
+/**
+ * How much extra track the opening gets, in seconds. See OPENING_GRACE_GAP.
+ *
+ * Linear rather than eased: the point is that it is gone by the ninety second
+ * mark, and every curve that reaches zero smoothly reaches it late.
+ */
+export function openingGraceAt(t) {
+  if (!(t < OPENING_GRACE_SECONDS)) return 0;
+  return OPENING_GRACE_GAP * (1 - Math.max(0, t) / OPENING_GRACE_SECONDS);
+}
+
 /** Seconds of track the spawner leaves between patterns at time `t`. */
 export function reactionAt(t) {
-  const base = REACTION_EASY + (REACTION_HARD - REACTION_EASY) * pressureAt(t);
+  const base =
+    REACTION_EASY + (REACTION_HARD - REACTION_EASY) * pressureAt(t) + openingGraceAt(t);
   if (t <= LATE_PRESSURE_AT) return base;
   // Past the first ramp the gap keeps closing, just far more slowly. Without
   // this the run stopped getting harder at exactly the point most players stop

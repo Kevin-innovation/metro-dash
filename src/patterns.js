@@ -4,6 +4,12 @@ import { GRAVITY, JETPACK_ALTITUDE, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from
 const JUMP_AIRTIME = (2 * JUMP_V) / -GRAVITY;
 import { shuffled } from "./rng.js";
 import { SPEC } from "./specs.js";
+import {
+  PHASE_LATE_REACH,
+  easyWeightScale,
+  hardWeightScale,
+  tierPatternScale,
+} from "./tiers.js";
 
 export const ALL_LANES = [-1, 0, 1];
 
@@ -149,6 +155,7 @@ export const PATTERNS = [
   },
   {
     id: "two-trains",
+    hard: true,
     minPhase: 1,
     weight: 2,
     late: 2,
@@ -193,6 +200,7 @@ export const PATTERNS = [
   },
   {
     id: "triple-barrier",
+    hard: true,
     minPhase: 2,
     weight: 2,
     late: 3,
@@ -203,6 +211,7 @@ export const PATTERNS = [
   },
   {
     id: "triple-sign",
+    hard: true,
     /** Can only be cleared by sliding: the tunnel leans on these. */
     slide: true,
     minPhase: 2,
@@ -215,6 +224,7 @@ export const PATTERNS = [
   },
   {
     id: "two-bus",
+    hard: true,
     minPhase: 2,
     weight: 2,
     late: 2,
@@ -226,6 +236,7 @@ export const PATTERNS = [
   },
   {
     id: "bus-hop",
+    hard: true,
     minPhase: 2,
     weight: 2,
     late: 3,
@@ -241,6 +252,7 @@ export const PATTERNS = [
   },
   {
     id: "oncoming-two",
+    hard: true,
     minPhase: 2,
     weight: 2,
     late: 3,
@@ -255,6 +267,7 @@ export const PATTERNS = [
   },
   {
     id: "zigzag",
+    hard: true,
     minPhase: 3,
     weight: 2,
     late: 3,
@@ -273,6 +286,7 @@ export const PATTERNS = [
   },
   {
     id: "jump-slide",
+    hard: true,
     /** Can only be cleared by sliding: the tunnel leans on these. */
     slide: true,
     minPhase: 3,
@@ -292,6 +306,7 @@ export const PATTERNS = [
   },
   {
     id: "slide-jump",
+    hard: true,
     /** Can only be cleared by sliding: the tunnel leans on these. */
     slide: true,
     minPhase: 3,
@@ -307,6 +322,7 @@ export const PATTERNS = [
   },
   {
     id: "train-hop",
+    hard: true,
     minPhase: 3,
     weight: 2,
     late: 3,
@@ -318,6 +334,7 @@ export const PATTERNS = [
   },
   {
     id: "oncoming-mix",
+    hard: true,
     minPhase: 3,
     weight: 2,
     late: 3,
@@ -329,6 +346,7 @@ export const PATTERNS = [
   },
   {
     id: "gauntlet",
+    hard: true,
     minPhase: 4,
     weight: 2,
     late: 4,
@@ -344,6 +362,7 @@ export const PATTERNS = [
   },
   {
     id: "roof-weave",
+    hard: true,
     minPhase: 4,
     weight: 2,
     late: 4,
@@ -362,6 +381,7 @@ export const PATTERNS = [
     // Three gates back to back. Slide, stand, slide again — the spacing is the
     // whole pattern, so it is measured from SLIDE_TIME rather than guessed.
     id: "gate-run",
+    hard: true,
     slide: true,
     minPhase: 5,
     weight: 1,
@@ -383,6 +403,7 @@ export const PATTERNS = [
     // full-width, and both have a way through: the buses are ridden, the
     // barriers are jumped.
     id: "roof-drop",
+    hard: true,
     minPhase: 6,
     weight: 2,
     late: 4,
@@ -396,6 +417,7 @@ export const PATTERNS = [
     // Two lanes coming at you and a container parked in the third, far enough
     // apart that the lane you are pushed into is not the lane it sits in.
     id: "oncoming-storm",
+    hard: true,
     minPhase: 6,
     weight: 2,
     late: 3,
@@ -411,6 +433,7 @@ export const PATTERNS = [
   },
   {
     id: "triple-bus",
+    hard: true,
     minPhase: 4,
     weight: 1,
     late: 3,
@@ -418,6 +441,127 @@ export const PATTERNS = [
       ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
       ...coinLine(0, z - 2, 5, 1.35, 2.55),
     ],
+  },
+
+  // --- tier layouts --------------------------------------------------------
+  //
+  // Dealt by score rather than by the clock — see tiers.js. Every one of them
+  // is built from moves the game has already taught and gaps the table already
+  // uses; what makes them hard is that they ask for two or three of those moves
+  // back to back, so a run's chance of surviving the next minute falls off
+  // without any single row ever becoming unclearable. The fairness audit sweeps
+  // these tiers, and nothing here ships until it comes back clean.
+  {
+    // Two rows, each leaving exactly one lane, and never the same lane twice.
+    // The open lanes are deliberately kept adjacent: a needle that asked for
+    // both lane changes at once would be a coin flip rather than a test.
+    id: "needle",
+    hard: true,
+    minPhase: 5,
+    minTier: 2,
+    weight: 1,
+    late: 3,
+    build: ({ z, lane, either, gap }) => {
+      const step = gap(0.85, 18, 0.62);
+      const second = lane === 0 ? either(-1, 1) : 0;
+      return [
+        ...ALL_LANES.filter((l) => l !== lane).map((l) => ({ type: "train", lane: l, z })),
+        ...ALL_LANES.filter((l) => l !== second).map((l) => ({
+          type: "train",
+          lane: l,
+          z: z + step,
+        })),
+        // Past the second row, not between the two: coins sitting in a lane the
+        // first row still blocks are a trap the player cannot read as one.
+        ...coinLine(second, z + step + 4, 4),
+      ];
+    },
+  },
+  {
+    // Slide the wall, then thread the row waiting on the other side of it.
+    id: "gate-needle",
+    hard: true,
+    slide: true,
+    minPhase: 6,
+    minTier: 3,
+    weight: 1,
+    late: 2,
+    build: ({ z, lane, gap }) => {
+      const step = gap(0.9, 20, 0.66);
+      return [
+        ...ALL_LANES.map((l) => ({ type: "sign", lane: l, z })),
+        ...ALL_LANES.filter((l) => l !== lane).map((l) => ({ type: "train", lane: l, z: z + step })),
+        ...coinLine(lane, z + step + 4, 4),
+      ];
+    },
+  },
+  {
+    // Something coming the other way, a wall to jump, and a needle to thread.
+    // Three different answers, in the order the run is least ready for them.
+    id: "storm-needle",
+    hard: true,
+    minPhase: 7,
+    minTier: 4,
+    weight: 1,
+    late: 3,
+    build: ({ z, lane, lanes, gap }) => {
+      const lead = gap(0.6, 16);
+      const wall = lead + gap(0.9, 20, 0.66);
+      const needle = wall + gap(0.85, 18, 0.62);
+      return [
+        { type: "bus", lane: lanes[0], z: z + lead, oncoming: true },
+        ...ALL_LANES.map((l) => ({ type: "barrier", lane: l, z: z + wall })),
+        ...ALL_LANES.filter((l) => l !== lane).map((l) => ({
+          type: "train",
+          lane: l,
+          z: z + needle,
+        })),
+      ];
+    },
+  },
+  {
+    // Jump, slide, swerve. The gap before the gate is the one jump-slide uses
+    // and is likewise left out of the pressure compression, because super
+    // sneakers stretch the airtime it has to clear.
+    id: "triple-demand",
+    hard: true,
+    slide: true,
+    minPhase: 7,
+    minTier: 5,
+    weight: 1,
+    late: 2,
+    build: ({ z, lane, gap }) => {
+      const gate = gap(1.06, 20);
+      const needle = gate + gap(0.9, 20, 0.66);
+      return [
+        ...ALL_LANES.map((l) => ({ type: "barrier", lane: l, z })),
+        ...ALL_LANES.map((l) => ({ type: "sign", lane: l, z: z + gate })),
+        ...ALL_LANES.filter((l) => l !== lane).map((l) => ({
+          type: "train",
+          lane: l,
+          z: z + needle,
+        })),
+      ];
+    },
+  },
+  {
+    // Up onto the roofs and straight back down into a needle. Coming off a roof
+    // costs the run its lane freedom for as long as the drop lasts, which is
+    // what this is actually asking about.
+    id: "roof-needle",
+    hard: true,
+    minPhase: 8,
+    minTier: 6,
+    weight: 1,
+    late: 3,
+    build: ({ z, lane, gap }) => {
+      const drop = gap(1.15, 24);
+      return [
+        ...ALL_LANES.map((l) => ({ type: "bus", lane: l, z })),
+        ...coinLine(0, z - 2, 4, 1.35, 2.55),
+        ...ALL_LANES.filter((l) => l !== lane).map((l) => ({ type: "train", lane: l, z: z + drop })),
+      ];
+    },
   },
 ];
 
@@ -629,8 +773,16 @@ export function describePattern(z, placements) {
  */
 export const SLIDE_BIAS_MAX = 3;
 
-/** The phase at which `late` weights are fully in effect. */
-const FULL_PHASE = 6;
+/**
+ * The phase at which `late` weights are fully in effect.
+ *
+ * Was six, which is 190 seconds — and PHASES runs to id 8. So SURGE and MAYHEM
+ * dealt exactly the pile phase 6 dealt, and the comment in pace.js promising
+ * that `weightAt` "keeps handing more of the pile to the gauntlets" past that
+ * point was describing something the code stopped doing three phases earlier.
+ * Ten, so the drift now runs the length of the phase table.
+ */
+const FULL_PHASE = 10;
 
 /**
  * A pattern's share of the pile at this phase.
@@ -646,16 +798,43 @@ export function weightAt(pattern, phaseId) {
   const late = pattern.late ?? pattern.weight;
   const span = Math.max(1, FULL_PHASE - pattern.minPhase);
   const t = Math.min(1, Math.max(0, (phaseId - pattern.minPhase) / span));
-  return Math.max(1, Math.round(pattern.weight + (late - pattern.weight) * t));
+  // Only part of the way to `late` — the score tiers carry the rest. See
+  // PHASE_LATE_REACH for why the clock is no longer allowed to carry it alone.
+  const reach = t * PHASE_LATE_REACH;
+  return Math.max(1, Math.round(pattern.weight + (late - pattern.weight) * reach));
 }
 
-export function candidatesFor(phaseId, slideBias = 0) {
+/**
+ * The pile the spawner draws from.
+ *
+ * `tier` is the run's score standing — see tiers.js. It does two things the
+ * phase cannot: it unlocks the layouts written for a run that is already going
+ * well (`minTier`), and it keeps shifting the pile towards the demanding ones
+ * for as long as the score keeps climbing. The phase saturates; a tier does
+ * not, which is the whole reason it exists.
+ *
+ * Weights only. Nothing here places an obstacle into another layout's clear
+ * lane — the fairness guarantee lives in `requiredGapSeconds`, and a difficulty
+ * knob that reached past it would be a knob that ships unclearable rows.
+ */
+export function candidatesFor(phaseId, slideBias = 0, tier = 0) {
   const bias = Math.min(1, Math.max(0, slideBias));
+  const hardScale = hardWeightScale(tier);
+  const easyScale = easyWeightScale(tier);
   const pool = [];
   for (const pattern of PATTERNS) {
     if (pattern.section || pattern.minPhase > phaseId) continue;
+    if ((pattern.minTier ?? 0) > tier) continue;
     const extra = pattern.slide ? 1 + SLIDE_BIAS_MAX * bias : 1;
-    const copies = Math.round(weightAt(pattern, phaseId) * extra);
+    const scale = pattern.minTier
+      ? tierPatternScale(tier, pattern.minTier)
+      : pattern.hard
+        ? hardScale
+        : easyScale;
+    // Never below one copy, for the same reason `weightAt` floors there: a
+    // layout that has fallen out of the pile entirely is one the run can no
+    // longer use to give the player a beat between the hard ones.
+    const copies = Math.max(1, Math.round(weightAt(pattern, phaseId) * extra * scale));
     for (let i = 0; i < copies; i++) pool.push(pattern);
   }
   return pool;

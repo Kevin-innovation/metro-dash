@@ -64,6 +64,18 @@ export default defineSchema({
     payoutCoinsToday: v.optional(v.number()),
     payoutXpToday: v.optional(v.number()),
 
+    /**
+     * How many runs this account has banked in the current window, and when
+     * that window opened.
+     *
+     * `scores:submit` is the only mutation that pays anything and it had no
+     * throttle at all, so a loop calling it was bounded by nothing but how fast
+     * the network answered. See RUNS_PER_WINDOW for why this is a burst
+     * allowance rather than a minimum gap between two runs.
+     */
+    runWindowStart: v.optional(v.number()),
+    runsInWindow: v.optional(v.number()),
+
     /** Set when a save was refused for exceeding the ledger, for staff to see. */
     flagged: v.optional(v.boolean()),
 
