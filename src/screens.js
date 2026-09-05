@@ -764,6 +764,114 @@ export class Screens {
     return !$("gameover-screen").classList.contains("hidden");
   }
 
+  // --- the diamond wheel ---------------------------------------------------
+
+  /**
+   * Spin the wheel and, when it has stopped and been read, hand the run back.
+   *
+   * The strip is three copies of the face list so the reel can travel a long
+   * way and still land on a real face: one copy would have to either stop
+   * immediately or wrap, and a wrap mid-spin is a visible jump.
+   *
+   * Timed rather than driven by `transitionend`. A transition that never fires
+   * — a backgrounded tab, a browser that drops it under load — would leave the
+   * run stopped forever with a wheel on it, and there is no button here to get
+   * out with. A timer always fires.
+   *
+   * @param {Array} faces the whole wheel, in drawing order
+   * @param {number} index which face it lands on
+   * @param {object} face that face, for the result line
+   * @param {() => void} onDone called once the result has been read
+   */
+  showSlots(faces, index, face, onDone) {
+    const screen = $("slots-screen");
+    const reel = $("slots-reel");
+    const result = $("slots-result");
+    if (!screen || !reel || !result) {
+      // No wheel to show is not a reason to keep the run stopped.
+      onDone?.();
+      return;
+    }
+
+    clearTimeout(this.slotLandTimer);
+    clearTimeout(this.slotDoneTimer);
+
+    const strip = [...faces, ...faces, ...faces];
+    reel.innerHTML = strip
+      .map(
+        (item) => `
+        <div class="slot-face slot-${item.tone}">
+          <span class="slot-icon" aria-hidden="true">${item.icon}</span>
+          <span class="slot-label">${escapeHtml(item.label)}</span>
+          <span class="slot-detail">${escapeHtml(item.detail)}</span>
+        </div>`,
+      )
+      .join("");
+
+    result.textContent = "";
+    result.className = "slots-result";
+    screen.classList.remove("hidden");
+
+    // Measured rather than assumed: the face height is set in CSS in `rem` and
+    // a hardcoded pixel figure here would put the pointer between two faces on
+    // any device whose root font size is not the one this was written on.
+    const step = reel.firstElementChild?.getBoundingClientRect().height || 0;
+    const landing = faces.length + index;
+    const settled = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const spinMs = settled ? 0 : 1900;
+
+    reel.style.transition = "none";
+    reel.style.transform = "translateY(0px)";
+    // Forced so the browser takes the start position as a fact before the
+    // transition is attached; without it the two writes coalesce and the reel
+    // simply appears at its destination.
+    void reel.offsetHeight;
+    reel.style.transition = spinMs
+      ? `transform ${spinMs}ms cubic-bezier(0.16, 0.85, 0.2, 1)`
+      : "none";
+    reel.style.transform = `translateY(${-landing * step}px)`;
+
+    const land = () => {
+      result.textContent = `${face.icon} ${face.label}${face.detail ? ` · ${face.detail}` : ""}`;
+      result.className = `slots-result on slot-${face.tone}`;
+      this.slotDoneTimer = setTimeout(() => {
+        screen.classList.add("hidden");
+        onDone?.();
+      }, settled ? 700 : 1200);
+    };
+    if (spinMs) this.slotLandTimer = setTimeout(land, spinMs + 60);
+    else land();
+  }
+
+  /** Take the wheel off screen without paying it out. See Game.startRun. */
+  hideSlots() {
+    clearTimeout(this.slotLandTimer);
+    clearTimeout(this.slotDoneTimer);
+    $("slots-screen")?.classList.add("hidden");
+  }
+
+  /**
+   * A diamond was taken: pulse the counter so the corner is where the eye goes.
+   *
+   * The pulse and nothing else. The count and whether the chip is on screen
+   * belong to renderHud, which caches the last value it wrote and skips the
+   * write when it has not changed — so a second writer setting the same node
+   * behind its back leaves that cache describing a chip that says something
+   * else, and the next real change is then skipped as a no-op. Three diamonds
+   * taken inside one frame did exactly that and left 「3/3」 on screen for the
+   * rest of the run.
+   *
+   * Nothing is lost by waiting: this is called from inside the step, and the
+   * HUD is synced at the end of the same frame.
+   */
+  flashDiamond() {
+    const chip = $("diamond-chip");
+    if (!chip) return;
+    chip.classList.remove("pop");
+    void chip.offsetWidth;
+    chip.classList.add("pop");
+  }
+
   openShop(save) {
     renderShop($("shop-list"), shopView(save));
     $("shop-screen").classList.remove("hidden");
@@ -905,6 +1013,17 @@ export class Screens {
       phaseName: game.phaseName(),
       speed: game.speed,
       crow: game.run.crowT > 0 ? { remaining: game.run.crowT, seconds: game.run.crowSeconds } : null,
+      diamonds: game.run.diamonds,
+      slot:
+        game.run.slotT > 0
+          ? {
+              multiplier: game.run.slotMultiplier,
+              remaining: game.run.slotT,
+              // The face is what the chip is coloured and labelled by, so a
+              // ×0.5 reads as the penalty it is rather than as a power-up.
+              face: game.run.slotFace,
+            }
+          : null,
       event: game.section
         ? {
             name: game.section.event.name,

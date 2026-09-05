@@ -479,6 +479,45 @@ export function crowEggPattern(z, context) {
 }
 
 /**
+ * A diamond, put somewhere it has to be gone and got.
+ *
+ * The crow egg sits in the coin line because a trap has to be walked into. A
+ * diamond is the opposite problem: it is worth taking, so putting it in the
+ * line the player is already running would make it a free pickup on a timer
+ * and the wheel would spin itself.
+ *
+ * So it goes in a lane of its own, with the coins in a different one. Taking it
+ * costs the coin line for a moment and a lane change at speed; leaving it costs
+ * a third of a spin. That is the decision, and it is the same decision each of
+ * the three times.
+ *
+ * Nothing lethal is added: the wheel is already a gamble, and a diamond that
+ * also had to be threaded between two buses would be asking a player to risk
+ * the run for a coin flip. The cost is the coins and the lane, and that is all.
+ */
+export function diamondPattern(z, context) {
+  const lane = context.lane;
+  const line = context.others[0] ?? (lane === 1 ? 0 : 1);
+  const stoneZ = z + 7.4;
+
+  return [
+    // The line the player is on, running past the diamond rather than through
+    // it — so the choice is visible for the whole approach.
+    ...coinLine(line, z, 12),
+
+    { type: "diamond", lane, z: stoneZ, y: 0.95 },
+
+    // Three coins on the diamond's own lane, tight around it. Not a reward for
+    // going — a signpost. A lone pickup in an empty lane at fifty metres a
+    // second reads as track furniture; a short line pointing at it reads as
+    // somewhere to be.
+    { type: "coin", lane, z: stoneZ - 3.4, y: 0.7 },
+    { type: "coin", lane, z: stoneZ - 1.7, y: 0.7 },
+    { type: "coin", lane, z: stoneZ + 1.7, y: 0.7 },
+  ];
+}
+
+/**
  * The trail that shows where the jetpack is about to take you.
  *
  * The steps grow as the line recedes. Evenly spaced in metres they were not

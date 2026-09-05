@@ -13,6 +13,7 @@ import { CHANGELOG } from "./release.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
+import { DIAMOND_GOAL } from "./slots.js";
 import { QUALITY_PROFILES, QUALITY_TIERS } from "./settings.js";
 
 const $ = (id) => document.getElementById(id);
@@ -96,18 +97,25 @@ let powerupFills = [];
  *   a draining bar — because "a timed thing is on you" is one idea and should
  *   have one shape. The colour is what says which kind.
  */
-export function renderPowerupHud(el, timers, durations, crow = null) {
+export function renderPowerupHud(el, timers, durations, crow = null, slot = null) {
   if (!el) return;
   const active = Object.keys(POWERUPS).filter((id) => timers[id] > 0);
-  const chips = crow ? [...active, CROW.id] : active;
+  // The wheel first: it is the largest number on the screen while it runs, and
+  // a ×10 that appears below three power-up chips is a ×10 nobody sees.
+  const chips = [...(slot ? [SLOT_CHIP] : []), ...active, ...(crow ? [CROW.id] : [])];
   const signature = chips.join(",");
 
   if (el.dataset.signature !== signature) {
     el.dataset.signature = signature;
     el.innerHTML = chips
       .map((id) => {
-        const spec = id === CROW.id ? CROW : POWERUPS[id];
-        const bad = id === CROW.id ? " bad" : "";
+        const spec =
+          id === CROW.id
+            ? CROW
+            : id === SLOT_CHIP
+              ? slotChipSpec(slot)
+              : POWERUPS[id];
+        const bad = id === CROW.id || (id === SLOT_CHIP && slot.multiplier < 1) ? " bad" : "";
         // The name is kept in the DOM but hidden by CSS: the icon is what a
         // player reads mid-run, and four spelled-out names used to cover the
         // track. `title` puts it back on hover for anyone who wants it.
@@ -126,14 +134,54 @@ export function renderPowerupHud(el, timers, durations, crow = null) {
     el.classList.toggle("hidden", chips.length === 0);
   }
 
+  // The wheel's label carries a number that changes between spins, so unlike
+  // every other chip it has to be rewritten even when the set has not changed.
+  if (slot && el.dataset.slotLabel !== String(slot.multiplier)) {
+    el.dataset.slotLabel = String(slot.multiplier);
+    const chip = el.querySelector(`[data-pw="${SLOT_CHIP}"]`);
+    const name = chip?.querySelector(".pw-name");
+    if (name) name.textContent = slotChipSpec(slot).name;
+    // And the tooltip with it. The chip is only rebuilt when the *set* of
+    // chips changes, so a second spin at a different multiplier reused the
+    // first one's title and hovering it read out the number it used to be.
+    if (chip) chip.title = slotChipSpec(slot).name;
+  }
+
   for (const [id, fill] of powerupFills) {
     if (!fill) continue;
     const left =
       id === CROW.id
         ? (crow?.remaining ?? 0) / (crow?.seconds || 1)
-        : timers[id] / (durations[id] || 1);
+        : id === SLOT_CHIP
+          ? (slot?.remaining ?? 0) / (slotFullSeconds(slot) || 1)
+          : timers[id] / (durations[id] || 1);
     fill.style.transform = `scaleX(${Math.max(0, left)})`;
   }
+}
+
+/** The wheel's chip id. Not a power-up id, and deliberately not in POWERUPS. */
+const SLOT_CHIP = "slot";
+
+/** What the wheel's chip looks like, given what it is currently paying. */
+function slotChipSpec(slot) {
+  const down = slot.multiplier < 1;
+  return {
+    name: `점수 ×${slot.multiplier}`,
+    icon: down ? "💧" : "💎",
+    colour: down ? "#64748b" : "#7dd3fc",
+  };
+}
+
+/**
+ * The duration the chip's bar is drawn against.
+ *
+ * Taken from the face the wheel landed on rather than from the timer's own
+ * starting value, because Run only keeps what is left. Without it a chip that
+ * appeared at 12 seconds and one that appeared at 30 would both start full and
+ * drain at visibly different rates for no reason the player could see.
+ */
+function slotFullSeconds(slot) {
+  return slot?.face?.effect?.seconds ?? slot?.remaining ?? 1;
 }
 
 /**
@@ -160,6 +208,8 @@ function hudNodes() {
     boardFill: boardWrap?.querySelector(".board-fill") ?? null,
     boardCount: $("board-count"),
     antidote: $("antidote-chip"),
+    diamond: $("diamond-chip"),
+    diamondCount: $("diamond-count"),
     pace: $("pace-chip"),
     event: $("event-chip"),
     eventName: $("event-name"),
@@ -173,6 +223,7 @@ function hudNodes() {
       pace: null,
       event: null,
       antidotes: null,
+      diamonds: null,
     },
   };
   return hud;
@@ -203,7 +254,7 @@ export function renderHud(state) {
     last.combo = combo;
   }
 
-  renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow);
+  renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow, state.slot);
 
   if (el.boardWrap) {
     el.boardWrap.classList.toggle("riding", state.boarding);
@@ -236,6 +287,16 @@ export function renderHud(state) {
     } else {
       el.antidote.classList.add("hidden");
     }
+  }
+
+  // Diamonds are counted rather than gauged: three is a number small enough to
+  // read as a number, and 「2/3」 says how many more with no arithmetic. Hidden
+  // at zero, because a counter at zero for the first minute of every run is
+  // three characters of noise over the track.
+  if (el.diamond && state.diamonds !== last.diamonds) {
+    last.diamonds = state.diamonds;
+    el.diamond.classList.toggle("hidden", !(state.diamonds > 0));
+    if (el.diamondCount) el.diamondCount.textContent = `${state.diamonds}/${DIAMOND_GOAL}`;
   }
 
   // The section banner drains a bar rather than printing a number. A gauge is

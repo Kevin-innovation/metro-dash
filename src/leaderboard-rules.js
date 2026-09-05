@@ -1,7 +1,9 @@
 import { MAX_SPEED } from "./config.js";
+import { MAX_CHARACTER_SCORE_BONUS } from "./characters.js";
 import { MAX_EVENT_MULTIPLIER } from "./events.js";
 import { speedAt } from "./pace.js";
 import { DOUBLE_SCORE_MULTIPLIER } from "./powerups.js";
+import { SLOT_TOP_MULTIPLIER } from "./slots.js";
 import {
   COIN_BASE,
   COIN_COMBO_CAP,
@@ -77,19 +79,27 @@ export function maxDistanceIn(seconds) {
 /**
  * Ceilings on what one metre and one coin can possibly be worth.
  *
- * Three multipliers stack, not two: the combo tier (×2), the double-score
- * power-up (×2) and the section running at the time (×2 during 코인 러시).
- * Run.multiplier() has multiplied all three together since sections were added;
- * this said 4 and so rejected the exact runs it should have been ranking — a
- * strong combo through a coin rush with double score is eight times, and the
- * board simply never heard about it. Worse, a rejected run does not lift the
- * ledger either, so the best players were also the ones whose saves started
- * being refused.
+ * Five multipliers stack, and Run.multiplier() is the list: the combo tier
+ * (×2.5), the double-score power-up (×2), the section running at the time (×2
+ * during 코인 러시), the diamond wheel (×10 on its best face) and the equipped
+ * runner (×1.3 at the top of the shop).
  *
- * Derived from the pieces rather than written as a number, so a fourth
- * multiplier cannot be added without this following it.
+ * It once said 4 while three of them were already live, and so rejected the
+ * exact runs it should have been ranking — a strong combo through a coin rush
+ * with double score is eight times, and the board simply never heard about it.
+ * Worse, a rejected run does not lift the ledger either, so the best players
+ * were also the ones whose saves started being refused.
+ *
+ * Derived from the pieces rather than written as a number, so a multiplier
+ * added to the game cannot fail to be added here. Every one of the five is
+ * exported from the file that owns it for exactly this reason.
  */
-export const MAX_MULTIPLIER = MAX_COMBO_MULTIPLIER * DOUBLE_SCORE_MULTIPLIER * MAX_EVENT_MULTIPLIER;
+export const MAX_MULTIPLIER =
+  MAX_COMBO_MULTIPLIER *
+  DOUBLE_SCORE_MULTIPLIER *
+  MAX_EVENT_MULTIPLIER *
+  SLOT_TOP_MULTIPLIER *
+  MAX_CHARACTER_SCORE_BONUS;
 const MAX_PER_METRE = (DIST_SCORE_RATE + ROOF_RIDE_RATE) * MAX_MULTIPLIER;
 const MAX_PER_COIN = (COIN_BASE + COIN_COMBO_CAP) * MAX_MULTIPLIER;
 /**

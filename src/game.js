@@ -24,7 +24,7 @@ import { MISSION_SLOTS, MISSION_TIERS, ensureMissions, rollMissions } from "./mi
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { RunSchedule } from "./schedule.js";
 
-import { POWERUPS, jumpMultiplier } from "./powerups.js";
+import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
@@ -36,7 +36,8 @@ import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { randomSeed } from "./rng.js";
 import { Spawner } from "./spawner.js";
-import { characterById } from "./shop.js";
+import { ANTIDOTE_MAX, HOVERBOARD_MAX, characterById } from "./shop.js";
+import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import { applyLook, applyWorldQuality, createWorld, placeMouth, syncWorld } from "./world.js";
@@ -263,7 +264,10 @@ export class Game {
   showUpdateBanner() {
     const banner = $("update-banner");
     if (!banner) return;
-    banner.classList.toggle("hidden", !this.updateReady || this.state === "playing");
+    banner.classList.toggle(
+      "hidden",
+      !this.updateReady || this.state === "playing" || this.state === "slots",
+    );
   }
 
   // --- online ---------------------------------------------------------------
@@ -862,6 +866,161 @@ export class Game {
     return submitted;
   }
 
+  // --- the diamond wheel ---------------------------------------------------
+
+  /**
+   * A diamond was taken.
+   *
+   * The third one does not spin the wheel here. It sets a flag and the spin is
+   * started from `tick`, one frame later, for a dull but important reason:
+   * this runs inside the fixed-step simulation, which may be executing several
+   * steps for a single frame, and stopping the run from inside step two of
+   * four leaves the remaining steps to run against a state that says the game
+   * is paused.
+   */
+  onDiamond(event) {
+    this.audio.powerup();
+    vibrate(event.ready ? [24, 40, 24] : 12);
+    this.screens.flashDiamond();
+    if (event.ready) this.spinPending = true;
+    else this.screens.showToast(`💎 다이아몬드 ${event.held}/${DIAMOND_GOAL}`);
+  }
+
+  /**
+   * Stop the run and spin.
+   *
+   * `state` becomes "slots", which the simulation treats exactly as it treats
+   * "paused" — the world stops, the timers stop, and the run keeps everything
+   * it had. What it is not is `pause()`: that shows the pause card, stops the
+   * music and offers a way back to the title screen, none of which belongs in
+   * front of a wheel the player did not ask for and cannot decline.
+   */
+  spinWheel() {
+    this.spinPending = false;
+    if (this.state !== "playing") return;
+    if (!this.run.takeSpin()) return;
+
+    const { face, index } = spinSlots(() => Math.random());
+    this.state = "slots";
+    this.accumulator = 0;
+    this.audio.resume();
+    this.screens.showSlots(SLOT_FACES, index, face, () => this.settleWheel(face));
+  }
+
+  /**
+   * The wheel has stopped. Pay it out and give the run back.
+   *
+   * Everything the wheel can do is applied here rather than in slots.js,
+   * because every one of these lines needs something slots.js deliberately
+   * does not have: the run, the profile, the audio, the screen. The table says
+   * what was won; this is the only place that knows how to hand it over.
+   */
+  settleWheel(face) {
+    const effect = face.effect;
+
+    if (effect.type === "multiplier") {
+      this.run.setSlotMultiplier(effect.value, effect.seconds, face);
+    } else if (effect.type === "powerup") {
+      // Granted at the level the player has bought, then held for the wheel's
+      // own duration if that is longer. A face that said 25 seconds and paid 10
+      // because the shop level was low would be the wheel lying.
+      this.run.addPowerup(effect.id, this.store.upgradeLevel(effect.id));
+      this.run.powerups[effect.id] = Math.max(this.run.powerups[effect.id], effect.seconds);
+    } else if (effect.type === "powerups") {
+      for (const id of POWERUP_IDS) {
+        this.run.addPowerup(id, this.store.upgradeLevel(id));
+        this.run.powerups[id] = Math.max(this.run.powerups[id], effect.seconds);
+      }
+    } else if (effect.type === "coins") {
+      this.grantWheelCoins(effect.amount);
+    } else if (effect.type === "combo") {
+      for (let i = 0; i < effect.amount; i++) this.run.bumpCombo();
+    } else if (effect.type === "item") {
+      // Capped at what the shop allows, so the wheel cannot put a profile into
+      // a state the shop would refuse to sell it into.
+      const key = effect.id === "antidote" ? "antidotes" : "hoverboards";
+      const max = effect.id === "antidote" ? ANTIDOTE_MAX : HOVERBOARD_MAX;
+      this.store.set(key, Math.min(max, (this.store.data[key] ?? 0) + 1));
+    } else if (effect.type === "cure") {
+      this.run.cureCrow(effect.seconds);
+    } else if (effect.type === "diamonds") {
+      for (let i = 0; i < effect.amount; i++) this.run.addDiamond();
+    } else if (effect.type === "crow") {
+      this.run.addHazard("crow");
+      this.audio.caw();
+      this.shake = Math.max(this.shake, 0.45);
+    } else if (effect.type === "clearPowerups") {
+      // The wheel's own multiplier is not a power-up and does not go with them;
+      // see Run.clearPowerups, which is death's version and takes everything.
+      clearPowerups(this.run.powerups);
+    } else if (effect.type === "comboReset") {
+      this.run.combo = 0;
+      this.run.comboT = 0;
+    } else if (effect.type === "speed") {
+      this.run.setSpeedScale(effect.value, effect.seconds);
+      this.fovPunch = 1;
+      this.speedBurst(14);
+    } else if (effect.type === "blind") {
+      // The bird's veil without the bird — the same curve, on a timer of its
+      // own. See Run.blind.
+      this.run.blind(effect.seconds);
+    } else if (effect.type === "loseItem") {
+      this.takeWheelItem();
+    }
+
+    if (face.tone === "bad") {
+      vibrate([28, 60, 40]);
+      this.audio.denied();
+    } else if (face.tone === "good") {
+      this.audio.purchase();
+      this.fovPunch = Math.max(this.fovPunch, 0.7);
+    }
+
+    this.state = "playing";
+    this.accumulator = 0;
+    this.lastFrame = 0;
+    this.screens.refreshProfile(this.store.data);
+    this.screens.syncHud(this);
+    // A spin that finished while the tab was in the background would otherwise
+    // hand the run back to a player who is not looking at it. The visibility
+    // handler could not do this itself: it only pauses a run that is
+    // "playing", and for the last few seconds this one was not.
+    if (document.hidden) this.pause();
+  }
+
+  /**
+   * Coins from the wheel.
+   *
+   * Credits go through the run's claim rather than straight into the balance,
+   * for the same reason a mission payout does: the server pays what it can
+   * check, and everything it cannot check is bounded by a daily allowance. A
+   * wheel that wrote to the balance directly would be a coin printer with a
+   * five-second cooldown.
+   *
+   * Debits are an ordinary spend, so they settle the way a shop purchase does.
+   */
+  grantWheelCoins(amount) {
+    if (amount > 0) {
+      this.store.addCoins(amount);
+      this.run.claimed.coins += amount;
+    } else if (amount < 0) {
+      // Never below zero, and never a debt carried into the next run: the wheel
+      // is allowed to cost a player coins they have, not coins they do not.
+      const taken = Math.min(this.store.data.coins, -amount);
+      if (taken > 0) this.store.spendCoins(taken);
+    }
+    this.syncCoins();
+  }
+
+  /** The one face that takes something off the profile. Board first. */
+  takeWheelItem() {
+    if ((this.store.data.hoverboards ?? 0) > 0) {
+      this.store.set("hoverboards", this.store.data.hoverboards - 1);
+    } else if ((this.store.data.antidotes ?? 0) > 0) {
+      this.store.set("antidotes", this.store.data.antidotes - 1);
+    }
+  }
+
   // --- quality ------------------------------------------------------------
 
   /** The tier actually in force: a pinned setting wins over the governor. */
@@ -1062,6 +1221,12 @@ export class Game {
 
   startRun() {
     this.audio.resume();
+    // A run started from the game-over card can be started while the wheel is
+    // still on screen, if the player died on the frame the third diamond was
+    // taken. Nothing else clears it, because nothing else can: the spin is
+    // owed to a run that no longer exists.
+    this.spinPending = false;
+    this.screens.hideSlots();
     // Retrying straight from the game-over card still has to close out the run.
     if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
       this.bankProgress(true);
@@ -1091,6 +1256,10 @@ export class Game {
     this.run.crowScale = perk.crowTime ?? 1;
     this.run.comboScale = perk.comboWindow ?? 1;
     this.run.xpScale = perk.xpBonus ?? 1;
+    // The plain half of every paid runner: see the note on `perk` in
+    // characters.js. Read here with the rest so nothing downstream has to know
+    // a character was equipped.
+    this.run.scoreScale = perk.scoreBonus ?? 1;
     this.boardScale = perk.boardTime ?? 1;
     this.crowVeilScale = perk.crowVeil ?? 1;
     this.cam = { x: 0, y: 3.6, z: -7.4 };
@@ -1113,6 +1282,8 @@ export class Game {
   }
 
   toTitle() {
+    this.spinPending = false;
+    this.screens.hideSlots();
     if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
       this.bankProgress(true);
     }
@@ -1139,6 +1310,9 @@ export class Game {
   }
 
   pause() {
+    // "slots" is already a stopped run; the pause card over the wheel would be
+    // a second overlay with a 「계속하기」 button that resumes into a spin the
+    // player can no longer see.
     if (this.state !== "playing") return;
     this.state = "paused";
     this.accumulator = 0;
@@ -1231,10 +1405,19 @@ export class Game {
 
     // Hitstop freezes the simulation for a beat on impact. Presentation keeps
     // running so the shake and particles still read during the freeze.
+    // Started here rather than from the pickup that earned it: the pickup runs
+    // inside the fixed-step loop below, which may be part-way through four
+    // steps, and stopping the run from inside step two leaves the other two to
+    // simulate a game that has already been told it is not running.
+    if (this.spinPending && this.state === "playing" && this.hitstop <= 0) this.spinWheel();
+
     if (this.hitstop > 0) {
       this.hitstop = Math.max(0, this.hitstop - frameDt);
       this.accumulator = 0;
-    } else if (this.state === "paused") {
+    } else if (this.state === "paused" || this.state === "slots") {
+      // The wheel stops the world for the same reason the pause card does, and
+      // by the same means. What it does not do is stop the *presentation*: the
+      // particles from the third diamond are still settling behind it.
       this.accumulator = 0;
     } else {
       this.accumulator += frameDt;
@@ -1275,7 +1458,13 @@ export class Game {
     // Read from the timer, not from the state: the timer is already zeroed on
     // death and on reset, and gating on `playing` as well would lift the veil
     // the instant the game was paused and drop it again on resume.
-    const veil = crowVeil(this.run.crowT, this.run.crowSeconds);
+    // The worse of the two things that take sight away, so the fog and the bird
+    // can overlap without the screen getting twice as dark, and so neither of
+    // them can lift a veil the other one is still holding up.
+    const veil = Math.max(
+      crowVeil(this.run.crowT, this.run.crowSeconds),
+      crowVeil(this.run.blindT, this.run.blindSeconds),
+    );
     // The world dims by the same reduced amount the overlay does, or 허수아비
     // would be looking at a clear sheet over a pitch-dark track.
     applyCrowGloom(this.world, veil * (this.crowVeilScale ?? 1));
@@ -1491,7 +1680,10 @@ export class Game {
     this.runTime += dt;
 
     const phase = phaseAt(this.runTime);
-    const target = speedAt(this.runTime);
+    // The wheel's one nasty face rides on top of the curve rather than
+    // replacing it, so the run still slows back down at a phase boundary and
+    // the twelve seconds read as a shove rather than as a new speed.
+    const target = speedAt(this.runTime) * (this.run.speedScale ?? 1);
     this.speed += (target - this.speed) * approach(2.6, dt);
 
     if (phase.id !== this.phaseId) {
@@ -1684,6 +1876,10 @@ export class Game {
       slideBias: playing ? this.schedule.lookAt(this.runTime).slideBias : 0,
       // While a section runs, its layouts are the only ones dealt.
       eventPatterns: playing ? (this.schedule.eventAt(this.runTime)?.event.patterns ?? null) : null,
+      // What the crow's cadence is keyed to past a hundred thousand; see
+      // HAZARD_FRENZY_SCORE. Zero off a run, so the title screen's preview
+      // never deals the frenzy behind the menu.
+      score: playing ? this.run.score : 0,
       tutorial: playing,
     });
   }
@@ -1764,14 +1960,23 @@ export class Game {
         this.audio.coin();
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
+      } else if (event.type === "token") {
+        this.onDiamond(event);
       } else if (event.type === "hazard") {
         if (event.blocked) {
           // The antidote is the only thing in the game that stops something
           // from happening, so it gets its own sound and its own line. Silence
           // plus a crow that failed to appear would read as the egg missing.
+          //
+          // The wheel's immunity says so too, and says something different:
+          // nothing was spent, and there is a window still running. A player
+          // who read 「해독제가 막았다」 during it would go and check a stock
+          // that had not moved.
           this.audio.powerup();
           vibrate(18);
-          this.screens.showToast("💊 해독제가 까마귀를 막았다!");
+          this.screens.showToast(
+            event.reason === "immune" ? "🕊️ 까마귀가 접근하지 못했다!" : "💊 해독제가 까마귀를 막았다!",
+          );
         } else {
           this.audio.caw();
           // Longer than a power-up's nudge and in two beats, so the hand knows

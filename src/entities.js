@@ -428,6 +428,53 @@ export function makeCrowEgg() {
   return g;
 }
 
+/**
+ * The diamond: the one pickup that pays nothing by itself.
+ *
+ * Three of them stop the run and spin the wheel, so a single diamond is a
+ * promise rather than a reward — which is exactly the shape it has to read as
+ * on the track. Everything else out there is either obviously good (a bright
+ * gem in a coloured ring) or obviously bad (soot and a warning stripe), and a
+ * player decides in about a fifth of a second at fifty metres per second.
+ *
+ * So: white and faceted rather than tinted, on a pale ring that matches none of
+ * the four power-ups. It looks valuable and it looks like nothing else, which
+ * is the whole of what it needs to say — the counter in the corner explains the
+ * rest the first time one is taken.
+ */
+export function makeDiamond() {
+  const g = powerupShell(0xe0f2fe, 0x38bdf8);
+
+  // Two cones back to back rather than an octahedron: a brilliant cut has a
+  // shallow crown over a deep pavilion, and the asymmetry is what stops this
+  // reading as the magnet's gem in a different colour.
+  const facets = new THREE.MeshLambertMaterial({
+    color: 0xf0f9ff,
+    emissive: 0x7dd3fc,
+    emissiveIntensity: 0.75,
+  });
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.22, 8), facets);
+  crown.position.y = 0.34;
+  g.add(crown);
+
+  const pavilion = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.42, 8), facets);
+  pavilion.rotation.x = Math.PI;
+  pavilion.position.y = 0.02;
+  g.add(pavilion);
+
+  // A thin bright girdle where the two meet, which is the line the eye
+  // actually catches when the thing is spinning.
+  const girdle = new THREE.Mesh(
+    new THREE.TorusGeometry(0.33, 0.03, 6, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }),
+  );
+  girdle.rotation.x = Math.PI / 2;
+  girdle.position.y = 0.23;
+  g.add(girdle);
+
+  return g;
+}
+
 const FACTORIES = {
   train: () => makeTrain(TRAIN_COLORS[(Math.random() * TRAIN_COLORS.length) | 0]),
   bus: () => makeBus(BUS_COLORS[(Math.random() * BUS_COLORS.length) | 0]),
@@ -440,6 +487,7 @@ const FACTORIES = {
   double: makeDouble,
   sneakers: makeSneakers,
   crowEgg: makeCrowEgg,
+  diamond: makeDiamond,
 };
 
 export { SPEC };
@@ -478,6 +526,8 @@ export class EntityPool {
       powerup: spec.powerup ?? null,
       /** Non-null on a pickup that hurts to take. See crow.js. */
       hazard: spec.hazard ?? null,
+      /** Non-null on a pickup that is collected toward something. See slots.js. */
+      token: spec.token ?? null,
       /** Set once the runner has passed it, so near misses only score once. */
       scored: false,
       // Position at the start of the current simulation step, so the swept

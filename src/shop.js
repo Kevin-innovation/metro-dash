@@ -33,11 +33,21 @@ export const HOVERBOARD_COST = 3000;
 export const ANTIDOTE_COST = 5000;
 
 /**
- * One at a time, same as the hoverboard and for the same reason: only one can
- * be used per run, so holding nine would be buying nine runs of insurance in
- * advance and would make the shop a place where the answer is "save up".
+ * Three at a time, and spent one per crow.
+ *
+ * It was one, matched to the hoverboard, on the reasoning that only one could
+ * be used per run. That was true of the board and never of this: the board
+ * eats the crash that ends the run, so a second one has nothing left to do,
+ * while the crow comes back — and now comes back far more often once a run is
+ * past a hundred thousand. A single antidote against six eggs is not insurance,
+ * it is a coin toss about which one it happens to catch.
+ *
+ * Three, not nine, because the point is still that a run is prepared for rather
+ * than bought outright. Fifteen thousand coins to be immune to the crow for a
+ * whole run is a price worth paying and a decision worth taking; unlimited
+ * antidotes would delete the bird from the game for anyone with a balance.
  */
-export const ANTIDOTE_MAX = 1;
+export const ANTIDOTE_MAX = 3;
 /**
  * How many boards may be held at once.
  *

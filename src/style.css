@@ -495,6 +495,33 @@ body.running #game-canvas {
   white-space: nowrap;
 }
 
+/* The wheel's chip is the exception, and has to be.
+   Every other chip in this row is an icon a player already knows the meaning
+   of — the magnet is the magnet however long it lasts. This one carries a
+   number that is different every spin, and 「×10」 hidden behind a gem is the
+   single most important thing on the screen not being shown at all. */
+/* Wide enough for the label, since the rest of the row is sized for an icon. */
+.pw-chip[data-pw="slot"] {
+  width: auto;
+  min-width: 42px;
+  padding-left: 9px;
+  padding-right: 9px;
+}
+
+[data-pw="slot"] .pw-name {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--pw);
+}
+
 .pw-track {
   width: 100%;
   height: 4px;
@@ -3192,4 +3219,204 @@ body.admin {
   background: rgba(255, 122, 60, 0.16);
   border-color: rgba(255, 122, 60, 0.5);
   color: #ffd2b8;
+}
+
+/* --- the diamond wheel ---------------------------------------------------
+   Diamonds held toward a spin, and the wheel itself. The counter lives beside
+   the antidote because both answer the same question — what am I carrying —
+   and the wheel is its own full-screen layer because it stops the run. */
+
+.diamond-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 40px;
+  padding: 0 11px;
+  border-radius: 14px;
+  border: 2px solid rgba(125, 211, 252, 0.65);
+  background: rgba(7, 16, 24, 0.6);
+  backdrop-filter: blur(8px);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: #e0f2fe;
+  animation: chipIn 0.28s ease-out;
+}
+
+.diamond-icon {
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* Fires on every diamond taken, so the corner answers before the toast does. */
+.diamond-chip.pop {
+  animation: diamondPop 0.44s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes diamondPop {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(125, 211, 252, 0);
+  }
+  40% {
+    transform: scale(1.28);
+    box-shadow: 0 0 26px rgba(125, 211, 252, 0.85);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(125, 211, 252, 0);
+  }
+}
+
+.slots-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 45%, rgba(12, 24, 38, 0.72), rgba(4, 8, 14, 0.93));
+  backdrop-filter: blur(10px);
+  animation: slotsIn 0.24s ease-out;
+  /* Nothing here is pressable. A wheel that swallowed a swipe would eat the
+     lane change the player was already making when the third diamond landed. */
+  pointer-events: none;
+}
+
+@keyframes slotsIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.slots-card {
+  width: min(340px, 88vw);
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
+.slots-title {
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: #bae6fd;
+  text-shadow: 0 0 18px rgba(125, 211, 252, 0.5);
+}
+
+/* The window is one face tall plus a sliver of the two either side, which is
+   what makes a strip read as a wheel rather than as a list scrolling past. */
+.slots-window {
+  position: relative;
+  width: 100%;
+  height: 210px;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 2px solid rgba(125, 211, 252, 0.35);
+  background: rgba(6, 12, 20, 0.86);
+  box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.75), 0 12px 44px rgba(0, 0, 0, 0.5);
+  /* Top and bottom fade out, so the faces arriving and leaving do not read as
+     hard-clipped rows. */
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+}
+
+/* Offset so the landing face sits under the pointer rather than at the top. */
+.slots-reel {
+  will-change: transform;
+  padding-top: 70px;
+}
+
+.slot-face {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  height: 70px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.slot-icon {
+  font-size: 24px;
+  line-height: 1;
+  text-align: center;
+}
+
+.slot-label {
+  font-weight: 800;
+  font-size: 16px;
+  color: #e2e8f0;
+}
+
+.slot-detail {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.55);
+}
+
+.slot-good .slot-label {
+  color: #7dfcd4;
+}
+
+.slot-bad .slot-label {
+  color: #ff8f6b;
+}
+
+.slot-none .slot-label {
+  color: rgba(226, 232, 240, 0.5);
+}
+
+/* The line the reel stops against. Drawn over the window rather than inside
+   the reel, or it would travel with the faces. */
+.slots-pointer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 70px;
+  transform: translateY(-50%);
+  border-top: 2px solid rgba(125, 211, 252, 0.85);
+  border-bottom: 2px solid rgba(125, 211, 252, 0.85);
+  background: linear-gradient(90deg, rgba(125, 211, 252, 0.16), rgba(125, 211, 252, 0.03));
+  pointer-events: none;
+}
+
+/* Space is reserved whether or not there is a result yet, so the card does not
+   jump upward the moment the wheel stops. */
+.slots-result {
+  min-height: 30px;
+  font-weight: 900;
+  font-size: 19px;
+  opacity: 0;
+  transform: scale(0.85);
+  color: #e2e8f0;
+}
+
+.slots-result.on {
+  animation: slotResult 0.44s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.slots-result.slot-good {
+  color: #7dfcd4;
+  text-shadow: 0 0 22px rgba(125, 252, 212, 0.55);
+}
+
+.slots-result.slot-bad {
+  color: #ff8f6b;
+  text-shadow: 0 0 22px rgba(255, 143, 107, 0.5);
+}
+
+@keyframes slotResult {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

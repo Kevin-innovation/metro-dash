@@ -10,6 +10,7 @@ import {
   candidatesFor,
   crowEggPattern,
   describePattern,
+  diamondPattern,
   inSlideDeadBand,
   patternById,
   requiredGapSeconds,
@@ -54,6 +55,46 @@ const HAZARD_EVERY = 17;
 const HAZARD_AFTER = 14;
 /** How far either side of that cadence an egg may fall. */
 const HAZARD_SPREAD = 6;
+
+/**
+ * Where the crow stops being an occasional nuisance.
+ *
+ * Past a hundred thousand the run has nothing left to escalate. The speed curve
+ * tops out, the phases run out of names, and the back half of a long run is the
+ * same track the front half was, arriving at a rate the player has already
+ * proved they can read. One egg every seventeen layouts is, by then, something
+ * that happens twice more before the run ends.
+ *
+ * So the bird takes over the job the speed curve has finished doing. Roughly
+ * one layout in five carries an egg, which is often enough that dodging them
+ * one at a time stops being a plan and the antidote stops being a luxury — and
+ * it is still an egg in a coin line with a free lane beside it, so it is a tax
+ * on greed rather than a wall.
+ *
+ * Deliberately keyed to score rather than to the clock. Time is what the player
+ * survived; score is how well, and a good run should be the one that gets hard.
+ */
+export const HAZARD_FRENZY_SCORE = 100_000;
+const HAZARD_FRENZY_EVERY = 5;
+const HAZARD_FRENZY_SPREAD = 2;
+
+/**
+ * How often a diamond is dealt, and the grace before the first one.
+ *
+ * Three make a spin, so this cadence is really "a spin every thirty-three
+ * layouts" — a couple of minutes into a good run, and once or twice more after
+ * that. Rarer than it looks, for a reason: the wheel stops the run dead for a
+ * few seconds, and a game that pauses itself every forty seconds is a game
+ * being interrupted rather than played.
+ *
+ * The grace is longer than the crow's. The wheel is the most complicated thing
+ * in the game and the only one that has to be explained; meeting it in the
+ * first thirty seconds, before a player has a combo worth losing, would be
+ * teaching the wrong lesson at the worst moment.
+ */
+const DIAMOND_EVERY = 11;
+const DIAMOND_AFTER = 20;
+const DIAMOND_SPREAD = 3;
 
 /**
  * How far a pattern's own spacing may open up, as a share of itself.
@@ -157,6 +198,7 @@ export class Spawner {
     this.rng = makeRng(seed);
     this.powerupDeck = [];
     this.hazardIn = HAZARD_EVERY;
+    this.diamondIn = DIAMOND_EVERY;
     this.patternCount = 0;
     /**
      * The last hazard actually placed, wherever it came from. Tracked across
@@ -321,6 +363,7 @@ export class Spawner {
     pressure = 0,
     slideBias = 0,
     eventPatterns = null,
+    score = 0,
   }) {
     const context = patternContext({ z, speed, pressure, rng: this.rng });
 
@@ -357,12 +400,26 @@ export class Spawner {
       return POWERUP_PATTERNS[this.powerupDeck.shift()](z, context.lane);
     }
 
+    // Before the crow, so the wheel is not the thing crowded out once the
+    // frenzy starts dealing an egg every fifth layout.
+    if (this.patternCount >= DIAMOND_AFTER && --this.diamondIn <= 0) {
+      this.diamondIn = DIAMOND_EVERY + Math.floor(this.rng() * DIAMOND_SPREAD * 2) - DIAMOND_SPREAD;
+      return diamondPattern(z, context);
+    }
+
     // Checked after the power-ups, so on the rare draw where both cadences
     // land on the same pattern the player gets the good one. Counted down with
     // a jitter rather than tested against a fixed multiple, so an egg cannot be
     // predicted by counting layouts.
     if (this.patternCount >= HAZARD_AFTER && --this.hazardIn <= 0) {
-      this.hazardIn = HAZARD_EVERY + Math.floor(this.rng() * HAZARD_SPREAD * 2) - HAZARD_SPREAD;
+      // Past the frenzy score the countdown is reloaded far shorter, so the
+      // rate climbs from the next egg onward rather than at the moment the
+      // score ticks over — which would drop one on top of whatever the player
+      // was already in the middle of.
+      const frenzy = score >= HAZARD_FRENZY_SCORE;
+      const every = frenzy ? HAZARD_FRENZY_EVERY : HAZARD_EVERY;
+      const spread = frenzy ? HAZARD_FRENZY_SPREAD : HAZARD_SPREAD;
+      this.hazardIn = every + Math.floor(this.rng() * spread * 2) - spread;
       return crowEggPattern(z, context);
     }
 

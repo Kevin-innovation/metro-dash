@@ -86,6 +86,13 @@
              itself the moment a crow egg is taken — so it is shown rather than
              offered, and only while there is one to show. -->
         <div id="board-wrap" class="board-wrap">
+          <!-- Diamonds held toward the next spin. Shown only once the first one
+               is taken: an empty 0/3 on the title screen would be a promise to
+               a player who has not met the thing yet. -->
+          <div id="diamond-chip" class="diamond-chip hidden" aria-label="다이아몬드">
+            <span class="diamond-icon">💎</span>
+            <span id="diamond-count">0/3</span>
+          </div>
           <div id="antidote-chip" class="antidote-chip hidden" aria-label="까마귀 해독제">
             <span class="antidote-icon">💊</span>
           </div>
@@ -94,6 +101,22 @@
             <span id="board-count">0</span>
           </button>
           <div class="board-track"><div class="board-fill"></div></div>
+        </div>
+      </div>
+
+      <!-- The diamond wheel.
+           Its own layer rather than an `.overlay` like the shop and the pause
+           card: those are screens you opened and can close, and this is a
+           thing that happens to a run in progress. It has no buttons at all —
+           closing it early would mean a spin with no result. -->
+      <div id="slots-screen" class="slots-screen hidden" aria-live="polite">
+        <div class="slots-card">
+          <div class="slots-title">💎 다이아몬드 3개</div>
+          <div class="slots-window">
+            <div id="slots-reel" class="slots-reel"></div>
+            <div class="slots-pointer" aria-hidden="true"></div>
+          </div>
+          <div id="slots-result" class="slots-result"></div>
         </div>
       </div>
 

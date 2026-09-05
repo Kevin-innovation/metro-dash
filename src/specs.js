@@ -60,6 +60,10 @@ export const SPEC = {
   // run. Given the same band as the power-ups so it can be placed among them
   // and has to be told apart by looking at it, which is the whole point.
   crowEgg: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, hazard: "crow" },
+  // Neither a power-up nor a hazard: three of them buy a spin of the wheel and
+  // one of them does nothing at all. Same band as the rest of the pickups, so
+  // it is placed by the same rules and read by the same collision test.
+  diamond: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "diamond" },
 };
 
 export const ENTITY_TYPES = Object.keys(SPEC);
@@ -68,6 +72,9 @@ export const POWERUP_PICKUPS = ENTITY_TYPES.filter((type) => SPEC[type].powerup)
 
 /** Pickups that hurt to take. Deliberately not power-ups: nothing buys these. */
 export const HAZARD_PICKUPS = ENTITY_TYPES.filter((type) => SPEC[type].hazard);
+
+/** Pickups collected toward something rather than used on the spot. */
+export const TOKEN_PICKUPS = ENTITY_TYPES.filter((type) => SPEC[type].token);
 
 export function isRideable(type) {
   return !!SPEC[type]?.rideable;

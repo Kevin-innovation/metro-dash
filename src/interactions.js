@@ -9,8 +9,19 @@ import {
 } from "./config.js";
 import { POWERUPS } from "./powerups.js";
 
-/** Half-range in which a magnet-dragged coin is simply absorbed. */
+/** Half-range in which a magnet-dragged pickup is simply absorbed. */
 const MAGNET_GRAB = 1.35;
+
+/**
+ * What the magnet reaches for.
+ *
+ * One predicate, read by both the drag and the grab, because the two used to
+ * be written separately and a thing the magnet pulled but would not absorb
+ * would orbit the runner for the rest of the power-up.
+ */
+function magnetTakes(item) {
+  return item.type === "coin" || item.hazard === "crow";
+}
 /** How far the runner's midpoint may sit from a pickup and still take it. */
 const PICKUP_REACH = 1.35;
 /**
@@ -87,11 +98,16 @@ export class Interactions {
       const itemX = item.mesh.position.x;
       const itemY = item.mesh.position.y;
 
-      // A magnet-dragged coin can end up alongside the runner rather than in
-      // front, so proximity wins over the swept corridor test.
+      // Anything the magnet drags can end up alongside the runner rather than
+      // in front, so proximity wins over the swept corridor test.
+      //
+      // Crow eggs included, and that is the point of the change rather than a
+      // side effect of it: the magnet now pulls the egg in too, so the one
+      // power-up that collected things for you is also the one that collects
+      // the thing you did not want. See pullCoins.
       const grabbed =
         magnetOn &&
-        item.type === "coin" &&
+        magnetTakes(item) &&
         Math.hypot(player.x - itemX, player.y + 0.95 - itemY, player.z - item.z) < MAGNET_GRAB;
 
       if (!grabbed) {
@@ -142,8 +158,18 @@ export class Interactions {
           life: 0.8,
           size: 0.4,
         });
-        const { blocked } = this.run.addHazard(item.hazard);
-        events.push({ type: "hazard", id: item.hazard, blocked });
+        const { blocked, reason } = this.run.addHazard(item.hazard);
+        events.push({ type: "hazard", id: item.hazard, blocked, reason });
+      } else if (item.token === "diamond") {
+        this.particles.burst(itemX, itemY, item.z, {
+          count: 24,
+          colour: 0xbae6fd,
+          speed: 6.2,
+          life: 0.7,
+          size: 0.34,
+        });
+        const ready = this.run.addDiamond();
+        events.push({ type: "token", id: "diamond", held: this.run.diamonds, ready });
       } else if (item.powerup) {
         this.particles.burst(itemX, itemY, item.z, {
           count: 26,
@@ -238,12 +264,32 @@ export class Interactions {
     return false;
   }
 
-  /** Drag loose coins toward the runner while the magnet is running. */
+  /**
+   * Drag loose pickups toward the runner while the magnet is running.
+   *
+   * Coins and crow eggs, and nothing else.
+   *
+   * The egg is the whole of the change. The magnet used to be the one thing in
+   * the game with no downside at all — twenty seconds of collecting without
+   * steering — and the crow was the one thing that punished not looking where
+   * you were going. Having the magnet ignore the egg meant the two never met:
+   * the safest stretch of a run was also the one stretch the trap could not
+   * reach into.
+   *
+   * Now the magnet takes what is in front of it, which is what a magnet does.
+   * It is still overwhelmingly a good thing to pick up; it is no longer a
+   * reason to stop reading the track, and a magnet running through the frenzy
+   * past a hundred thousand is a genuine decision about which lane to be in.
+   *
+   * Power-ups are deliberately left out. Dragging them in would make the
+   * magnet a machine for collecting the other three power-ups, which is a much
+   * bigger change than this one and not the one that was asked for.
+   */
   pullCoins(player, dt, speed) {
     if (!this.run.powerupActive("magnet")) return;
 
     for (const item of this.pool.live) {
-      if (item.type !== "coin" || item.taken) continue;
+      if (!magnetTakes(item) || item.taken) continue;
       const dx = player.x - item.mesh.position.x;
       const dy = player.y + 1.05 - item.mesh.position.y;
       const dz = player.z + 0.7 - item.z;

@@ -20,12 +20,14 @@ const store = (coins = 0) => {
 };
 
 describe("crow antidote — buying", () => {
-  it("costs what the shop says and is held one at a time", () => {
-    const s = store(ANTIDOTE_COST * 3);
-    expect(purchase(s, "antidote").ok).toBe(true);
-    expect(s.data.antidotes).toBe(ANTIDOTE_MAX);
-    expect(s.data.coins).toBe(ANTIDOTE_COST * 3 - ANTIDOTE_COST);
-    // A second one cannot be stockpiled while the first is unspent.
+  it("costs what the shop says, up to the cap, and no further", () => {
+    const s = store(ANTIDOTE_COST * (ANTIDOTE_MAX + 2));
+    for (let held = 1; held <= ANTIDOTE_MAX; held++) {
+      expect(purchase(s, "antidote").ok).toBe(true);
+      expect(s.data.antidotes).toBe(held);
+    }
+    expect(s.data.coins).toBe(ANTIDOTE_COST * 2);
+    // The cap is what stops a balance being turned into permanent immunity.
     expect(purchase(s, "antidote")).toEqual({ ok: false, reason: "maxed" });
     expect(s.data.antidotes).toBe(ANTIDOTE_MAX);
   });
