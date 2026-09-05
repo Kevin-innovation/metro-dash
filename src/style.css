@@ -1276,7 +1276,9 @@ kbd {
  * bottom of the card without turning the card into a spreadsheet.
  */
 .tally-title {
-  margin: 0 0 8px;
+  /* Bottom margin only, so the label stays welded to the rows it labels while
+     the column gap does the spacing above it. */
+  margin: 0 0 -2px;
   color: #9ec2d8;
   font-size: 12px;
   letter-spacing: 0.1em;
@@ -1289,7 +1291,9 @@ kbd {
   flex-wrap: wrap;
   justify-content: center;
   gap: 7px;
-  margin: 0 0 18px;
+  /* The column's own gap spaces this from the balance line above; a margin of
+     its own would be a second, different number arguing with it. */
+  margin: 0;
 }
 
 /* Icon, name, number — in that order and on one line, which is the order they
