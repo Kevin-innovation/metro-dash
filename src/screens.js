@@ -16,6 +16,7 @@ import {
   renderMissions,
   renderNotes,
   renderRank,
+  renderRunTally,
   renderSettings,
   renderShop,
 } from "./ui.js";
@@ -1139,6 +1140,7 @@ export class Screens {
     if (mountEl) mountEl.textContent = String(run.metrics.mounts);
     const xpEl = $("final-xp");
     if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
+    renderRunTally($("run-tally"), run.metrics);
 
     this.renderPromotion(promotion);
     const cleared = this.renderMissionResults(result);

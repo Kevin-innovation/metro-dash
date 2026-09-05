@@ -323,6 +323,44 @@ export function renderHud(state) {
   }
 }
 
+/**
+ * What the run met, under what it scored.
+ *
+ * The rows the track decides are always shown, zero included — 「다이아몬드 2 ·
+ * 룰렛 0」 is the run telling you it was one stone short, which is a thing worth
+ * knowing and is invisible if the line is hidden for being zero.
+ *
+ * The two consumables are the exception. Those are things you brought with you
+ * rather than things the track handed out, and a player who owns neither would
+ * be shown two permanent zeros explaining nothing about the run they just had.
+ * They appear the moment one is spent.
+ */
+const TALLY_ROWS = [
+  { key: "diamonds", icon: "💎", label: "다이아몬드", always: true },
+  { key: "spins", icon: "🎰", label: "룰렛", suffix: "회", always: true },
+  { key: "powerups", icon: "⚡", label: "파워업", always: true },
+  { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true },
+  { key: "gates", icon: "🚧", label: "게이트", always: true },
+  { key: "boards", icon: "🛹", label: "호버보드", always: false },
+  { key: "antidotes", icon: "💊", label: "해독제", always: false },
+];
+
+export function renderRunTally(root, metrics = {}) {
+  if (!root) return;
+  const rows = TALLY_ROWS.filter((row) => row.always || (metrics[row.key] ?? 0) > 0);
+  root.innerHTML = rows
+    .map((row) => {
+      const value = Math.max(0, Math.floor(metrics[row.key] ?? 0));
+      return `
+      <div class="tally${value > 0 ? " on" : ""}">
+        <span class="tally-icon" aria-hidden="true">${row.icon}</span>
+        <span class="tally-label">${escapeHtml(row.label)}</span>
+        <strong class="tally-value">${value.toLocaleString()}${row.suffix ?? ""}</strong>
+      </div>`;
+    })
+    .join("");
+}
+
 export function renderSettings(root, settings, activeTier) {
   if (!root) return;
   const toggle = (key, label, hint) => `

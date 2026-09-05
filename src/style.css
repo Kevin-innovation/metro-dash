@@ -1266,6 +1266,76 @@ kbd {
   font-size: 24px;
 }
 
+/**
+ * What the run met, under what it scored.
+ *
+ * A quieter register than the cards above on purpose. Those six are the
+ * headline — coins, distance, combo — and a headline only reads as one if the
+ * things under it do not compete: same information density, smaller type, no
+ * card of its own. It fills the space the stat grid used to leave empty at the
+ * bottom of the card without turning the card into a spreadsheet.
+ */
+.tally-title {
+  margin: 0 0 8px;
+  color: #9ec2d8;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.run-tally {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 0 18px;
+}
+
+/* Icon, name, number — in that order and on one line, which is the order they
+   are read in and the shape that packs two to a row on a phone. */
+.tally {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 128px;
+  max-width: 176px;
+  padding: 7px 11px;
+  border-radius: 11px;
+  background: rgba(7, 16, 24, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tally-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.tally-label {
+  flex: 1;
+  color: #8fb2c6;
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.tally-value {
+  font-size: 16px;
+  /* Dimmed at zero rather than hidden. A row that says nothing happened is
+     still the run telling you something — 다이아몬드 2 · 룰렛 0 is "you were
+     one stone short" — but it should not read as loudly as one that did. */
+  color: rgba(226, 232, 240, 0.42);
+}
+
+.tally.on {
+  background: rgba(7, 16, 24, 0.62);
+  border-color: rgba(125, 211, 252, 0.16);
+}
+
+.tally.on .tally-value {
+  color: #e2e8f0;
+}
+
 .new-best {
   color: var(--gold);
   margin: 0 0 12px;
