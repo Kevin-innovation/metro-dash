@@ -268,10 +268,32 @@ export function applyAction(p, action, audio, opts = {}) {
     p.laneChangeT = 0;
     p.lane -= 1;
     audio?.switchLane();
-  } else if (action === "jump" && !p.jumping && !p.mounting) {
+  } else if (action === "jump" && !p.jumping) {
     if (p.sliding) {
       p.sliding = false;
       p.slideT = 0;
+    }
+    // Jumping out of the climb, rather than being refused for the whole of it.
+    //
+    // MOUNT_TIME is three tenths of a second of the runner easing up onto a
+    // roof. Refusing a jump during it was fine at twenty metres a second, when
+    // a bus roof lasts 0.43s and there was still a tenth of a second of
+    // standing on it. It stopped being fine at twenty-nine, which is where the
+    // roof gets shorter than the climb: from there to the end of the run every
+    // press was swallowed, so the roof-to-roof line — the whole point of buses
+    // being rideable — quietly stopped working exactly when the run got fast
+    // enough for it to matter. A train held out to thirty-eight and then went
+    // the same way.
+    //
+    // The climb is finished on the spot instead. The mount already succeeded;
+    // the easing is presentation, and a jump that starts half-way up a bus is
+    // a jump that clears less than the one the player asked for. Snapping to
+    // the roof and launching from there is the jump they would have got by
+    // waiting, which is what they were trying to do.
+    if (p.mounting) {
+      p.mounting = false;
+      p.mountT = 0;
+      p.y = p.roofY;
     }
     p.mounted = null;
     p.roofY = 0;
