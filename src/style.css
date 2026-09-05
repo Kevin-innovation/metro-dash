@@ -917,15 +917,16 @@ body.running #game-canvas {
     justify-content: center;
   }
 
-  /* Seven lines across the full width read as two columns of three or four,
-     not as one long list with a ragged right edge. */
-  .howto {
-    columns: 2;
-    column-gap: 26px;
-  }
-
-  .howto li {
-    break-inside: avoid;
+  /* Two columns across the full width: the controls on the left, the track on
+     the right. Explicit columns rather than one list flowed into two — see the
+     note in the markup — so the split stays where it means something however
+     many lines either side grows to. Aligned to the top, because the two sides
+     are different lengths on purpose. */
+  .howto-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+    align-items: start;
   }
 }
 
@@ -944,12 +945,14 @@ body.running #game-canvas {
  */
 .version-badge {
   display: inline-block;
-  margin-left: 8px;
-  vertical-align: top;
-  transform: translateY(0.35em);
-  color: #7c9bb0;
+  /* Placement belongs to .title-tags now, which stacks this under the season
+     slab. Left here it would offset itself a second time inside the wrapper. */
+  padding-left: 0.2em;
+  /* Lifted a step. It sits over the wordmark's own glow now rather than beside
+     it, and the old grey was a shade the glow simply swallowed. */
+  color: #9fbccd;
   font-family: var(--font-numeric);
-  font-size: clamp(10px, 1.5vh, 13px);
+  font-size: min(clamp(9px, 1.8vw, 13px), 1.5vh);
   letter-spacing: 0.08em;
   text-shadow: none;
   white-space: nowrap;
@@ -970,12 +973,19 @@ body.running #game-canvas {
 .notes-chip {
   /* Matched to the streak capsule it stands next to, down to the line-height:
      two pills on one line at two different heights read as a mistake, and the
-     browser's own button metrics are what made them differ. */
+     browser's own button metrics are what made them differ.
+
+     The geometry was already identical and the two still did not look it. What
+     differed was the fill: the streak capsule is a tinted body inside a
+     coloured border and this was a hairline around nothing, so the same box
+     read as the smaller of the two. It gets the same treatment in its own
+     colour — the same padding, the same radius, a body and a border that
+     belong to each other. */
   padding: 2px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(158, 194, 216, 0.42);
   border-radius: 999px;
-  background: rgba(7, 16, 24, 0.4);
-  color: #9ec2d8;
+  background: rgba(158, 194, 216, 0.16);
+  color: #bcd9ea;
   font-family: inherit;
   font-size: 12px;
   line-height: 1.35;
@@ -990,7 +1000,52 @@ body.running #game-canvas {
 .notes-chip:hover,
 .notes-chip:focus-visible {
   border-color: rgba(255, 210, 74, 0.6);
+  background: rgba(255, 210, 74, 0.18);
   color: var(--gold);
+}
+
+/**
+ * The season, beside the wordmark.
+ *
+ * The build number and the season answer different questions. "ver 2.60" is
+ * for the one moment something has changed and you want to know whether you
+ * have it; the season is what game this is, and it is the thing worth saying
+ * loudly after a patch that adds a wheel and rewrites every character.
+ *
+ * So they sit together and look nothing alike: the season is the display face
+ * at full weight in gold on a solid slab, the version stays the smallest thing
+ * on the screen. Stacked rather than side by side — the wordmark's shoulder is
+ * narrow, and two things in a row beside it would push the title off centre.
+ */
+.title-tags {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* Both sized off viewport *width* as well as height, the way the wordmark
+     they hang from is. Height alone gave a phone the full-size slab against a
+     46px wordmark — the same absolute badge that reads as a tag beside a 74px
+     title reads as a second title beside a small one. */
+  gap: clamp(1px, 0.5vw, 3px);
+  margin-left: clamp(6px, 1.4vw, 12px);
+  vertical-align: top;
+  transform: translateY(0.5em);
+  text-shadow: none;
+}
+
+.season-badge {
+  padding: 0.22em 0.55em 0.16em;
+  border-radius: 0.38em;
+  background: linear-gradient(180deg, #ffd24a, #f0a815);
+  color: #2a1a02;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: min(clamp(11px, 2.5vw, 17px), 2vh);
+  line-height: 1.1;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  box-shadow:
+    0 2px 0 #8a5c04,
+    0 5px 16px rgba(255, 210, 74, 0.32);
 }
 
 h1 {
@@ -1080,6 +1135,12 @@ button {
 
 /* Block rather than flex, because the wide layout below splits it into two
    multi-column columns and a flex container has no columns to split. */
+/* One column by default; .howto-cols splits it once there is width for two. */
+.howto-cols {
+  display: grid;
+  gap: 0;
+}
+
 .howto {
   list-style: none;
   margin: 18px 0 0;

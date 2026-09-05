@@ -131,10 +131,17 @@
         <div class="title-card">
           <div class="title-head">
             <p class="eyebrow">ENDLESS 3-LANE RUNNER</p>
-            <!-- The wordmark and the build it is. Beside the title rather than
-                 under it: the number is a footnote, and a footnote on its own
-                 line is not a footnote. -->
-            <h1>Met<span>Dash</span><small id="version-badge" class="version-badge"></small></h1>
+            <!-- The wordmark, the season and the build it is. All three beside
+                 the title rather than under it: the number is a footnote, and a
+                 footnote on its own line is not a footnote.
+
+                 The season is not a footnote, which is why it is not styled
+                 like one. The build number answers "has something changed";
+                 the season answers "which game am I playing", and after a
+                 patch that adds a wheel, rewrites every character and doubles
+                 down on the crow, that is a different question with a louder
+                 answer. -->
+            <h1>Met<span>Dash</span><small class="title-tags"><em class="season-badge">SEASON 3</em><span id="version-badge" class="version-badge"></span></small></h1>
           </div>
 
           <!-- One column on a phone, two once the screen is wide but short —
@@ -241,36 +248,64 @@
           -->
           <details id="howto-wrap" class="howto-wrap">
             <summary>조작 방법</summary>
-            <ul class="howto">
-              <li>
-                <span class="howto-icon" aria-hidden="true">↔️</span>
-                <span><b>레인 바꾸기</b> <kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프</span>
-              </li>
-              <li>
-                <span class="howto-icon" aria-hidden="true">⬆️</span>
-                <span><b>점프</b> <kbd>↑</kbd> · 스페이스 · 위로 스와이프 — 버스 위로 올라탑니다</span>
-              </li>
-              <li>
-                <span class="howto-icon" aria-hidden="true">⬇️</span>
-                <span><b>슬라이드</b> <kbd>↓</kbd> · 아래로 스와이프 — 점프 중이면 캔슬</span>
-              </li>
-              <li>
-                <span class="howto-icon" aria-hidden="true">🛹</span>
-                <span><b>호버보드</b> <span id="howto-board"></span></span>
-              </li>
-              <li>
-                <span class="howto-icon" aria-hidden="true">🚧</span>
-                <span><b>노란 게이트</b> 점프로는 못 넘어요 — 슬라이드 필수</span>
-              </li>
-              <li>
-                <span class="howto-icon" aria-hidden="true">🚌</span>
-                <span><b>헤드라이트 버스</b> 마주 오면 레인을 바꾸세요</span>
-              </li>
-              <li>
-                <span class="howto-icon" aria-hidden="true">✨</span>
-                <span><b>아슬아슬하게 스치면</b> 콤보와 보너스가 오릅니다</span>
-              </li>
-            </ul>
+            <div class="howto-cols">
+              <!-- The left column is the controls: what your hands do. -->
+              <ul class="howto">
+                <li>
+                  <span class="howto-icon" aria-hidden="true">↔️</span>
+                  <span><b>레인 바꾸기</b> <kbd>←</kbd><kbd>→</kbd> 또는 좌우 스와이프</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">⬆️</span>
+                  <span><b>점프</b> <kbd>↑</kbd> · 스페이스 · 위로 스와이프 — 버스 위로 올라탑니다</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">⬇️</span>
+                  <span><b>슬라이드</b> <kbd>↓</kbd> · 아래로 스와이프 — 점프 중이면 캔슬</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">🛹</span>
+                  <span><b>호버보드</b> <span id="howto-board"></span></span>
+                </li>
+              </ul>
+
+              <!-- The right column is the track: what the world does to you.
+                   Two explicit lists rather than one list flowed into two
+                   columns, which is what this was. A balanced flow decides the
+                   split by counting lines, so adding the wheel to the list
+                   pushed 슬라이드 across the gap and left a control sitting in
+                   the middle of the hazards. -->
+              <ul class="howto">
+                <li>
+                  <span class="howto-icon" aria-hidden="true">🚧</span>
+                  <span><b>노란 게이트</b> 점프로는 못 넘어요 — 슬라이드 필수</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">🚌</span>
+                  <span><b>헤드라이트 버스</b> 마주 오면 레인을 바꾸세요</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">🥚</span>
+                  <span><b>까마귀 알</b> 먹으면 앞이 안 보여요 — 10만 점부터 훨씬 자주 나옵니다</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">🧲</span>
+                  <span><b>자석은 알도 끌어당겨요</b> 자석 중에도 레인은 봐야 합니다</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">💎</span>
+                  <span><b>다이아몬드 3개</b> 30칸 룰렛이 돕니다 — 다섯에 하나는 손해예요</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">💊</span>
+                  <span><b>해독제</b> 상점에서 3개까지 — 까마귀를 한 번씩 막아 줍니다</span>
+                </li>
+                <li>
+                  <span class="howto-icon" aria-hidden="true">✨</span>
+                  <span><b>아슬아슬하게 스치면</b> 콤보와 보너스가 오릅니다</span>
+                </li>
+              </ul>
+            </div>
           </details>
         </div>
       </div>
