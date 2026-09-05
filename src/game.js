@@ -1002,8 +1002,6 @@ export class Game {
     this.deadAt = 0;
     this.runTime = 0;
     this.phaseId = 0;
-    /** Highest score tier announced this run; see the toast in advanceRun. */
-    this.tierId = 0;
     this.sawOncoming = false;
     this.hitstop = 0;
     // Cleared with the rest of the run, so a kick from the last one cannot
@@ -1489,18 +1487,6 @@ export class Game {
       }
     }
 
-    // The score tiers, which are the other half of how hard the run is — see
-    // tiers.js. Announced rather than applied quietly: a difficulty step the
-    // player cannot perceive reads as the game having cheated, and this one is
-    // earned rather than waited out, so it is worth telling them about.
-    const tier = this.run.tier;
-    if (tier > this.tierId) {
-      this.tierId = tier;
-      this.screens.showToast(`난이도 상승 · LV.${tier}`);
-      this.shake = Math.max(this.shake, 0.22);
-      vibrate(14);
-    }
-
     // Sections: for fifteen seconds the run asks for something else. Tracked
     // here rather than in the spawner so the banner, the multiplier and the
     // layouts all turn over on the same tick.
@@ -1673,11 +1659,6 @@ export class Game {
       // The tunnel's low roof has to mean something, so it leans the pattern
       // pick towards the gates you can only get under by sliding.
       slideBias: playing ? this.schedule.lookAt(this.runTime).slideBias : 0,
-      // How well this run is actually going, which is the other half of how
-      // hard it should be — see tiers.js. The clock alone stopped moving the
-      // pile at 190 seconds, and a run that is 300,000 points in has earned a
-      // different pile from one that is 3,000 points in at the same moment.
-      tier: playing ? this.run.tier : 0,
       // While a section runs, its layouts are the only ones dealt.
       eventPatterns: playing ? (this.schedule.eventAt(this.runTime)?.event.patterns ?? null) : null,
       tutorial: playing,

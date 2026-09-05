@@ -70,26 +70,6 @@ export const REACTION_EASY = 1.15;
 export const REACTION_HARD = 0.45;
 
 /**
- * The opening grace.
- *
- * The bottom of the leaderboard was not made of people playing badly — it was
- * made of people dying in the first minute, before the run had taught them
- * anything. Measured over twelve seeded runs, the opening deals 0.93 obstacle
- * rows a second against 1.65 later on, which sounds generous until you remember
- * that a new player reads none of them.
- *
- * So the first ninety seconds get extra track between layouts, fading to
- * nothing by the end of it. This is deliberately *not* a change to pressure:
- * the front-loaded pressure curve is what makes the opening feel like a game
- * rather than a warm-up lap, and slowing that down would trade the bottom of
- * the board for everybody's first impression. This adds room without taking
- * away speed.
- */
-export const OPENING_GRACE_SECONDS = 90;
-/** Extra seconds of track between patterns at t=0, fading linearly to zero. */
-export const OPENING_GRACE_GAP = 0.9;
-
-/**
  * The second, much slower squeeze.
  *
  * Runs it from the end of the first ramp to REACTION_LATE over four more

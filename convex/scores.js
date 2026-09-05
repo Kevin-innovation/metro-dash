@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { perkFor } from "../src/characters.js";
-import { REJECT_RUN, runThrottle, validateRun } from "../src/leaderboard-rules.js";
+import { validateRun } from "../src/leaderboard-rules.js";
 import { rankAt, rankUpBetween, runXp } from "../src/progression.js";
 import { dayKey } from "../src/daily.js";
 import { weekKey } from "../src/week.js";
@@ -67,11 +67,6 @@ export const submit = mutation({
   handler: async (ctx, args) => {
     const player = await requirePlayer(ctx, args.token);
 
-    // Before the plausibility check, because it costs two field reads and the
-    // check walks the speed curve.
-    const throttle = runThrottle(player, Date.now());
-    if (!throttle.ok) return { ok: false, reason: REJECT_RUN.TOO_MANY };
-
     const check = validateRun(args);
     if (!check.ok) {
       // Rejected quietly: the run simply does not reach the board. Telling the
@@ -104,11 +99,7 @@ export const submit = mutation({
     const week = weekKey(now);
     const weekBest = player.weekKey === week ? (player.weekBest ?? 0) : 0;
 
-    const patch = {
-      updatedAt: now,
-      runWindowStart: throttle.runWindowStart,
-      runsInWindow: throttle.runsInWindow,
-    };
+    const patch = { updatedAt: now };
     if (score > player.best) patch.best = score;
     if (score > weekBest || player.weekKey !== week) {
       patch.weekKey = week;

@@ -113,59 +113,10 @@ export const REJECT_RUN = {
   DISTANCE: "distance",
   COINS: "coins",
   SCORE: "score",
-  TOO_MANY: "tooMany",
 };
 
 /** Longest run accepted, so a tab left running forever cannot bank a number. */
 export const MAX_RUN_SECONDS = 60 * 60 * 3;
-
-/**
- * How many runs one account may bank in a minute.
- *
- * `scores:submit` is the one mutation that pays out and it had no throttle at
- * all, so what bounded a loop calling it was the round trip.
- *
- * A burst allowance rather than a minimum gap between two runs, and the
- * difference matters: a player who clips the first obstacle twice in a row
- * genuinely does submit two runs seconds apart, and a floor between successive
- * runs would reject the second one — no board entry and no coins, for playing
- * badly and then playing badly again. Twenty in a minute is three seconds a run
- * sustained, which nobody reaches by dying quickly and a script passes in the
- * first second.
- *
- * Deliberately not derived from the run's own `seconds`: that field is the
- * client's word for how long the run took, and a throttle that trusts the
- * number it is throttling is not a throttle.
- */
-export const RUN_WINDOW_MS = 60_000;
-export const RUNS_PER_WINDOW = 20;
-
-/**
- * Whether this run may be banked, and the window state to store with it.
- *
- * Pure, so the window arithmetic is testable without a database. A fixed window
- * rather than a rolling one: it costs two fields instead of a list, and the
- * worst it allows is two bursts back to back across a boundary — forty runs in
- * a minute, which is still nowhere near unbounded.
- *
- * @param {{ runWindowStart?: number, runsInWindow?: number }} player
- * @param {number} now epoch millis
- * @returns {{ ok: boolean, runWindowStart: number, runsInWindow: number }}
- */
-export function runThrottle(player, now) {
-  const start = player?.runWindowStart ?? 0;
-  const count = player?.runsInWindow ?? 0;
-  // A window that has expired — or one stamped in the future, which is a clock
-  // problem rather than a cheat and must not strand the account — starts over.
-  const elapsed = now - start;
-  if (!Number.isFinite(start) || elapsed >= RUN_WINDOW_MS || elapsed < 0) {
-    return { ok: true, runWindowStart: now, runsInWindow: 1 };
-  }
-  if (count >= RUNS_PER_WINDOW) {
-    return { ok: false, runWindowStart: start, runsInWindow: count };
-  }
-  return { ok: true, runWindowStart: start, runsInWindow: count + 1 };
-}
 
 /**
  * Reject runs that could not have happened.

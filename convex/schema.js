@@ -65,13 +65,14 @@ export default defineSchema({
     payoutXpToday: v.optional(v.number()),
 
     /**
-     * How many runs this account has banked in the current window, and when
-     * that window opened.
+     * Left over from the v3.0 submission throttle, which was rolled back.
      *
-     * `scores:submit` is the only mutation that pays anything and it had no
-     * throttle at all, so a loop calling it was bounded by nothing but how fast
-     * the network answered. See RUNS_PER_WINDOW for why this is a burst
-     * allowance rather than a minimum gap between two runs.
+     * Kept declared even though nothing writes them any more: accounts that
+     * played during the short window it was live have these fields on their
+     * document, and a Convex validator is exact — dropping them from the schema
+     * would fail the very deploy that is meant to undo the change. They cost
+     * nothing here and go when the throttle either comes back or is cleaned up
+     * deliberately.
      */
     runWindowStart: v.optional(v.number()),
     runsInWindow: v.optional(v.number()),
