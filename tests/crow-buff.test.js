@@ -4,7 +4,7 @@ import { Interactions } from "../src/interactions.js";
 import { Run } from "../src/run.js";
 import { SaveStore } from "../src/save.js";
 import { Spawner } from "../src/spawner.js";
-import { HAZARD_FRENZY_SCORE } from "../src/spawner.js";
+import { HAZARD_FROM_SCORE } from "../src/spawner.js";
 import { MAGNET_RANGE } from "../src/config.js";
 
 const store = () => new SaveStore({ getItem: () => null, setItem: () => {} });
@@ -30,6 +30,19 @@ function fakePool() {
   };
 }
 
+/** Layouts dealt and eggs among them, for one seed at one score. */
+function layoutSpacing(score) {
+  const pool = fakePool();
+  const spawner = new Spawner(pool, {});
+  spawner.reset(31337);
+  let patterns = 0;
+  for (let i = 0; i < 300; i++) {
+    spawner.place(i * 200, { speed: 50, phaseId: 4, score });
+    patterns += 1;
+  }
+  return { patterns, eggs: pool.live.filter((item) => item.type === "crowEgg").length };
+}
+
 /** Deal `count` layouts and report how many carried a crow egg. */
 function dealEggs(count, score) {
   const pool = fakePool();
@@ -44,24 +57,48 @@ function dealEggs(count, score) {
   return eggs;
 }
 
-describe("the crow past a hundred thousand", () => {
-  it("is dealt several times more often", () => {
-    const calm = dealEggs(300, 0);
-    const frenzy = dealEggs(300, HAZARD_FRENZY_SCORE);
-    expect(calm).toBeGreaterThan(0);
-    // The speed curve has topped out by here and the phases have run out of
-    // names; the bird is what is left to escalate with.
-    expect(frenzy).toBeGreaterThan(calm * 2);
+describe("when the crow is dealt at all", () => {
+  it("stays off the track entirely below the threshold", () => {
+    // The beginner's whole run. A player still learning which lane to be in was
+    // meeting a trap that takes their sight away — and since the magnet drags
+    // the egg in, the power-up beginners like best was the one delivering it.
+    expect(dealEggs(400, 0)).toBe(0);
+    expect(dealEggs(400, HAZARD_FROM_SCORE - 1)).toBe(0);
   });
 
-  it("leaves the run below the threshold alone", () => {
-    expect(dealEggs(300, HAZARD_FRENZY_SCORE - 1)).toBe(dealEggs(300, 0));
+  it("arrives once the run is past it", () => {
+    expect(dealEggs(400, HAZARD_FROM_SCORE)).toBeGreaterThan(0);
   });
 
-  it("never deals the frenzy to the title screen's preview", () => {
+  it("is dealt at a rate that leaves the track readable", () => {
+    // The number this replaces was one egg every five layouts, which is one
+    // every six seconds against a crow that lasts four and a half: 77% of a
+    // five-minute run spent unable to see. That is not pressure, it is the
+    // lights going out.
+    const layouts = 400;
+    const eggs = dealEggs(layouts, HAZARD_FROM_SCORE);
+    const every = layouts / eggs;
+    expect(every).toBeGreaterThan(7);
+    expect(every).toBeLessThan(12);
+  });
+
+  it("never deals one to the title screen's preview", () => {
     // Game passes 0 off a run, so the menu behind the title card cannot be
     // running the hard cadence at nobody.
-    expect(dealEggs(120, undefined)).toBe(dealEggs(120, 0));
+    expect(dealEggs(200, undefined)).toBe(0);
+  });
+
+  it("keeps the slot below the threshold and fills it with the rest", () => {
+    // The egg pattern is a coin line with a trap in it and a free lane beside
+    // it — one of the few genuine rests in the table. Skipping the slot handed
+    // those layouts back to the ordinary draw and tightened the opening minutes,
+    // which is the opposite of the point.
+    const beginner = layoutSpacing(0);
+    const expert = layoutSpacing(HAZARD_FROM_SCORE);
+    // The rhythm is the same either side; only what lands in the slot changes.
+    expect(beginner.patterns).toBe(expert.patterns);
+    expect(beginner.eggs).toBe(0);
+    expect(expert.eggs).toBeGreaterThan(0);
   });
 });
 

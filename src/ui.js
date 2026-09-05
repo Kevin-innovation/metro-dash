@@ -13,6 +13,7 @@ import { CHANGELOG } from "./release.js";
 import { POWERUPS } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
+import { ANTIDOTE_SECONDS } from "./shop.js";
 import { DIAMOND_GOAL } from "./slots.js";
 import { QUALITY_PROFILES, QUALITY_TIERS } from "./settings.js";
 
@@ -447,8 +448,8 @@ export function renderShop(root, view) {
       <div class="shop-icon">💊</div>
       <div class="shop-body">
         <div class="shop-title">까마귀 해독제 <em>${antidote.owned}/${antidote.max}</em></div>
-        <div class="shop-blurb">까마귀 알을 먹어도 한 번은 막아 줍니다</div>
-        <div class="shop-meta">막으면서 사라집니다 · 한 판에 한 번</div>
+        <div class="shop-blurb">까마귀 알을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다</div>
+        <div class="shop-meta">까마귀는 20만 점부터 나옵니다</div>
       </div>
       <button type="button" class="shop-buy" data-buy="antidote" data-id="antidote"
         ${antidote.affordable ? "" : "disabled"}>${

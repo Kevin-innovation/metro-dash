@@ -7,6 +7,7 @@ import { SaveStore, normalizeSave } from "../src/save.js";
 import {
   ANTIDOTE_COST,
   ANTIDOTE_MAX,
+  ANTIDOTE_SECONDS,
   HOVERBOARD_COST,
   profileWorth,
   purchase,
@@ -80,17 +81,34 @@ describe("crow antidote — using", () => {
     const s = store(ANTIDOTE_COST);
     purchase(s, "antidote");
     const run = new Run(s);
-    expect(run.addHazard("crow")).toEqual({ blocked: true });
+    expect(run.addHazard("crow")).toEqual({ blocked: true, reason: "antidote" });
     expect(run.crowActive()).toBe(false);
     expect(s.data.antidotes).toBe(0);
     expect(run.metrics.antidotes).toBe(1);
   });
 
-  it("blocks once only — the next egg lands", () => {
+  it("buys a stretch, not a single block", () => {
+    // One egg stopped was a fifth of a run's income for about a twentieth of
+    // the problem, once the bird started arriving every eleven seconds.
     const s = store(ANTIDOTE_COST);
     purchase(s, "antidote");
     const run = new Run(s);
     run.addHazard("crow");
+    expect(run.crowImmuneT).toBe(ANTIDOTE_SECONDS);
+
+    // Everything inside the window is free, and nothing further is spent.
+    run.advance(ANTIDOTE_SECONDS - 1, { travelled: 1, mounted: false });
+    expect(run.addHazard("crow")).toEqual({ blocked: true, reason: "immune" });
+    expect(run.metrics.antidotes).toBe(1);
+    expect(run.crowActive()).toBe(false);
+  });
+
+  it("lets the bird back in once the window closes", () => {
+    const s = store(ANTIDOTE_COST);
+    purchase(s, "antidote");
+    const run = new Run(s);
+    run.addHazard("crow");
+    run.advance(ANTIDOTE_SECONDS + 0.1, { travelled: 1, mounted: false });
     expect(run.addHazard("crow")).toEqual({ blocked: false });
     expect(run.crowActive()).toBe(true);
   });
@@ -100,6 +118,7 @@ describe("crow antidote — using", () => {
     purchase(s, "antidote");
     const run = new Run(s);
     run.addHazard("crow");
+    run.advance(ANTIDOTE_SECONDS + 0.1, { travelled: 1, mounted: false });
     run.addHazard("crow");
     expect(run.metrics.crows).toBe(2);
   });
@@ -120,8 +139,11 @@ describe("crow antidote — using", () => {
 describe("hoverboard price", () => {
   it("is priced as the extra life it is, not as pocket change", () => {
     expect(HOVERBOARD_COST).toBe(3000);
-    // The antidote answers the worse problem, so it costs more.
-    expect(ANTIDOTE_COST).toBeGreaterThan(HOVERBOARD_COST);
+    // And above the antidote, which is the order that was upside down. The
+    // board stops the crash that ends the run; the antidote buys half a minute
+    // of being able to see. Charging more for the second one is why nobody
+    // bought it.
+    expect(HOVERBOARD_COST).toBeGreaterThan(ANTIDOTE_COST);
   });
 });
 

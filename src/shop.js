@@ -24,28 +24,43 @@ export const UPGRADE_COSTS = [0, 0, 500, 1200, 2400, 4200, 6500, 9500, 14000];
 export const HOVERBOARD_COST = 3000;
 
 /**
- * The crow antidote. Blocks one crow egg and is spent doing it.
+ * The crow antidote. Spent on the first egg it meets, and the crow stays off
+ * for a while afterwards.
  *
- * More than a hoverboard because it answers a worse problem: a crash is over
- * in an instant and a crow is four and a half seconds of not being able to see
- * what is coming, which is where the crash after it comes from.
+ * It was 5,000 and blocked exactly one egg. Priced above the hoverboard while
+ * being worth a fraction of it: the board stops the crash that ends the run,
+ * this stopped four and a half seconds of not seeing — and once the bird became
+ * an endgame animal arriving every eleven seconds, a thing that blocks one of
+ * them was 5,000 coins for about a twentieth of the problem. Nobody bought it,
+ * and nobody was wrong not to.
+ *
+ * So it buys a stretch rather than a single block, and costs less than the
+ * board rather than more. What it is for is the run that has gone past two
+ * hundred thousand and is now being run in the dark.
  */
-export const ANTIDOTE_COST = 5000;
+export const ANTIDOTE_COST = 2000;
 
 /**
- * Three at a time, and spent one per crow.
+ * Seconds the crow cannot land after an antidote is spent.
+ *
+ * Long enough to cover about three eggs at the cadence they arrive at, so one
+ * antidote is a stretch of the run you can see through rather than a coin flip
+ * about which egg it happens to catch. Three of them is most of a minute.
+ */
+export const ANTIDOTE_SECONDS = 30;
+
+/**
+ * Three at a time, one spent per window.
  *
  * It was one, matched to the hoverboard, on the reasoning that only one could
- * be used per run. That was true of the board and never of this: the board
- * eats the crash that ends the run, so a second one has nothing left to do,
- * while the crow comes back — and now comes back far more often once a run is
- * past a hundred thousand. A single antidote against six eggs is not insurance,
- * it is a coin toss about which one it happens to catch.
+ * be used per run. That was true of the board and never of this: the board eats
+ * the crash that ends the run, so a second one has nothing left to do, while the
+ * crow comes back and back.
  *
- * Three, not nine, because the point is still that a run is prepared for rather
- * than bought outright. Fifteen thousand coins to be immune to the crow for a
- * whole run is a price worth paying and a decision worth taking; unlimited
- * antidotes would delete the bird from the game for anyone with a balance.
+ * Three, not nine, because the point is that a run is prepared for rather than
+ * bought outright. Ninety seconds of clear sight for 6,000 coins is a decision
+ * worth taking; unlimited antidotes would delete the bird from the game for
+ * anyone with a balance.
  */
 export const ANTIDOTE_MAX = 3;
 /**

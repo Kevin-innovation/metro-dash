@@ -10,6 +10,7 @@ import {
 } from "./powerups.js";
 import { CROW_TIME } from "./config.js";
 import { DIAMOND_GOAL } from "./slots.js";
+import { ANTIDOTE_SECONDS } from "./shop.js";
 import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
@@ -243,9 +244,15 @@ export class Run {
     // The antidote is checked here rather than at the pickup, so every route
     // into a hazard — the egg, a test, anything added later — is covered by
     // one rule instead of by whoever remembered.
+    //
+    // Spending one buys a window, not a single block. One egg stopped for 2,000
+    // coins was a fifth of a run's income for about a twentieth of the problem
+    // once the bird started arriving every eleven seconds; a stretch you can
+    // see through is a thing worth carrying into a run.
     if (this.store.spendAntidote()) {
       this.metrics.antidotes += 1;
-      return { blocked: true };
+      this.crowImmuneT = Math.max(this.crowImmuneT, ANTIDOTE_SECONDS);
+      return { blocked: true, reason: "antidote" };
     }
     const held = seconds * this.crowScale;
     this.crowSeconds = held;

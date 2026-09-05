@@ -162,9 +162,10 @@ describe("the diamond wheel — what it pays", () => {
     expect(s.data.antidotes).toBe(1);
     expect(run.crowActive()).toBe(false);
 
-    // And the antidote is still there to be spent once the window closes.
+    // And the antidote is still there to be spent once the window closes —
+    // buying a window of its own, which is what it is for.
     run.advance(15.1, { travelled: 1, mounted: false });
-    expect(run.addHazard("crow")).toEqual({ blocked: true });
+    expect(run.addHazard("crow")).toEqual({ blocked: true, reason: "antidote" });
     expect(s.data.antidotes).toBe(0);
   });
 

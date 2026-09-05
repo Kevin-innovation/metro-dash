@@ -36,7 +36,7 @@ import { Screens } from "./screens.js";
 import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
 import { randomSeed } from "./rng.js";
 import { Spawner } from "./spawner.js";
-import { ANTIDOTE_MAX, HOVERBOARD_MAX, characterById } from "./shop.js";
+import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
@@ -1986,8 +1986,14 @@ export class Game {
           // that had not moved.
           this.audio.powerup();
           vibrate(18);
+          // Three ways a crow can fail to land and only one of them costs
+          // anything, so they do not share a line. The antidote says how long
+          // it bought, because a player who is not told will spend the next
+          // thirty seconds dodging eggs they no longer need to.
           this.screens.showToast(
-            event.reason === "immune" ? "🕊️ 까마귀가 접근하지 못했다!" : "💊 해독제가 까마귀를 막았다!",
+            event.reason === "antidote"
+              ? `💊 해독제 · ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다`
+              : "🕊️ 까마귀가 접근하지 못했다!",
           );
         } else {
           this.audio.caw();
