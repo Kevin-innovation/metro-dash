@@ -11,7 +11,7 @@ import {
 import { CROW_TIME } from "./config.js";
 import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
-import { tierAt } from "./tiers.js";
+import { tierAt, tierScoreScale } from "./tiers.js";
 import {
   COMBO_WINDOW,
   NEAR_MISS_BONUS,
@@ -114,10 +114,17 @@ export class Run {
     return tierAt(this.baseScore);
   }
 
-  /** Combo tier times any power-up bonus, times the section running now. */
+  /**
+   * Everything that scales a point: the combo tier, any power-up bonus, the
+   * section running now, and the tier's own falloff.
+   *
+   * The falloff belongs here rather than at each call site so that nothing can
+   * pay a gain without it — a bonus added later and multiplied by hand would
+   * quietly be worth full value at every tier.
+   */
   multiplier() {
     const base = scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
-    return base * (this.eventMultiplier ?? 1);
+    return base * (this.eventMultiplier ?? 1) * tierScoreScale(this.tier);
   }
 
   bumpCombo() {

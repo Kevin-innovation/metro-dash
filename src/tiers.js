@@ -45,6 +45,57 @@ export const TIER_EASY_FADE = 0.12;
 export const TIER_EASY_FLOOR = 0.3;
 
 /**
+ * How much of a point's value each tier takes back.
+ *
+ * The layouts alone could not do this job. Measured against the pattern table,
+ * shifting the whole pile from its easiest mix to its hardest changes how
+ * demanding the average draw is by about 1.6x — because the spacing floors are
+ * already at the geometric minimum (`CLEARANCE_SECONDS_HARD` is six hundredths
+ * of a second above what a jump physically needs) and because the late pile was
+ * mostly gauntlets to begin with. A run that survives twice as long still
+ * scores about twice as much, so the top of the board stayed an order of
+ * magnitude above the middle of it.
+ *
+ * So the tiers take the other route as well: the further a run has climbed, the
+ * less each metre and each coin is worth. It is the one lever whose effect is
+ * arithmetic rather than a guess about how often a player will misread a row,
+ * and it is what actually brings the top of the board back towards the players
+ * on it.
+ *
+ * Applied to what is banked and shown, never to `Run.baseScore` — the tiers are
+ * spaced in raw points so that reaching the next one always costs the same
+ * amount of *play*. Feeding the decay back into the thing that measures it
+ * would make each tier slower to reach than the last for no reason anybody
+ * could see.
+ */
+export const TIER_SCORE_DECAY = 0.07;
+/**
+ * What a point is worth once the ladder has run out.
+ *
+ * Not zero, and not near it: a run that has climbed this far is the best run
+ * anybody is having, and a game that stops paying is a game that has ended
+ * without saying so. A third still rewards going further — it just stops one
+ * exceptional afternoon from outscoring every other player put together.
+ *
+ * These two together are what actually compressed the board. Simulated over
+ * four skill profiles and forty thousand runs each, and read the way a board is
+ * actually read — every player's *best* run rather than their median one — the
+ * spread between the weakest player's board figure and the strongest goes from
+ * roughly forty-two times to fourteen. The layouts alone got it to thirty.
+ */
+export const TIER_SCORE_FLOOR = 0.28;
+
+/**
+ * What a point earned at this tier is actually worth.
+ *
+ * @param {number} tier
+ */
+export function tierScoreScale(tier) {
+  const step = Math.max(0, Math.min(MAX_TIER, tier));
+  return Math.max(TIER_SCORE_FLOOR, 1 - TIER_SCORE_DECAY * step);
+}
+
+/**
  * The extra pull the tier layouts get, on top of the generic hard scaling.
  *
  * Without it they were capped around a fifth of the pile however far a run

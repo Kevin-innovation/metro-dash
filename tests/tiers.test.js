@@ -4,10 +4,13 @@ import {
   TIER_EASY_FLOOR,
   TIER_STARTS_AT,
   TIER_STEP,
+  TIER_SCORE_DECAY,
+  TIER_SCORE_FLOOR,
   easyWeightScale,
   hardWeightScale,
   tierAt,
   tierPatternScale,
+  tierScoreScale,
   tierProgress,
   tierThreshold,
 } from "../src/tiers.js";
@@ -95,6 +98,38 @@ describe("weight scaling", () => {
     expect(tierPatternScale(1, 3)).toBe(0);
     expect(tierPatternScale(3, 3)).toBeGreaterThan(0);
     expect(tierPatternScale(6, 3)).toBeGreaterThan(tierPatternScale(4, 3));
+  });
+});
+
+describe("tierScoreScale", () => {
+  it("pays a run in full until the first tier bites", () => {
+    expect(tierScoreScale(0)).toBe(1);
+  });
+
+  it("takes a little more back at every tier", () => {
+    let previous = Infinity;
+    for (let tier = 0; tier <= MAX_TIER; tier++) {
+      const scale = tierScoreScale(tier);
+      expect(scale).toBeLessThanOrEqual(previous);
+      previous = scale;
+    }
+    expect(tierScoreScale(MAX_TIER)).toBeLessThan(tierScoreScale(0));
+  });
+
+  it("never stops paying, however far the run climbs", () => {
+    // A game that pays nothing has ended without saying so.
+    for (const tier of [MAX_TIER, MAX_TIER + 50, 10_000]) {
+      expect(tierScoreScale(tier)).toBeGreaterThanOrEqual(TIER_SCORE_FLOOR);
+      expect(tierScoreScale(tier)).toBeGreaterThan(0);
+    }
+  });
+
+  it("clamps below zero rather than paying a bonus", () => {
+    expect(tierScoreScale(-5)).toBe(1);
+  });
+
+  it("follows the decay it documents", () => {
+    expect(tierScoreScale(2)).toBeCloseTo(1 - TIER_SCORE_DECAY * 2, 10);
   });
 });
 
