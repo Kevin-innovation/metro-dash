@@ -54,6 +54,22 @@ export const POWERUPS = {
 export const POWERUP_IDS = Object.keys(POWERUPS);
 
 /**
+ * Which per-power-up counter in Run.metrics each id feeds.
+ *
+ * The names differ because the metrics are plural tallies and the ids are
+ * singular things. Written down once here rather than inline where it is
+ * needed: it was a literal inside Run.addPowerup, and the moment the game-over
+ * card wanted to read the same four numbers there were two copies of the same
+ * mapping in two files with nothing keeping them honest.
+ */
+export const POWERUP_METRIC = {
+  magnet: "magnets",
+  jetpack: "jetpacks",
+  double: "doubles",
+  sneakers: "sneakers",
+};
+
+/**
  * Where the upgrade track ends, and where it changes gear.
  *
  * It used to end at five, which cost 33,200 coins for all four — a fortnight of

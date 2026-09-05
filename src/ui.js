@@ -10,7 +10,7 @@ import {
 } from "./missions.js";
 import { CROW } from "./crow.js";
 import { CHANGELOG } from "./release.js";
-import { POWERUPS } from "./powerups.js";
+import { POWERUPS, POWERUP_IDS, POWERUP_METRIC } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
 import { ANTIDOTE_SECONDS } from "./shop.js";
@@ -339,7 +339,20 @@ export function renderHud(state) {
 const TALLY_ROWS = [
   { key: "diamonds", icon: "💎", label: "다이아몬드", always: true },
   { key: "spins", icon: "🎰", label: "룰렛", suffix: "회", always: true },
-  { key: "powerups", icon: "⚡", label: "파워업", always: true },
+  // The four by name rather than one 「파워업 14」.
+  //
+  // Run has counted them separately since the missions needed to single one
+  // out, and the total was the only one being shown — which told a player the
+  // least interesting fact available. Whether a run was carried by four
+  // jetpacks or by fourteen magnets is the shape of the run; the sum of them is
+  // not. Read from the power-up table so the card cannot end up calling one of
+  // them something the shop does not.
+  ...POWERUP_IDS.map((id) => ({
+    key: POWERUP_METRIC[id],
+    icon: POWERUPS[id].icon,
+    label: POWERUPS[id].name,
+    always: true,
+  })),
   { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true },
   { key: "gates", icon: "🚧", label: "게이트", always: true },
   { key: "boards", icon: "🛹", label: "호버보드", always: false },

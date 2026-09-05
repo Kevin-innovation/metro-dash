@@ -1372,10 +1372,35 @@ kbd {
 .over-main,
 .over-side,
 .over-outcome,
+.over-tally,
 .over-cta {
   display: flex;
   flex-direction: column;
   gap: clamp(8px, 1.4vh, 14px);
+}
+
+/**
+ * One stack on a phone, and the buttons come before the detail.
+ *
+ * The tally is ten rows of what the run met, and stacked in source order it sat
+ * between the score and 「다시 달리기」 — which put the one control everybody
+ * presses below the fold on a 900px screen. Nothing is hidden: the rows are
+ * still there, a thumb's scroll under the button, which is where a detail
+ * belongs relative to an action.
+ *
+ * Undone at the two-column breakpoint, where the tally is what fills the right
+ * column and the buttons end level with the left one.
+ */
+.over-outcome {
+  order: 1;
+}
+
+.over-cta {
+  order: 2;
+}
+
+.over-tally {
+  order: 3;
 }
 
 .over-main.over-main > *,
@@ -1410,6 +1435,14 @@ kbd {
   .over-side {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  /* Source order again: with two columns the tally is what fills this one, and
+     the buttons belong at the bottom where they end level with the left. */
+  .over-outcome,
+  .over-tally,
+  .over-cta {
+    order: 0;
   }
 
   /**

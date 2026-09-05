@@ -573,21 +573,31 @@
                 보유 코인 <span class="coin-orb small"></span><strong id="over-bank">0</strong>
               </p>
 
+              </div>
+
               <!-- What the track handed you, in the space this column had
                    nothing to put in it.
                    A quieter row than the six cards opposite on purpose: those
                    are the run's headline and a stat is only a headline if the
-                   things beside it are not. It sits here rather than under
-                   them because the two columns have to end level — the left
-                   one carries the whole score breakdown and this one carried
-                   four lines, so pushing the buttons to the bottom opened a
-                   hand's width of nothing in the middle of the card. Content
-                   fills it; a smaller gap only moves it.
-                   Built from the run's own tally in ui.js, so a metric added
-                   to Run shows up here by being named rather than by being
-                   marked up. -->
-              <p class="tally-title">이번 판에 만난 것</p>
-              <div id="run-tally" class="run-tally"></div>
+                   things beside it are not. It sits in this column rather than
+                   under them because the two have to end level — the left one
+                   carries the whole score breakdown and this one carried four
+                   lines, so pushing the buttons to the bottom opened a hand's
+                   width of nothing in the middle of the card. Content fills it;
+                   a smaller gap only moves it.
+
+                   Its own block rather than part of the outcome above, so that
+                   on a phone — where the two columns become one stack — it can
+                   be ordered *after* the buttons. Ten rows of detail between
+                   the score and 「다시 달리기」 pushed the one thing everybody
+                   presses off the bottom of the screen.
+
+                   Built from the run's own tally in ui.js, so a metric added to
+                   Run shows up here by being named rather than by being marked
+                   up. -->
+              <div class="over-tally">
+                <p class="tally-title">이번 판에 만난 것</p>
+                <div id="run-tally" class="run-tally"></div>
               </div>
 
               <div class="over-cta">

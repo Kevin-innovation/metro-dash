@@ -1,6 +1,7 @@
 import { MISSION_TIERS, allCleared, applyMetrics, dailyBonus, missionReward } from "./missions.js";
 import { dayKey } from "./daily.js";
 import {
+  POWERUP_METRIC,
   activatePowerup,
   clearPowerups,
   createPowerupState,
@@ -220,8 +221,9 @@ export class Run {
   addPowerup(id, level) {
     activatePowerup(this.powerups, id, level);
     this.metrics.powerups += 1;
-    // Per-power-up tallies as well as the total, so missions can single one out.
-    const counter = { jetpack: "jetpacks", magnet: "magnets", double: "doubles", sneakers: "sneakers" }[id];
+    // Per-power-up tallies as well as the total, so missions can single one out
+    // and the game-over card can list them.
+    const counter = POWERUP_METRIC[id];
     if (counter) this.metrics[counter] += 1;
   }
 
