@@ -64,19 +64,6 @@ export default defineSchema({
     payoutCoinsToday: v.optional(v.number()),
     payoutXpToday: v.optional(v.number()),
 
-    /**
-     * Left over from the v3.0 submission throttle, which was rolled back.
-     *
-     * Kept declared even though nothing writes them any more: accounts that
-     * played during the short window it was live have these fields on their
-     * document, and a Convex validator is exact — dropping them from the schema
-     * would fail the very deploy that is meant to undo the change. They cost
-     * nothing here and go when the throttle either comes back or is cleaned up
-     * deliberately.
-     */
-    runWindowStart: v.optional(v.number()),
-    runsInWindow: v.optional(v.number()),
-
     /** Set when a save was refused for exceeding the ledger, for staff to see. */
     flagged: v.optional(v.boolean()),
 
