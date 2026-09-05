@@ -324,11 +324,29 @@ export const save = mutation({
     // now, and a client can only report what changed. What it still catches is
     // upgrades and characters appearing without having been paid for.
     const spent = profileWorth(profile) - Math.max(0, Math.floor(profile?.coins ?? 0));
-    const credited = Math.min(
-      Math.max(0, Math.trunc(coinsEarned ?? 0)),
-      MAX_COIN_GAIN_PER_SYNC,
-    );
+    const reportedEarned = Math.max(0, Math.trunc(coinsEarned ?? 0));
+    const credited = Math.min(reportedEarned, MAX_COIN_GAIN_PER_SYNC);
     const ledger = ledgerBefore(player, spent) + credited;
+
+    /**
+     * What the browser says it spent since it last synced.
+     *
+     * The gross credits minus the net change: a sync reporting +200 credited
+     * and -2,800 net is a run followed by a 3,000 coin purchase. Spending is
+     * the one number a browser may still state, because the whole of the risk
+     * in believing it falls on the player who sent it — and without it a
+     * purchase was refunded on the next sync, which is how the shop came to be
+     * giving hoverboards away.
+     *
+     * Not applied when the balance is being stated outright (the sign-in
+     * merge), where the profile's own total already has the spending in it, and
+     * skipped entirely for a client too old to send a delta rather than
+     * reading its silence as a spend of everything it earned.
+     */
+    const spentNow =
+      coinsAbsolute || typeof coinsDelta !== "number"
+        ? 0
+        : Math.max(0, reportedEarned - Math.trunc(coinsDelta));
 
     if (spent > ledger) {
       // Kept out of the cloud copy rather than argued with: the browser goes on
@@ -342,7 +360,7 @@ export const save = mutation({
       return { ok: false, reason: "ledger" };
     }
 
-    // Nothing is paid here any more.
+    // Nothing is *paid* here any more — but spending is still settled here.
     //
     // This used to credit whatever the browser said it had earned since its
     // last sync, up to five thousand coins and sixty thousand experience a
@@ -357,7 +375,7 @@ export const save = mutation({
     const heldXp = xpOf(player);
     const coins = coinsAbsolute
       ? Math.max(0, Math.min(Math.floor(profile?.coins ?? 0), held + MAX_COIN_GAIN_PER_SYNC))
-      : held;
+      : Math.max(0, held - spentNow);
     const xp = xpAbsolute
       ? Math.max(0, Math.min(Math.floor(profile?.xp ?? 0), heldXp + MAX_XP_GAIN_PER_SYNC))
       : heldXp;

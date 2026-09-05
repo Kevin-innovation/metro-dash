@@ -283,6 +283,62 @@ describe("players:save", () => {
     expect(loaded.level).toBe(1);
   });
 
+  it("takes the coins a purchase spent", async () => {
+    // The bug this closes: the shop deducted the price locally, the sync that
+    // followed answered with the server's untouched balance, and the browser
+    // adopted it. Every item in the shop was free to anyone signed in.
+    const t = backend();
+    const { token } = await signUp(t, "손님");
+
+    await t.mutation(api.scores.submit, { token, ...plausibleRun({ coins: 40 }) });
+    const paid = (await t.query(api.players.load, { token })).coins;
+    expect(paid).toBeGreaterThan(0);
+
+    // A hoverboard, bought out of that balance: nothing credited since the
+    // sync, and the balance down by the price.
+    const price = Math.floor(paid / 2);
+    const after = await t.mutation(api.players.save, {
+      token,
+      profile: { coins: paid - price },
+      coinsDelta: -price,
+      coinsEarned: 0,
+    });
+    expect(after.coins).toBe(paid - price);
+    expect((await t.query(api.players.load, { token })).coins).toBe(paid - price);
+  });
+
+  it("separates a run's earnings from a purchase in the same sync", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "겸사겸사");
+
+    await t.mutation(api.scores.submit, { token, ...plausibleRun({ coins: 40 }) });
+    const paid = (await t.query(api.players.load, { token })).coins;
+
+    // The browser earned 40 during the run and then spent everything it holds:
+    // the netted delta alone cannot say which part was which, the gross figure
+    // beside it can.
+    const after = await t.mutation(api.players.save, {
+      token,
+      profile: { coins: 0 },
+      coinsDelta: 40 - paid,
+      coinsEarned: 40,
+    });
+    expect(after.coins).toBe(0);
+  });
+
+  it("cannot spend its way below nothing", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "빈지갑");
+
+    const after = await t.mutation(api.players.save, {
+      token,
+      profile: { coins: 0 },
+      coinsDelta: -999999,
+      coinsEarned: 0,
+    });
+    expect(after.coins).toBe(0);
+  });
+
   it("cannot raise the score the leaderboard ranks on", async () => {
     const t = backend();
     const { token } = await signUp(t, "치터");

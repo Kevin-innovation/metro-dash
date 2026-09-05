@@ -725,15 +725,38 @@ export class Game {
   }
 
   /**
+   * Spending this browser has reported but the server has not confirmed.
+   *
+   * Everything bought since the last acknowledged sync, worked out the same way
+   * the server works it out: the credits since then, less the net change to the
+   * balance. Normally zero — a purchase syncs the moment it is made — and above
+   * zero exactly when a sync has failed with a purchase behind it.
+   */
+  unsyncedSpend() {
+    const save = this.store.data;
+    const credited = (save.earned ?? 0) - (save.syncedEarned ?? 0);
+    const net = (save.coins ?? 0) - (save.syncedCoins ?? 0);
+    return Math.max(0, Math.round(credited - net));
+  }
+
+  /**
    * Take the balance the server settled on.
    *
    * The browser pays itself as a run ends so the card is not waiting on the
    * network, but what it works out is a prediction. This is the answer.
+   *
+   * Minus anything bought that the server has not been told about yet. The run
+   * was settled before that purchase reached it, so its figure is a balance
+   * with the purchase still in it — adopted whole it would hand the coins back
+   * and mark them acknowledged, and the item would have been free. The debt is
+   * left standing in the numbers, so the sync that follows reports it.
    */
   adoptCoins(coins) {
     if (typeof coins !== "number" || !Number.isFinite(coins)) return;
-    const next = Math.max(0, Math.floor(coins));
-    this.store.set("syncedCoins", next);
+    const owed = this.unsyncedSpend();
+    const settled = Math.max(0, Math.floor(coins));
+    const next = Math.max(0, settled - owed);
+    this.store.set("syncedCoins", settled);
     this.store.set("syncedEarned", this.store.data.earned);
     if (next === this.store.data.coins) return;
     this.store.set("coins", next);
