@@ -47,6 +47,94 @@ function sanitizeProfile(profile, serverBest) {
   return { ...profile, best: serverBest };
 }
 
+/**
+ * Fields a save may raise and may never lower.
+ *
+ * Everything here is bought, unlocked or counted, and none of it can be sold,
+ * refunded or undone by playing. A save that reports less of one than the
+ * account already holds is not a player losing something — it is a browser
+ * that has not caught up yet.
+ *
+ * Deliberately not here: `hoverboards`, `antidotes` and `streak`. Those go down
+ * in normal play — the board is used, the antidote is spent, a day is missed —
+ * and a floor under them would make them impossible to consume.
+ */
+const NEVER_LOWERED = [
+  "runs",
+  "totalDistance",
+  "totalCoins",
+  "missionsDone",
+  "bestStreak",
+];
+
+/**
+ * Keep what the account has already been told about.
+ *
+ * Two browsers signed into one account each hold a whole copy of the save, and
+ * whichever one wrote last used to win outright. A character bought on the
+ * computer at home was deleted from the account by the school computer simply
+ * booting up — it pushed its own older copy, and this took it at its word.
+ *
+ * The client now reconciles on boot as well as on sign-in, which fixes the
+ * ordinary case. This is the floor under it: a stale save, a save from a build
+ * that predates the fix, a save from a browser whose load failed — none of them
+ * can take away something the account has already paid for. Purchases only ever
+ * go up here, whatever any browser says.
+ *
+ * Everything else is still the client's to state. The daily missions turn over,
+ * the equipped character changes, the settings are the device's own.
+ */
+function keepEarned(next, held) {
+  if (!next || !held) return next;
+  const merged = { ...next };
+
+  // Characters are bought and cannot be sold, so the account's list is a floor
+  // and the union is the answer.
+  const owned = new Set([
+    ...(Array.isArray(held.characters) ? held.characters : []),
+    ...(Array.isArray(next.characters) ? next.characters : []),
+  ]);
+  merged.characters = [...owned];
+
+  // Upgrade levels are bought one step at a time and never refunded, so the
+  // higher of the two is the one that was paid for.
+  const levels = { ...(held.upgrades ?? {}), ...(next.upgrades ?? {}) };
+  for (const id of Object.keys(levels)) {
+    levels[id] = Math.max(
+      Math.floor(Number(held.upgrades?.[id]) || 0),
+      Math.floor(Number(next.upgrades?.[id]) || 0),
+    );
+  }
+  merged.upgrades = levels;
+
+  for (const key of NEVER_LOWERED) {
+    merged[key] = Math.max(
+      Math.floor(Number(held[key]) || 0),
+      Math.floor(Number(next[key]) || 0),
+    );
+  }
+
+  // Which runner is equipped is the client's choice — unless the client did
+  // not know what it was choosing between.
+  //
+  // A browser whose list is missing a character the account owns has not caught
+  // up, and its 「runner를 착용 중」 is not a preference, it is ignorance: it
+  // cannot have decided against a runner it has never heard of. So the account's
+  // choice stands until the browser has seen the whole list. Once it has —
+  // which is what the client's boot reconciliation is for — picking the free
+  // runner is a real decision and sticks.
+  const knewEverything = [...owned].every((id) =>
+    (Array.isArray(next.characters) ? next.characters : []).includes(id),
+  );
+  if (!knewEverything && owned.has(held.character)) {
+    merged.character = held.character;
+  } else if (!owned.has(merged.character) && owned.has(held.character)) {
+    merged.character = held.character;
+  }
+
+  return merged;
+}
+
 /** Client-visible shape. Never includes the PIN or another player's token. */
 function publicProfile(player) {
   return {
@@ -382,8 +470,10 @@ export const save = mutation({
 
     await ctx.db.patch(player._id, {
       // The blob keeps a copy so a fresh device restoring it starts correct,
-      // but the columns above are what decide.
-      profile: { ...sanitizeProfile(profile, player.best), coins, xp },
+      // but the columns above are what decide. Merged with what the account
+      // already holds rather than replacing it, so a browser that is behind
+      // cannot delete a purchase — see keepEarned.
+      profile: { ...keepEarned(sanitizeProfile(profile, player.best), player.profile), coins, xp },
       coins,
       xp,
       // Folded into `coins` by coinsOf; nothing left to hold.

@@ -236,7 +236,7 @@ export class Game {
     this.screens.showAccountBar(this.cloud);
     // Reconnects an existing session in the background; guests never wait.
     // The sync that follows is what brings down a balance changed elsewhere.
-    this.cloud.connect().then(() => this.syncCoins());
+    this.cloud.connect().then(() => this.restoreFromCloud());
 
     // Offered rather than forced, and only where a reload costs nothing: a
     // player mid-run would lose the run to a banner they did not ask for.
@@ -360,6 +360,38 @@ export class Game {
     } finally {
       this.screens.setAccountBusy(false);
     }
+  }
+
+  /**
+   * Take the account's save back down, on a browser that was already signed in.
+   *
+   * The bug this closes, and it was a bad one. Signing in runs
+   * reconcileProfiles and merges the two saves properly. *Booting* an
+   * already-signed-in browser did not: it read the session, confirmed the
+   * token, threw the profile that came back away, and went straight to
+   * syncCoins — which pushes this browser's local save up. players:save wrote
+   * that blob over the account's.
+   *
+   * So a character bought on the computer at home was not merely missing on the
+   * one at school. The moment the school computer loaded, it deleted the
+   * purchase from the account, and the computer at home would find it gone too
+   * the next time it looked. Nothing in the game said anything had happened.
+   *
+   * Boot now goes through the same reconciliation a sign-in does. On an
+   * ordinary boot the two saves agree and it changes nothing; when they
+   * disagree it unions the characters and takes the higher of every counter,
+   * which is what mergeProfiles has always done and what this path was simply
+   * never calling.
+   */
+  restoreFromCloud() {
+    if (!this.cloud.signedIn) return;
+    const loaded = this.cloud.lastLoad;
+    // No answer from the server — offline, or the query failed. The local save
+    // is the only truth there is, and pushing it up would be doing the exact
+    // thing this method exists to prevent, so nothing is sent either.
+    if (!loaded) return;
+    this.reconcileProfiles(loaded.profile, loaded.best);
+    this.screens.refreshProfile(this.store.data);
   }
 
   /**

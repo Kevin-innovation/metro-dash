@@ -180,6 +180,7 @@ export class Cloud {
 
   clearSession() {
     this.session = null;
+    this.lastLoad = null;
     writeSession(null);
     this.emit();
   }
@@ -293,6 +294,14 @@ export class Cloud {
       staff: Boolean(result.staff),
     };
     writeSession(this.session);
+    // Kept, rather than read for a nickname and thrown away.
+    //
+    // This is the account's save file, and on a browser that was already
+    // signed in it is the only chance to see it before this browser starts
+    // pushing its own copy up. Dropping it is how a character bought on one
+    // computer went missing on another — and worse, how the second computer
+    // came to overwrite it. See Game.restoreFromCloud.
+    this.lastLoad = result;
     this.emit();
     return result;
   }

@@ -339,6 +339,82 @@ describe("players:save", () => {
     expect(after.coins).toBe(0);
   });
 
+  it("cannot delete a purchase made on another device", async () => {
+    // The bug this closes, and it was silent data loss. Two browsers signed
+    // into one account each hold a whole copy of the save, and whichever wrote
+    // last won outright. A character bought on the computer at home was deleted
+    // from the account by the school computer simply booting up: it pushed its
+    // own older copy and this took it at its word.
+    const t = backend();
+    const { token } = await signUp(t, "\ub450\ub300");
+    // Funded first, or the ledger refuses a save claiming purchases the
+    // account was never credited for — which is a different guard doing its
+    // own job correctly.
+    await t.mutation(api.admin.grantCoins, { adminKey: ADMIN_KEY, handle: "\ub450\ub300", coins: 200000 });
+
+    // Computer A buys the most expensive runner in the shop.
+    await t.mutation(api.players.save, {
+      token,
+      profile: {
+        characters: ["runner", "scarecrow"],
+        character: "scarecrow",
+        upgrades: { magnet: 6 },
+        runs: 40,
+      },
+      coinsDelta: 0,
+      coinsEarned: 0,
+    });
+
+    // Computer B, still holding a save from before that purchase, syncs.
+    await t.mutation(api.players.save, {
+      token,
+      profile: {
+        characters: ["runner"],
+        character: "runner",
+        upgrades: { magnet: 2 },
+        runs: 12,
+      },
+      coinsDelta: 0,
+      coinsEarned: 0,
+    });
+
+    const loaded = await t.query(api.players.load, { token });
+    expect(loaded.profile.characters).toContain("scarecrow");
+    // And the runner it does not know about stays equipped rather than being
+    // silently swapped back to the default.
+    expect(loaded.profile.character).toBe("scarecrow");
+    // Upgrades are bought a step at a time and never refunded, so the higher
+    // level is the one that was paid for.
+    expect(loaded.profile.upgrades.magnet).toBe(6);
+    // And the counters that only ever climb do not fall back either.
+    expect(loaded.profile.runs).toBe(40);
+  });
+
+  it("still lets the consumables be spent", async () => {
+    // The floor is under what is bought, not under what is used up. A board
+    // that could not be spent would be a board that lasts forever.
+    const t = backend();
+    const { token } = await signUp(t, "\uc18c\ubaa8\ud488");
+
+    await t.mutation(api.players.save, {
+      token,
+      profile: { hoverboards: 1, antidotes: 3, streak: 9 },
+      coinsDelta: 0,
+      coinsEarned: 0,
+    });
+    await t.mutation(api.players.save, {
+      token,
+      profile: { hoverboards: 0, antidotes: 0, streak: 1 },
+      coinsDelta: 0,
+      coinsEarned: 0,
+    });
+
+    const loaded = await t.query(api.players.load, { token });
+    expect(loaded.profile.hoverboards).toBe(0);
+    expect(loaded.profile.antidotes).toBe(0);
+    expect(loaded.profile.streak).toBe(1);
+  });
+
   it("cannot raise the score the leaderboard ranks on", async () => {
     const t = backend();
     const { token } = await signUp(t, "치터");
