@@ -64,6 +64,24 @@ export default defineSchema({
     payoutCoinsToday: v.optional(v.number()),
     payoutXpToday: v.optional(v.number()),
 
+    /**
+     * Dead fields, kept declared so the deployment can happen at all.
+     *
+     * A submission throttle written for v3.0 wrote these; v3.0 was rolled back
+     * and nothing reads or writes them any more. They cannot simply be deleted
+     * from this file: a Convex validator is exact, so a player document that
+     * still carries them fails validation and takes the whole deploy with it —
+     * which is exactly what happened when they were removed, and the mutation
+     * that would clean the documents up could not be deployed either, for the
+     * same reason.
+     *
+     * Removing them for real is a three step job: declare them (this), deploy a
+     * mutation that strips them from every document, run it, then delete both.
+     * Until somebody wants that, two optional numbers nobody reads cost nothing.
+     */
+    runWindowStart: v.optional(v.number()),
+    runsInWindow: v.optional(v.number()),
+
     /** Set when a save was refused for exceeding the ledger, for staff to see. */
     flagged: v.optional(v.boolean()),
 
