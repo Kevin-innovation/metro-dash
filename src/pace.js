@@ -47,10 +47,10 @@ export function speedAt(t) {
   // Steep to begin with and easing off, rather than the old even climb: the
   // first ten seconds are where a player decides whether this is a game about
   // running, and 16m/s does not answer that question.
-  if (t < 12) return START_SPEED + t * 0.75;
-  if (t < 30) return 29 + (t - 12) * 0.4;
-  if (t < 60) return 36.2 + (t - 30) * 0.24;
-  const cruise = Math.min(CRUISE_SPEED, 43.4 + (t - 60) * 0.14);
+  if (t < 20) return START_SPEED + t * 0.45;
+  if (t < 50) return 29 + (t - 20) * 0.28;
+  if (t < 90) return 37.4 + (t - 50) * 0.16;
+  const cruise = Math.min(CRUISE_SPEED, 43.8 + (t - 90) * 0.069);
   if (t <= LATE_PRESSURE_AT) return cruise;
   // A creep rather than a climb — 50 to 56 over four minutes. Small enough that
   // the sight lines still work, large enough that the layouts a player has

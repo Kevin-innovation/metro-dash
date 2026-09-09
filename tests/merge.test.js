@@ -112,7 +112,7 @@ describe("nothing owned is ever paid for twice", () => {
     const local = save({ upgrades: { magnet: 4, jetpack: 1, double: 2, sneakers: 1 } });
     const cloud = save({ upgrades: { magnet: 2, jetpack: 5, double: 1, sneakers: 3 } });
     const { save: out } = mergeProfiles(local, cloud);
-    expect(out.upgrades).toMatchObject({ magnet: 4, jetpack: 5, double: 2, sneakers: 3 });
+    expect(out.upgrades).toMatchObject({ magnet: 4, jetpack: 5, focus: 2, sneakers: 3 });
   });
 
   it("keeps consumables held on either side", () => {

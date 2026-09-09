@@ -115,7 +115,7 @@ describe("the coin ledger", () => {
       profile: {
         coins: 5000,
         earned: 5000,
-        upgrades: { magnet: 5, jetpack: 5, double: 5, sneakers: 5 },
+        upgrades: { magnet: 5, jetpack: 5, focus: 5, sneakers: 5 },
       },
       coinsDelta: 0,
       coinsEarned: 0,

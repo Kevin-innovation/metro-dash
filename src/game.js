@@ -24,7 +24,7 @@ import { MISSION_SLOTS, MISSION_TIERS, ensureMissions, rollMissions } from "./mi
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "./pace.js";
 import { RunSchedule } from "./schedule.js";
 
-import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier } from "./powerups.js";
+import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier, runSpeedFactor } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
@@ -124,6 +124,8 @@ export class Game {
     this.rankRequest = 0;
     /** The same, for the title screen's two rank cells. */
     this.standingRequest = 0;
+    /** Weekly personal rank at last lookup. 1 is the only rank that is not chasing. */
+    this.weekRank = null;
     /** Live leaderboard subscriptions, and a counter to retire stale ones. */
     this.boardSubscriptions = [];
     this.boardGeneration = 0;
@@ -289,10 +291,12 @@ export class Game {
    */
   async refreshStandings() {
     if (!this.cloud.enabled) {
+      this.weekRank = null;
       this.screens.showTitleRanks(null);
       return;
     }
     if (!this.cloud.signedIn) {
+      this.weekRank = null;
       this.screens.showTitleRanks({ guest: true });
       return;
     }
@@ -306,6 +310,7 @@ export class Game {
     // Overtaken by a newer lookup — a sign-in, or a run that finished while
     // this was in flight. Its answer is the right one.
     if (token !== this.standingRequest) return;
+    this.weekRank = me?.rank ?? null;
     this.screens.showTitleRanks({ me, school, schoolNote: this.schoolCellNote() });
   }
 
@@ -932,7 +937,7 @@ export class Game {
     if (this.state !== "playing") return;
     if (!this.run.takeSpin()) return;
 
-    const { face, index } = spinSlots(() => Math.random());
+    const { face, index } = spinSlots(() => Math.random(), { chase: this.weekRank !== 1 });
     this.state = "slots";
     this.accumulator = 0;
     this.audio.resume();
@@ -1282,16 +1287,18 @@ export class Game {
     // returns the runner to its defaults.
     const perk = perkFor(this.store.data.character);
     this.player.slideScale = perk.slideTime ?? 1;
+    this.player.laneScale = perk.laneSnap ?? 1;
     this.interactions.magnetScale = perk.magnetRange ?? 1;
+
     // The run owns the numbers it ticks; reading the perk here means nothing
     // downstream has to know a character was equipped.
     this.run.crowScale = perk.crowTime ?? 1;
     this.run.comboScale = perk.comboWindow ?? 1;
     this.run.xpScale = perk.xpBonus ?? 1;
-    // The plain half of every paid runner: see the note on `perk` in
-    // characters.js. Read here with the rest so nothing downstream has to know
-    // a character was equipped.
     this.run.scoreScale = perk.scoreBonus ?? 1;
+    this.run.roofScale = perk.roofPay ?? 1;
+    this.run.jetpackScale = perk.jetpackTime ?? 1;
+    this.run.grantStartCombo(perk.startCombo);
     this.boardScale = perk.boardTime ?? 1;
     this.crowVeilScale = perk.crowVeil ?? 1;
     this.cam = { x: 0, y: 3.6, z: -7.4 };
@@ -1715,7 +1722,10 @@ export class Game {
     // The wheel's one nasty face rides on top of the curve rather than
     // replacing it, so the run still slows back down at a phase boundary and
     // the twelve seconds read as a shove rather than as a new speed.
-    const target = speedAt(this.runTime) * (this.run.speedScale ?? 1);
+    const target =
+      speedAt(this.runTime) *
+      (this.run.speedScale ?? 1) *
+      runSpeedFactor(this.run.powerupActive("focus"));
     this.speed += (target - this.speed) * approach(2.6, dt);
 
     if (phase.id !== this.phaseId) {
@@ -1794,6 +1804,7 @@ export class Game {
     if (hop) this.audio.hop();
     else this.audio.mount();
     this.run.addMount(hop);
+    this.screens.flashTrick("roof");
     // Landing on a roof is a landing: it gets the same thump as hitting the
     // deck, or riding a bus feels like floating onto it.
     const p = this.player;
@@ -2043,15 +2054,12 @@ export class Game {
       }
     }
 
-    const cleared = this.interactions.scoreNearMisses(this.player);
-    for (let i = cleared.nearMisses; i > 0; i--) {
+    const cleared = this.interactions.scoreClears(this.player);
+    for (const trick of cleared.tricks) {
       this.audio.nearMiss();
-      this.screens.flashNearMiss();
+      this.screens.flashTrick(trick);
     }
-    // A near miss gets air and a nudge, never a lens kick. They arrive several
-    // a second through a dense stretch, and a camera that punches on every one
-    // spends the whole run juddering.
-    if (cleared.nearMisses > 0 && this.nearMissFx <= 0) {
+    if (cleared.tricks.length > 0 && this.nearMissFx <= 0) {
       const p = this.player;
       this.nearMissFx = NEAR_MISS_FX_COOLDOWN;
       this.shake = Math.max(this.shake, 0.09);

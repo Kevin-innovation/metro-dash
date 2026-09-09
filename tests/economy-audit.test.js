@@ -17,7 +17,7 @@ import {
   maxDistanceIn,
   validateRun,
 } from "../src/leaderboard-rules.js";
-import { DOUBLE_SCORE_MULTIPLIER } from "../src/powerups.js";
+
 import { MAX_COMBO_MULTIPLIER } from "../src/scoring.js";
 import { missionTier } from "../src/progression.js";
 import { Run } from "../src/run.js";
@@ -65,13 +65,12 @@ describe("a mission pays what its card promised", () => {
 
 describe("the run validator knows every multiplier that exists", () => {
   it("matches what the game can actually stack", () => {
-    // Five now: the combo tier, the double-score power-up, the section, the
+    // Four now: the combo tier, the section, the
     // diamond wheel and the equipped runner. Each is exported from the file
     // that owns it so that adding one to the game and forgetting to add it
     // here fails loudly rather than quietly refusing the best runs.
     expect(MAX_MULTIPLIER).toBe(
       MAX_COMBO_MULTIPLIER *
-        DOUBLE_SCORE_MULTIPLIER *
         MAX_EVENT_MULTIPLIER *
         SLOT_TOP_MULTIPLIER *
         MAX_CHARACTER_SCORE_BONUS,

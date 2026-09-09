@@ -199,6 +199,8 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     flying: false,
     /** Character perk: how long a slide holds, as a multiplier of SLIDE_TIME. */
     slideScale: 1,
+    /** Character perk: how fast a lane change settles. */
+    laneScale: 1,
     /** Hoverboard deployed — absorbs the next crash. */
     boarding: false,
   };
@@ -385,7 +387,7 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
 
   p.laneChangeT += dt;
   const targetX = LANES[p.lane + 1];
-  p.x += (targetX - p.x) * approach(LANE_LERP, dt);
+  p.x += (targetX - p.x) * approach(LANE_LERP * (p.laneScale ?? 1), dt);
   p.lean += ((p.x - targetX) * 0.35 - p.lean) * approach(12, dt);
 
   if (p.alive) p.z += speed * dt;

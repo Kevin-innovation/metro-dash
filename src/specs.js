@@ -54,7 +54,7 @@ export const SPEC = {
   coin: { length: 0.5, depth: 0.25, minY: 0, maxY: JETPACK_ALTITUDE + PLAYER_HEIGHT + 1, lethal: false },
   magnet: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "magnet" },
   jetpack: { length: 0.7, depth: 0.32, minY: 0, maxY: 3.2, lethal: false, powerup: "jetpack" },
-  double: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "double" },
+  focus: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "focus" },
   sneakers: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "sneakers" },
   // Not lethal and not a power-up: taking it costs you sight rather than the
   // run. Given the same band as the power-ups so it can be placed among them

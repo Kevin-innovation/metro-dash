@@ -27,7 +27,7 @@ export const ONCOMING_SPEED = 12;
 export const LANE_LERP = 16;
 export const PLAYER_HEIGHT = 1.55;
 export const SLIDE_HEIGHT = 0.56;
-export const MAGNET_RANGE = 7.5;
+export const MAGNET_RANGE = 9;
 export const BEST_KEY = "metro-dash-best";
 export const SAVE_KEY = "metro-dash-save";
 
@@ -55,7 +55,7 @@ export const PATTERN_CLEARANCE = 6;
 // treadmill. These drive the part that actually tightens.
 
 /** Seconds before the run starts winding up, and when it is fully wound. */
-export const PRESSURE_STARTS_AT = 6;
+export const PRESSURE_STARTS_AT = 14;
 /**
  * Brought in from 240s. The first ramp used to finish at four minutes, by which
  * point a good player was around forty thousand points — and everything past it
@@ -92,7 +92,7 @@ export const JUMP_APEX = (JUMP_V * JUMP_V) / (2 * -GRAVITY);
 // --- Power-ups -------------------------------------------------------------
 
 /** Super sneakers raise the jump; the gate band is sized to still stop it. */
-export const SNEAKER_JUMP_MULT = 1.3;
+export const SNEAKER_JUMP_MULT = 1.35;
 export const SNEAKER_APEX =
   (JUMP_V * SNEAKER_JUMP_MULT * (JUMP_V * SNEAKER_JUMP_MULT)) / (2 * -GRAVITY);
 
@@ -100,7 +100,7 @@ export const SNEAKER_APEX =
 export const JETPACK_ALTITUDE = 6.2;
 export const JETPACK_CLIMB = 7.5;
 
-export const MAGNET_TIME = 8;
+export const MAGNET_TIME = 10;
 
 // --- Crow egg --------------------------------------------------------------
 

@@ -16,8 +16,7 @@ import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
   COMBO_WINDOW,
-  NEAR_MISS_BONUS,
-  coinGain,
+  COIN_BASE,
   distanceGain,
   mountBonus,
   roofRideGain,
@@ -47,6 +46,10 @@ export class Run {
     this.xpScale = 1;
     /** The equipped runner's score multiplier; see MAX_CHARACTER_SCORE_BONUS. */
     this.scoreScale = 1;
+    /** Character perk: roof-ride score multiplier. */
+    this.roofScale = 1;
+    /** Character perk: jetpack duration multiplier. */
+    this.jetpackScale = 1;
     this.reset();
   }
 
@@ -115,8 +118,8 @@ export class Run {
       powerups: 0,
       jetpacks: 0,
       magnets: 0,
-      doubles: 0,
       sneakers: 0,
+      focuses: 0,
       boards: 0,
       gates: 0,
       barriers: 0,
@@ -142,16 +145,23 @@ export class Run {
   /**
    * Everything that scales a point, multiplied together.
    *
-   * Four terms now: the combo tier, the double-score power-up, the section
-   * running at the time, the wheel's payout, and the equipped runner. Each is
-   * bounded, and the product of those bounds is what the server checks a
-   * finished run against — see MAX_MULTIPLIER in leaderboard-rules.js. A fifth
-   * term added here without being added there would put the best runs in the
-   * game past the validator and off the board.
+   * Combo tier, section, wheel, equipped runner. 점수 2배는 빠졌다.
+   *
+   * Bounded, and the product of those bounds is what the server checks a
+   * finished run against — see MAX_MULTIPLIER in leaderboard-rules.js.
    */
   multiplier() {
     const base = scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
     return base * (this.eventMultiplier ?? 1) * (this.slotMultiplier ?? 1) * (this.scoreScale ?? 1);
+  }
+
+  /**
+   * Put the runner part-way up a combo as the run opens. 치어 / 교장.
+   * Zero or garbage is a no-op, so callers can pass the perk through raw.
+   */
+  grantStartCombo(count) {
+    const n = Math.max(0, Math.floor(Number(count) || 0));
+    for (let i = 0; i < n; i++) this.bumpCombo();
   }
 
   bumpCombo() {
@@ -168,7 +178,7 @@ export class Run {
     this.scoreDist += distanceGain(travelled) * multiplier;
     // Riding a roof is the risky line, so it pays on top of plain distance.
     if (mounted) {
-      this.scoreDist += roofRideGain(travelled) * multiplier;
+      this.scoreDist += roofRideGain(travelled) * multiplier * (this.roofScale ?? 1);
       this.roofDistance += travelled;
     }
 
@@ -199,11 +209,11 @@ export class Run {
 
   /** @returns {number} points awarded, for the floating "+N" readout */
   addCoin() {
-    this.bumpCombo();
     this.coins += 1;
-    const gain = coinGain(this.combo) * this.multiplier();
-    this.scoreCoins += gain;
-    return gain;
+    // Flat. Combo, the wheel and the section do not touch a coin — those
+    // multiply the run (distance, roofs, clears). Coins are the shop.
+    this.scoreCoins += COIN_BASE;
+    return COIN_BASE;
   }
 
   addMount(isHop) {
@@ -212,14 +222,19 @@ export class Run {
     if (!isHop) this.metrics.mounts += 1;
   }
 
-  addNearMiss() {
-    this.metrics.nearMisses += 1;
+  /**
+   * A verb that keeps a combo alive: slide a gate, jump a crate/barrier.
+   * Roofs go through addMount. Coins do not come through here.
+   */
+  addClear(_kind) {
     this.bumpCombo();
-    this.scoreBonus += NEAR_MISS_BONUS * this.multiplier();
   }
 
   addPowerup(id, level) {
     activatePowerup(this.powerups, id, level);
+    if (id === "jetpack" && (this.jetpackScale ?? 1) > 1) {
+      this.powerups.jetpack *= this.jetpackScale;
+    }
     this.metrics.powerups += 1;
     // Per-power-up tallies as well as the total, so missions can single one out
     // and the game-over card can list them.

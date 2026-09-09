@@ -1,19 +1,19 @@
 /** Score points earned per metre travelled. */
-export const DIST_SCORE_RATE = 2.6;
+export const DIST_SCORE_RATE = 6;
 /** Base points for a coin, before the combo bonus. */
-export const COIN_BASE = 10;
+export const COIN_BASE = 18;
 /** Combo bonus is capped so a long chain cannot run away with the score. */
 export const COIN_COMBO_CAP = 20;
 /** Seconds a combo survives without a coin, near miss or roof mount. */
-export const COMBO_WINDOW = 1.6;
+export const COMBO_WINDOW = 2.2;
 /** Bonus for climbing onto a vehicle roof from the ground. */
-export const MOUNT_BONUS = 22;
+export const MOUNT_BONUS = 30;
 /** Bonus for hopping straight from one roof to the next. */
-export const HOP_BONUS = 8;
+export const HOP_BONUS = 10;
 /** Bonus for squeezing past an obstacle instead of taking the safe line. */
-export const NEAR_MISS_BONUS = 15;
+export const NEAR_MISS_BONUS = 22;
 /** Points per metre while riding a vehicle roof, on top of the distance score. */
-export const ROOF_RIDE_RATE = 3.2;
+export const ROOF_RIDE_RATE = 4.8;
 
 /**
  * Combo tiers. Keeping a chain alive raises a run-wide multiplier, which is

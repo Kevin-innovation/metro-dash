@@ -341,7 +341,7 @@ export function renderHud(state) {
 const TALLY_ROWS = [
   { key: "diamonds", icon: "💎", label: "다이아몬드", always: true },
   { key: "spins", icon: "🎰", label: "룰렛", suffix: "회", always: true },
-  // The four by name rather than one 「파워업 14」.
+  // Each power-up by name rather than one 「파워업 14」.
   //
   // Run has counted them separately since the missions needed to single one
   // out, and the total was the only one being shown — which told a player the

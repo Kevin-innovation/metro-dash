@@ -50,7 +50,7 @@ describe("reconciling two computers", () => {
     normalizeSave({
       characters: ["runner", "scarecrow"],
       character: "scarecrow",
-      upgrades: { magnet: 6, jetpack: 3, double: 1, sneakers: 1 },
+      upgrades: { magnet: 6, jetpack: 3, focus: 1, sneakers: 1 },
       coins: 4000,
       syncedCoins: 4000,
       runs: 40,
@@ -61,7 +61,7 @@ describe("reconciling two computers", () => {
     normalizeSave({
       characters: ["runner"],
       character: "runner",
-      upgrades: { magnet: 2, jetpack: 1, double: 1, sneakers: 1 },
+      upgrades: { magnet: 2, jetpack: 1, focus: 1, sneakers: 1 },
       coins: 1200,
       syncedCoins: 1200,
       runs: 12,

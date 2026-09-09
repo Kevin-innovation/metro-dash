@@ -427,7 +427,7 @@ export const POWERUP_PATTERNS = {
   // The trail climbs, so where the power-up is about to take you is visible
   // before you touch it.
   jetpack: (z, lane) => [{ type: "jetpack", lane, z, y: 1.15 }, ...jetpackClimb(z + 4, lane)],
-  double: (z, lane) => [{ type: "double", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 6)],
+  focus: (z, lane) => [{ type: "focus", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 6)],
   sneakers: (z, lane) => [{ type: "sneakers", lane, z, y: 1.05 }, ...coinLine(lane, z + 3, 6)],
 };
 

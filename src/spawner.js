@@ -38,7 +38,7 @@ const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
  * one jetpack per seven drops, so what a run contains has not changed — only
  * when it turns up.
  */
-const POWERUP_DECK = ["magnet", "double", "sneakers", "magnet", "jetpack", "double", "sneakers"];
+const POWERUP_DECK = ["magnet", "sneakers", "magnet", "jetpack", "sneakers", "magnet", "focus"];
 const POWERUP_EVERY = 6;
 
 /**

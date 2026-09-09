@@ -6,6 +6,7 @@ import {
   BASE_LEAD_SECONDS,
   BOOSTED_AIRTIME,
   DISMOUNT_LEAD_SECONDS,
+  MOUNT_LEAD_SECONDS,
   PATTERNS,
   POWERUP_PATTERNS,
   candidatesFor,
@@ -223,9 +224,12 @@ describe("requiredLeadSeconds", () => {
     expect(requiredLeadSeconds(vehicleRow, wall)).toBe(DISMOUNT_LEAD_SECONDS);
   });
 
-  it("does not penalise arriving airborne at a wall of vehicles", () => {
-    // Being in the air is how a vehicle wall is cleared at all.
-    expect(requiredLeadSeconds(jumpRow, vehicleWall)).toBe(BASE_LEAD_SECONDS);
+  it("times a vehicle wall off a jump as a roof landing, not a reaction", () => {
+    // Being in the air is how a vehicle wall is cleared, but the jump has to
+    // finish on the roof. Super sneakers stretch that window.
+    expect(requiredLeadSeconds(jumpRow, vehicleWall)).toBe(
+      Math.max(BOOSTED_AIRTIME + 0.1, MOUNT_LEAD_SECONDS),
+    );
   });
 
   it("never returns less than plain reaction time for a real hazard", () => {

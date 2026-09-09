@@ -50,9 +50,9 @@ describe("mission definitions", () => {
     const reported = new Set([
       // run-scoped
       "coins", "distance", "comboMax", "score", "seconds", "roofDistance",
-      "nearMissesRun", "mountsRun", "powerupsRun", "gatesRun",
+      "mountsRun", "powerupsRun", "gatesRun",
       // cumulative
-      "mounts", "nearMisses", "powerups", "jetpacks", "magnets", "doubles",
+      "mounts", "powerups", "jetpacks", "magnets", "focuses",
       "sneakers", "boards", "gates", "barriers", "coinsTotal",
     ]);
     for (const def of MISSION_DEFS) {

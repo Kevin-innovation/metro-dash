@@ -3,7 +3,7 @@ import { DIAMOND_GOAL, SLOT_FACES, SLOT_MAX_MULTIPLIER, SLOT_TOP_MULTIPLIER, spi
 import { MAX_CHARACTER_SCORE_BONUS, CHARACTERS } from "../src/characters.js";
 import { MAX_MULTIPLIER } from "../src/leaderboard-rules.js";
 import { MAX_COMBO_MULTIPLIER } from "../src/scoring.js";
-import { DOUBLE_SCORE_MULTIPLIER } from "../src/powerups.js";
+
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
 import { Run } from "../src/run.js";
 import { SaveStore } from "../src/save.js";
@@ -34,16 +34,41 @@ describe("the diamond wheel — the table", () => {
     expect(tones.filter((tone) => tone === "bad").length).toBeGreaterThan(0);
   });
 
-  it("declares an effect the game knows how to pay out", () => {
-    const known = new Set([
-      "multiplier", "powerup", "powerups", "coins", "combo", "item",
-      "cure", "diamonds", "crow", "clearPowerups", "comboReset",
-      "speed", "blind", "loseItem", "none",
-    ]);
+  it("is only score multipliers", () => {
+    const allowed = new Set([0, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     for (const face of SLOT_FACES) {
-      expect(known, `${face.id} → ${face.effect.type}`).toContain(face.effect.type);
-      if (face.effect.type === "multiplier") expect(face.effect.seconds).toBeGreaterThan(0);
+      expect(face.effect.type, face.id).toBe("multiplier");
+      expect(allowed, face.id).toContain(face.effect.value);
+      expect(face.effect.seconds, face.id).toBeGreaterThan(0);
     }
+  });
+
+  it("gives chasers ninety-five percent good spins", () => {
+    const n = 20000;
+    let good = 0;
+    const rng = sequence(Array.from({ length: n }, (_, i) => (i + 0.5) / n));
+    for (let i = 0; i < n; i++) {
+      const { face } = spinSlots(rng, { chase: true });
+      if (face.effect.value > 1) good += 1;
+    }
+    expect(good / n).toBeCloseTo(0.95, 2);
+  });
+
+  it("gives weekly first a mixed wheel", () => {
+    const n = 20000;
+    let good = 0;
+    let blank = 0;
+    let bad = 0;
+    const rng = sequence(Array.from({ length: n }, (_, i) => (i + 0.5) / n));
+    for (let i = 0; i < n; i++) {
+      const { face } = spinSlots(rng, { chase: false });
+      if (face.effect.value > 1) good += 1;
+      else if (face.effect.value === 1) blank += 1;
+      else bad += 1;
+    }
+    expect(good / n).toBeCloseTo(0.7, 2);
+    expect(blank / n).toBeCloseTo(0.1, 2);
+    expect(bad / n).toBeCloseTo(0.2, 2);
   });
 
   it("never lands outside the wheel, whatever the draw", () => {
@@ -83,7 +108,6 @@ describe("the diamond wheel — the server's ceiling", () => {
     // board. Written as the product so the failure is loud.
     expect(MAX_MULTIPLIER).toBe(
       MAX_COMBO_MULTIPLIER *
-        DOUBLE_SCORE_MULTIPLIER *
         MAX_EVENT_MULTIPLIER *
         SLOT_TOP_MULTIPLIER *
         MAX_CHARACTER_SCORE_BONUS,
@@ -95,7 +119,6 @@ describe("the diamond wheel — the server's ceiling", () => {
     run.scoreScale = MAX_CHARACTER_SCORE_BONUS;
     run.eventMultiplier = MAX_EVENT_MULTIPLIER;
     run.setSlotMultiplier(SLOT_MAX_MULTIPLIER, 8);
-    run.powerups.double = 10;
     for (let i = 0; i < 200; i++) run.bumpCombo();
     expect(run.multiplier()).toBeLessThanOrEqual(MAX_MULTIPLIER);
   });
@@ -217,37 +240,30 @@ describe("the diamond wheel — what it pays", () => {
 });
 
 describe("characters — the plain half of the perk", () => {
-  it("gives every paid runner something that shows on the score or the coins", () => {
-    // The complaint this answers: sixty thousand coins bought a runner that
-    // felt identical for the whole of a run.
+  it("gives every paid runner a signature that is not empty", () => {
     for (const character of CHARACTERS) {
       if (character.cost === 0) continue;
-      const perk = character.perk ?? {};
-      const plain = (perk.scoreBonus ?? 1) > 1 || (perk.coinBonus ?? 1) > 1;
-      expect(plain, `${character.id} has nothing a player can feel`).toBe(true);
+      expect(Object.keys(character.perk ?? {}).length, character.id).toBeGreaterThan(0);
     }
   });
 
-  it("prices the score bonus in the order the shop draws them", () => {
-    const paid = CHARACTERS.filter((character) => character.cost > 0);
+  it("prices the score bonus in the order the shop draws the runners that have one", () => {
+    const paid = CHARACTERS.filter((character) => (character.perk?.scoreBonus ?? 1) > 1);
     for (let i = 1; i < paid.length; i++) {
       expect(paid[i].cost).toBeGreaterThan(paid[i - 1].cost);
       expect(paid[i].perk.scoreBonus).toBeGreaterThanOrEqual(paid[i - 1].perk.scoreBonus);
     }
   });
 
-  it("makes 허수아비 the best runner on a clean run, not only on a bad one", () => {
-    // It is the most expensive thing in the shop and was sold entirely on
-    // damage limitation, which is a thing nobody buys until they are already
-    // losing runs to it.
+  it("makes 허수아비 the crow specialist, not the score specialist", () => {
     const scarecrow = CHARACTERS.find((character) => character.id === "scarecrow");
-    expect(scarecrow.perk.scoreBonus).toBe(MAX_CHARACTER_SCORE_BONUS);
     expect(scarecrow.perk.crowTime).toBeLessThan(1);
+    expect(scarecrow.perk.scoreBonus).toBeUndefined();
   });
 
   it("carries the runner's score bonus into the run's multiplier", () => {
     const run = new Run(store());
-    run.scoreScale = 1.3;
-    expect(run.multiplier()).toBeCloseTo(1.3, 10);
+    run.scoreScale = 1.22;
+    expect(run.multiplier()).toBeCloseTo(1.22, 10);
   });
 });

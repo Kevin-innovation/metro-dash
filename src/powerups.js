@@ -29,25 +29,30 @@ export const POWERUPS = {
     latePerLevel: 0.5,
     blurb: `고도 ${JETPACK_ALTITUDE}m로 날아 장애물을 넘습니다`,
   },
-  double: {
-    id: "double",
-    name: "점수 2배",
-    icon: "✦",
-    colour: "#ffd24a",
-    base: 10,
-    perLevel: 2.5,
-    latePerLevel: 1.25,
-    blurb: "획득 점수가 두 배가 됩니다",
-  },
   sneakers: {
     id: "sneakers",
     name: "슈퍼 스니커즈",
     icon: "👟",
     colour: "#14d4b8",
-    base: 10,
+    base: 14,
     perLevel: 2.5,
     latePerLevel: 1.25,
     blurb: "점프가 높아집니다 (게이트는 못 넘습니다)",
+  },
+  /**
+   * Replaces 점수 2배. That one stacked with combo, the wheel and the runner
+   * and turned a long run into a different game. This one buys time to read
+   * the track, which is what a 2–3만 점 학생이 20만에 닿으려면 실제로 필요한 것.
+   */
+  focus: {
+    id: "focus",
+    name: "여유",
+    icon: "⏳",
+    colour: "#60a5fa",
+    base: 8,
+    perLevel: 1.5,
+    latePerLevel: 0.75,
+    blurb: "트랙이 느려져 피할 시간이 늘어납니다",
   },
 };
 
@@ -65,8 +70,8 @@ export const POWERUP_IDS = Object.keys(POWERUPS);
 export const POWERUP_METRIC = {
   magnet: "magnets",
   jetpack: "jetpacks",
-  double: "doubles",
   sneakers: "sneakers",
+  focus: "focuses",
 };
 
 /**
@@ -85,7 +90,20 @@ export const POWERUP_METRIC = {
  */
 export const POWERUP_BASE_LEVELS = 5;
 export const POWERUP_MAX_LEVEL = 8;
-export const DOUBLE_SCORE_MULTIPLIER = 2;
+/**
+ * Kept at 1 so anything still multiplying by it does not silently re-inflate
+ * the board. The 점수 2배 pickup is gone.
+ */
+export const DOUBLE_SCORE_MULTIPLIER = 1;
+/**
+ * How much of the speed curve 여유 leaves behind. Not a score multiplier —
+ * the whole point of replacing 점수 2배 is that this buys reading time.
+ */
+export const FOCUS_SPEED = 0.78;
+
+export function runSpeedFactor(focusActive) {
+  return focusActive ? FOCUS_SPEED : 1;
+}
 
 /** Seconds a pickup lasts at the given shop level (1-based). */
 export function powerupDuration(id, level = 1) {
@@ -143,7 +161,7 @@ export function jumpMultiplier(timers) {
   return isActive(timers, "sneakers") ? SNEAKER_JUMP_MULT : 1;
 }
 
-/** Score multiplier contributed by power-ups alone. */
-export function powerupScoreMultiplier(timers) {
-  return isActive(timers, "double") ? DOUBLE_SCORE_MULTIPLIER : 1;
+/** Score multiplier contributed by power-ups alone. Always 1: none of them score. */
+export function powerupScoreMultiplier(_timers) {
+  return 1;
 }

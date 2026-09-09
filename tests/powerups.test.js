@@ -63,15 +63,15 @@ describe("power-up timers", () => {
 
   it("reports each power-up exactly once as it expires", () => {
     const timers = createPowerupState();
-    activatePowerup(timers, "double", 1);
-    const duration = powerupDuration("double", 1);
+    activatePowerup(timers, "focus", 1);
+    const duration = powerupDuration("focus", 1);
 
     let expiries = 0;
     for (let t = 0; t < duration + 2; t += 0.5) {
-      expiries += tickPowerups(timers, 0.5).filter((id) => id === "double").length;
+      expiries += tickPowerups(timers, 0.5).filter((id) => id === "focus").length;
     }
     expect(expiries).toBe(1);
-    expect(isActive(timers, "double")).toBe(false);
+    expect(isActive(timers, "focus")).toBe(false);
   });
 
   it("never goes negative", () => {
@@ -104,11 +104,12 @@ describe("power-up effects", () => {
     expect(SNEAKER_APEX).toBeLessThan(SPEC.sign.maxY);
   });
 
-  it("double score applies only while active", () => {
+  it("no power-up multiplies the score", () => {
     const timers = createPowerupState();
     expect(powerupScoreMultiplier(timers)).toBe(1);
-    activatePowerup(timers, "double", 1);
-    expect(powerupScoreMultiplier(timers)).toBe(DOUBLE_SCORE_MULTIPLIER);
+    activatePowerup(timers, "focus", 1);
+    expect(powerupScoreMultiplier(timers)).toBe(1);
+    expect(DOUBLE_SCORE_MULTIPLIER).toBe(1);
   });
 
   it("every power-up has a matching world pickup", () => {

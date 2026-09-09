@@ -41,7 +41,7 @@ export const EVENTS = [
     /** Nothing lethal at all: the reward for surviving to it is a rest. */
     patterns: ["rush-coins"],
     seconds: 8,
-    scoreMultiplier: 2,
+    scoreMultiplier: 1,
     colour: "#ffd24a",
   },
   {
@@ -50,7 +50,7 @@ export const EVENTS = [
     /** Slide, stand, slide. One verb, over and over, until it is a rhythm. */
     patterns: ["triple-sign", "gate-run"],
     seconds: 11,
-    scoreMultiplier: 1.5,
+    scoreMultiplier: 2,
     colour: "#7dfcd4",
   },
   {
@@ -58,7 +58,7 @@ export const EVENTS = [
     name: "지붕 하이웨이",
     /** The ground is still there; it is simply where the coins are not. */
     patterns: ["roof-weave", "bus-hop", "bus-roof"],
-    scoreMultiplier: 1.5,
+    scoreMultiplier: 2,
     colour: "#8fd0ff",
   },
 ];

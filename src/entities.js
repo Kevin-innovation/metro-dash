@@ -350,15 +350,21 @@ export function makeJetpack() {
   return g;
 }
 
-export function makeDouble() {
-  const g = powerupShell(0xffd24a, 0xffab00);
-  const star = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.34, 1),
-    new THREE.MeshLambertMaterial({ color: 0xffd24a, emissive: 0xffab00, emissiveIntensity: 0.65 }),
+export function makeFocus() {
+  const g = powerupShell(0x60a5fa, 0x2563eb);
+  const glass = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.28, 0),
+    new THREE.MeshLambertMaterial({ color: 0x93c5fd, emissive: 0x1d4ed8, emissiveIntensity: 0.55 }),
   );
-  star.position.y = 0.22;
-  star.scale.set(1, 1.35, 1);
-  g.add(star);
+  glass.position.y = 0.22;
+  glass.scale.set(0.7, 1.45, 0.7);
+  g.add(glass);
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.2, 0.04, 6, 12),
+    new THREE.MeshLambertMaterial({ color: 0xdbeafe, emissive: 0x60a5fa, emissiveIntensity: 0.7 }),
+  );
+  rim.position.y = 0.42;
+  g.add(rim);
   return g;
 }
 
@@ -531,7 +537,7 @@ const FACTORIES = {
   coin: makeCoin,
   magnet: makeMagnet,
   jetpack: makeJetpack,
-  double: makeDouble,
+  focus: makeFocus,
   sneakers: makeSneakers,
   crowEgg: makeCrowEgg,
   diamond: makeDiamond,

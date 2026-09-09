@@ -150,13 +150,12 @@ describe("the upgrade track has a late game", () => {
     expect(POWERUP_MAX_LEVEL).toBeGreaterThan(POWERUP_BASE_LEVELS);
   });
 
-  it("leaves the first five levels exactly as they were", () => {
-    // Anyone part-way up this track paid these prices for these durations.
+  it("leaves the first five upgrade prices exactly as they were", () => {
     expect(UPGRADE_COSTS.slice(0, 6)).toEqual([0, 0, 500, 1200, 2400, 4200]);
-    expect(powerupDuration("magnet", 5)).toBe(16);
+    expect(powerupDuration("magnet", 5)).toBe(18);
     expect(powerupDuration("jetpack", 5)).toBe(12);
-    expect(powerupDuration("double", 5)).toBe(20);
-    expect(powerupDuration("sneakers", 5)).toBe(20);
+    expect(powerupDuration("focus", 5)).toBe(14);
+    expect(powerupDuration("sneakers", 5)).toBe(24);
   });
 
   it("costs more per level than it did, and buys less", () => {

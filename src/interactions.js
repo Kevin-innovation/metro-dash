@@ -1,10 +1,7 @@
-import { LANE_TOLERANCE, lerp, nearMiss, sweptHit } from "./collision.js";
+import { LANE_TOLERANCE, lerp, sweptHit } from "./collision.js";
 import {
   COLLIDE_PAD_Y,
-  LATE_DODGE_WINDOW,
   MAGNET_RANGE,
-  NEAR_MISS_HEIGHT,
-  NEAR_MISS_RANGE,
   PICKUP_DEPTH,
 } from "./config.js";
 import { POWERUPS } from "./powerups.js";
@@ -187,46 +184,31 @@ export class Interactions {
   }
 
   /**
-   * Award a bonus the moment the runner squeaks past an obstacle. Scored once
-   * per obstacle, on the step where its Z is crossed.
+   * Credit the verbs that keep a combo alive, once per obstacle as its Z is
+   * crossed: a gate is a slide, a crate or barrier is a jump. Vehicles are
+   * scored on mount, not on walking past in another lane.
    *
-   * Also tallies what the runner got past, by the move it took to clear it, so
-   * missions can ask for gates specifically rather than just "obstacles".
-   *
-   * @returns {{ nearMisses: number, gates: number, barriers: number }}
+   * @returns {{ tricks: string[], gates: number, barriers: number }}
    */
-  scoreNearMisses(player) {
-    const tally = { nearMisses: 0, gates: 0, barriers: 0 };
+  scoreClears(player) {
+    const tally = { tricks: [], gates: 0, barriers: 0 };
     if (player.flying) return tally;
 
     for (const item of this.pool.live) {
       if (!item.lethal || item.scored || item.taken) continue;
-      // Only when the runner crosses the obstacle this step.
       if (player.prevZ - item.prevZ >= 0 || player.z - item.z < 0) continue;
       item.scored = true;
       if (item.type === "sign") tally.gates += 1;
       else if (item.type === "barrier") tally.barriers += 1;
       if (player.mounted === item) continue;
 
-      // Swerving out of this obstacle's lane at the last moment counts, even
-      // though the lerp has already carried the runner clear of it.
-      const lateDodge =
-        item.lane === player.laneFrom && player.laneChangeT < LATE_DODGE_WINDOW;
-
-      const kind = nearMiss(
-        { x: player.x, y: player.y, z: player.z, height: player.height },
-        { x: item.mesh.position.x, minY: item.minY, maxY: item.maxY },
-        {
-          laneRange: NEAR_MISS_RANGE,
-          heightRange: NEAR_MISS_HEIGHT,
-          padY: COLLIDE_PAD_Y,
-          lateDodge,
-        },
-      );
-      if (!kind) continue;
-
-      this.run.addNearMiss();
-      tally.nearMisses += 1;
+      if (item.type === "sign") {
+        this.run.addClear("slide");
+        tally.tricks.push("slide");
+      } else if (item.type === "barrier" || item.type === "crate") {
+        this.run.addClear("jump");
+        tally.tricks.push("jump");
+      }
     }
 
     this.run.addCleared(tally);

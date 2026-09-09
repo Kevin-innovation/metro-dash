@@ -1109,9 +1109,11 @@ export class Screens {
     chip.classList.add("coin-punch");
   }
 
-  flashNearMiss() {
+  flashTrick(kind) {
     const el = $("near-miss");
     if (!el) return;
+    const labels = { slide: "SLIDE!", jump: "JUMP!", roof: "ROOF!" };
+    el.textContent = labels[kind] ?? "NICE!";
     el.classList.remove("hidden", "pop");
     void el.offsetWidth;
     el.classList.add("pop");
@@ -1135,7 +1137,8 @@ export class Screens {
     $("new-best").classList.toggle("hidden", rounded < save.best || rounded === 0);
 
     const nearEl = $("final-nearmiss");
-    if (nearEl) nearEl.textContent = String(run.metrics.nearMisses);
+    // Kept the slot: it now shows gates cleared, the verb that replaced near-miss.
+    if (nearEl) nearEl.textContent = String(run.metrics.gates);
     const mountEl = $("final-mounts");
     if (mountEl) mountEl.textContent = String(run.metrics.mounts);
     const xpEl = $("final-xp");
