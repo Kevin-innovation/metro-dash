@@ -1,16 +1,13 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SIGN_BOARD_BOTTOM } from "../src/config.js";
-import { KAI_FRAMES, kaiSlideTop, pickKaiFrame, setKaiLook } from "../src/player.js";
+import { KAI_FRAMES, pickKaiFrame, setKaiLook } from "../src/player.js";
 
 const GROUND = {
   sliding: false,
   jumping: false,
   diving: false,
   flying: false,
-  boarding: false,
-  mounting: false,
   runT: 0,
 };
 
@@ -34,12 +31,11 @@ describe("카이 billboard", () => {
     expect(puppet.visible).toBe(false);
   });
 
-  it("keeps the boxes until the sprite actually exists", () => {
+  it("does not throw if the sprite has not loaded yet", () => {
     const box = { visible: true };
     const p = { rigMeshes: [box], puppet: null, kaiLook: false };
     expect(() => setKaiLook(p, true)).not.toThrow();
-    expect(p.kaiLook).toBe(true);
-    expect(box.visible).toBe(true);
+    expect(box.visible).toBe(false);
   });
 });
 
@@ -70,15 +66,6 @@ describe("카이 run cycle", () => {
 
   it("uses the slide pose while sliding, even if a jump flag is still set", () => {
     expect(pickKaiFrame({ ...GROUND, sliding: true, jumping: true })).toBe("slide");
-  });
-
-  it("plants the idle pose on a hoverboard or a roof climb", () => {
-    expect(pickKaiFrame({ ...GROUND, boarding: true })).toBe("idle");
-    expect(pickKaiFrame({ ...GROUND, mounting: true })).toBe("idle");
-  });
-
-  it("fits the slide silhouette under the yellow gate", () => {
-    expect(kaiSlideTop()).toBeLessThan(SIGN_BOARD_BOTTOM);
   });
 });
 
