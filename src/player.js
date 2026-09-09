@@ -151,8 +151,16 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
   );
   shadow.rotation.x = -Math.PI / 2;
 
+  const jetIds = new Set();
+  jets.traverse((child) => {
+    if (child.isMesh) jetIds.add(child.id);
+  });
+  const rigMeshes = [];
   hip.traverse((child) => {
-    if (child.isMesh) child.castShadow = true;
+    if (child.isMesh) {
+      child.castShadow = true;
+      if (!jetIds.has(child.id)) rigMeshes.push(child);
+    }
   });
 
   return {
@@ -166,6 +174,9 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     jets,
     board,
     parts,
+    rigMeshes,
+    puppet: null,
+    kaiLook: false,
     lane: 0,
     /** Lane the runner most recently left, and how long ago, for late dodges. */
     laneFrom: 0,
@@ -207,11 +218,60 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
 }
 
 /** Recolour the runner in place when a different character is equipped. */
-export function applySkin(p, palette) {
+export function applySkin(p, palette, id = "runner") {
   const skin = { ...DEFAULT_PALETTE, ...palette };
   for (const [slot, meshes] of Object.entries(p.parts)) {
     for (const mesh of meshes) mesh.material.color.setHex(skin[slot]);
   }
+  setKaiLook(p, id === "runner");
+}
+
+/** Cute DLAB student billboard. Only 카이 uses it; everyone else keeps the boxes. */
+export function setKaiLook(p, on) {
+  p.kaiLook = !!on;
+  if (p.puppet) p.puppet.visible = p.kaiLook;
+  for (const mesh of p.rigMeshes ?? []) mesh.visible = !p.kaiLook;
+}
+
+const KAI_TEX = "/characters/kai/full.png";
+
+/**
+ * Load the back-view sprite and hide the box rig when 카이 is on.
+ *
+ * Async on purpose: a missing file must not stop the game booting. The boxes
+ * stay up until the texture arrives.
+ */
+export function loadKaiPuppet(p) {
+  const loader = new THREE.TextureLoader();
+  loader.load(
+    KAI_TEX,
+    (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      const sprite = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.22, 1.64),
+        new THREE.MeshBasicMaterial({
+          map: tex,
+          transparent: true,
+          alphaTest: 0.22,
+          side: THREE.DoubleSide,
+        }),
+      );
+      // Player faces +Z; the camera sits behind, so the back of the sprite
+      // has to look down -Z.
+      sprite.rotation.y = Math.PI;
+      const puppet = new THREE.Group();
+      puppet.add(sprite);
+      puppet.position.y = 0.82;
+      p.root.add(puppet);
+      p.puppet = puppet;
+      setKaiLook(p, p.kaiLook);
+    },
+    undefined,
+    () => {
+      /* Keep the box rig if the sprite cannot load. */
+    },
+  );
 }
 
 export function resetPlayer(p, z = 0) {
@@ -491,6 +551,33 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
   animatePlayer(p, speed);
 }
 
+function poseKaiPuppet(p) {
+  const puppet = p.puppet;
+  if (!puppet || !p.kaiLook) return;
+  if (p.sliding) {
+    puppet.scale.set(1.18, 0.48, 1);
+    puppet.position.y = 0.38;
+    puppet.rotation.x = 0.15;
+    return;
+  }
+  if (p.flying) {
+    puppet.scale.set(1, 1.06, 1);
+    puppet.position.y = 0.9 + Math.sin(p.runT * 6) * 0.05;
+    puppet.rotation.x = -0.12;
+    return;
+  }
+  if (p.jumping || p.diving) {
+    puppet.scale.set(0.96, 1.1, 1);
+    puppet.position.y = 0.92;
+    puppet.rotation.x = p.diving ? 0.35 : -0.08;
+    return;
+  }
+  const bob = Math.sin(p.runT * 10) * 0.035;
+  puppet.scale.set(1, 1 + bob * 0.35, 1);
+  puppet.position.y = 0.82 + bob;
+  puppet.rotation.x = 0.04;
+}
+
 function enterFlight(p) {
   if (!p.flying) {
     p.flying = true;
@@ -528,6 +615,8 @@ function animatePlayer(p, speed) {
     p.root.visible = t < 1;
     return;
   }
+
+  poseKaiPuppet(p);
 
   if (p.flying) {
     p.hip.rotation.x = -0.22;

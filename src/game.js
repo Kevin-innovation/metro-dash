@@ -26,7 +26,7 @@ import { RunSchedule } from "./schedule.js";
 
 import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier, runSpeedFactor } from "./powerups.js";
 import { ParticleField } from "./particles.js";
-import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
+import { applyAction, applySkin, createPlayer, loadKaiPuppet, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import { SaveStore, hasProgress, mergeProfiles, normalizeSave } from "./save.js";
@@ -185,6 +185,12 @@ export class Game {
     this.world = createWorld(this.scene, this.quality);
 
     this.player = createPlayer(characterById(this.store.data.character).palette);
+    loadKaiPuppet(this.player);
+    applySkin(
+      this.player,
+      characterById(this.store.data.character).palette,
+      this.store.data.character,
+    );
     this.scene.add(this.player.root);
     this.scene.add(this.player.shadow);
     // Rides the runner rather than the track, so it is not in the entity pool.
@@ -495,7 +501,11 @@ export class Game {
     this.store.flush();
     this.settings = this.store.data.settings;
     this.syncMissions();
-    applySkin(this.player, characterById(this.store.data.character).palette);
+    applySkin(
+      this.player,
+      characterById(this.store.data.character).palette,
+      this.store.data.character,
+    );
     this.applyQuality(this.activeTier());
   }
 
@@ -1094,7 +1104,11 @@ export class Game {
     }
     this.audio.purchase();
     if (kind === "character") {
-      applySkin(this.player, characterById(this.store.data.character).palette);
+      applySkin(
+        this.player,
+        characterById(this.store.data.character).palette,
+        this.store.data.character,
+      );
     }
     this.screens.refreshShop(this.store.data);
     this.screens.refreshProfile(this.store.data);
