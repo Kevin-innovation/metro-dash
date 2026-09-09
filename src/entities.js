@@ -351,20 +351,20 @@ export function makeJetpack() {
 }
 
 export function makeFocus() {
-  const g = powerupShell(0x60a5fa, 0x2563eb);
-  const glass = new THREE.Mesh(
-    new THREE.OctahedronGeometry(0.28, 0),
-    new THREE.MeshLambertMaterial({ color: 0x93c5fd, emissive: 0x1d4ed8, emissiveIntensity: 0.55 }),
-  );
-  glass.position.y = 0.22;
-  glass.scale.set(0.7, 1.45, 0.7);
-  g.add(glass);
-  const rim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.2, 0.04, 6, 12),
-    new THREE.MeshLambertMaterial({ color: 0xdbeafe, emissive: 0x60a5fa, emissiveIntensity: 0.7 }),
-  );
-  rim.position.y = 0.42;
-  g.add(rim);
+  const g = powerupShell(0xfbbf24, 0xf59e0b);
+  const mat = new THREE.MeshLambertMaterial({
+    color: 0xfde68a,
+    emissive: 0xf59e0b,
+    emissiveIntensity: 0.9,
+  });
+  const upper = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.44, 0.12), mat);
+  upper.position.set(0.07, 0.5, 0);
+  upper.rotation.z = 0.48;
+  g.add(upper);
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.4, 0.12), mat);
+  lower.position.set(-0.07, 0.18, 0);
+  lower.rotation.z = -0.52;
+  g.add(lower);
   return g;
 }
 

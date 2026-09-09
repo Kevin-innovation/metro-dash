@@ -40,19 +40,20 @@ export const POWERUPS = {
     blurb: "점프가 높아집니다 (게이트는 못 넘습니다)",
   },
   /**
-   * Replaces 점수 2배. That one stacked with combo, the wheel and the runner
-   * and turned a long run into a different game. This one buys time to read
-   * the track, which is what a 2–3만 점 학생이 20만에 닿으려면 실제로 필요한 것.
+   * Replaces 여유, which replaced 점수 2배. Slowing the track fought the
+   * thing the game is. This one leans into it: a short rush. Distance score
+   * rises because more metres go by, not because a multiplier stacked.
+   * The save id stays `focus` so shop levels do not reset.
    */
   focus: {
     id: "focus",
-    name: "여유",
-    icon: "⏳",
-    colour: "#60a5fa",
+    name: "질주",
+    icon: "⚡",
+    colour: "#fbbf24",
     base: 8,
     perLevel: 1.5,
     latePerLevel: 0.75,
-    blurb: "트랙이 느려져 피할 시간이 늘어납니다",
+    blurb: "트랙이 빨라집니다. 점수 배수는 없고, 같은 시간에 더 멀리 갑니다",
   },
 };
 
@@ -96,13 +97,13 @@ export const POWERUP_MAX_LEVEL = 8;
  */
 export const DOUBLE_SCORE_MULTIPLIER = 1;
 /**
- * How much of the speed curve 여유 leaves behind. Not a score multiplier —
- * the whole point of replacing 점수 2배 is that this buys reading time.
+ * How much faster 질주 makes the curve. Not a score multiplier — metres
+ * tick up quicker, and that is the whole of the bonus.
  */
-export const FOCUS_SPEED = 0.78;
+export const SPRINT_SPEED = 1.25;
 
-export function runSpeedFactor(focusActive) {
-  return focusActive ? FOCUS_SPEED : 1;
+export function runSpeedFactor(sprintActive) {
+  return sprintActive ? SPRINT_SPEED : 1;
 }
 
 /** Seconds a pickup lasts at the given shop level (1-based). */

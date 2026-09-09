@@ -2050,6 +2050,10 @@ export class Game {
         if (event.id === "jetpack") this.audio.jetpack();
         else this.audio.powerup();
         this.screens.showToast(`${POWERUPS[event.id].icon} ${POWERUPS[event.id].name}!`);
+        if (event.id === "focus") {
+          this.fovPunch = Math.max(this.fovPunch, 1);
+          this.speedBurst(10);
+        }
         vibrate(18);
       }
     }
@@ -2086,6 +2090,10 @@ export class Game {
     if (id === "jetpack") this.audio.jetpack();
     else this.audio.powerup();
     this.screens.showToast(`${POWERUPS[id].icon} ${POWERUPS[id].name}!`);
+    if (id === "focus") {
+      this.fovPunch = Math.max(this.fovPunch, 1);
+      this.speedBurst(10);
+    }
     vibrate(18);
   }
 

@@ -129,7 +129,7 @@ export function normalizeSave(raw) {
     for (const id of POWERUP_IDS) {
       out.upgrades[id] = clampInt(raw.upgrades[id] ?? 1, 1, POWERUP_MAX_LEVEL);
     }
-    // 점수 2배를 여유로 갈아탔을 때, 이미 올린 레벨이 1로 돌아가지 않게.
+    // 점수 2배 → 여유 → 질주. 같은 칸의 레벨이 1로 돌아가지 않게.
     if (raw.upgrades.double && !raw.upgrades.focus) {
       out.upgrades.focus = clampInt(raw.upgrades.double, 1, POWERUP_MAX_LEVEL);
     }

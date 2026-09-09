@@ -102,7 +102,7 @@ const AUTHORED_DEFS = [
   { id: "magnet-total", metric: "magnets", scope: "total",
     targets: [4, 10, 20, 35, 55, 82, 120], label: "자석 {t}번 사용하기", coins: 115, xp: 90 },
   { id: "double-total", metric: "focuses", scope: "total",
-    targets: [4, 10, 20, 35, 55, 82, 120], label: "여유 {t}번 사용하기", coins: 125, xp: 100 },
+    targets: [4, 10, 20, 35, 55, 82, 120], label: "질주 {t}번 사용하기", coins: 125, xp: 100 },
   { id: "sneakers-total", metric: "sneakers", scope: "total",
     targets: [4, 10, 20, 35, 55, 82, 120], label: "슈퍼 스니커즈 {t}번 사용하기", coins: 120, xp: 95 },
   { id: "board-total", metric: "boards", scope: "total",

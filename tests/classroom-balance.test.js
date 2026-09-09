@@ -20,7 +20,7 @@ import {
 } from "../src/config.js";
 import { SPEC } from "../src/specs.js";
 import {
-  FOCUS_SPEED,
+  SPRINT_SPEED,
   POWERUP_IDS,
   POWERUPS,
   DOUBLE_SCORE_MULTIPLIER,
@@ -143,26 +143,26 @@ describe("점수 2배 is gone", () => {
   });
 });
 
-describe("여유 replaces the double", () => {
-  it("is a power-up the shop, the track and the wheel all know", () => {
+describe("질주 replaces 여유", () => {
+  it("is a power-up the shop and the track still know as focus", () => {
     expect(POWERUP_IDS).toContain("focus");
-    expect(POWERUPS.focus.name).toBe("여유");
+    expect(POWERUPS.focus.name).toBe("질주");
     expect(SPEC.focus.powerup).toBe("focus");
     expect(POWERUP_PATTERNS.focus).toBeTypeOf("function");
   });
 
-  it("slows the run instead of multiplying the score", () => {
-    expect(FOCUS_SPEED).toBeLessThan(1);
-    expect(FOCUS_SPEED).toBeGreaterThan(0.5);
+  it("speeds the run instead of slowing it, and does not multiply the score", () => {
+    expect(SPRINT_SPEED).toBeGreaterThan(1);
+    expect(SPRINT_SPEED).toBeLessThan(1.5);
     expect(runSpeedFactor(false)).toBe(1);
-    expect(runSpeedFactor(true)).toBe(FOCUS_SPEED);
+    expect(runSpeedFactor(true)).toBe(SPRINT_SPEED);
     const timers = createPowerupState();
     activatePowerup(timers, "focus", 1);
     expect(isActive(timers, "focus")).toBe(true);
     expect(powerupScoreMultiplier(timers)).toBe(1);
   });
 
-  it("carries spent 점수 2배 upgrades onto 여유 so nobody is reset to Lv.1", () => {
+  it("keeps spent 점수 2배 / 여유 upgrades so nobody is reset to Lv.1", () => {
     const save = normalizeSave({ upgrades: { magnet: 3, double: 6, sneakers: 2 } });
     expect(save.upgrades.focus).toBe(6);
     expect(save.upgrades.double).toBeUndefined();
@@ -231,10 +231,11 @@ describe("new character perks actually fire", () => {
   });
 });
 
-describe("the 여유 mission replaced 점수 2배", () => {
-  it("tracks focuses, not doubles", () => {
+describe("the 질주 mission replaced 여유", () => {
+  it("tracks focuses, not doubles, and says 질주", () => {
     const def = MISSION_DEFS.find((entry) => entry.id === "double-total");
     expect(def.metric).toBe("focuses");
-    expect(def.label).toContain("여유");
+    expect(def.label).toContain("질주");
+    expect(def.label).not.toContain("여유");
   });
 });

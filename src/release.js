@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.80";
+export const VERSION = "2.84";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,16 @@ export const VERSION = "2.80";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.84",
+    date: "2026-09-10",
+    kind: "major",
+    title: "모래시계 대신 질주",
+    notes: [
+      "여유(모래시계)가 없어졌습니다. 트랙을 늦추는 아이템이었어요. 그 자리에 「질주」가 옵니다. 먹으면 트랙이 빨라집니다. 점수 배수는 없고, 같은 시간에 더 멀리 달립니다.",
+      "상점에서 여유를 강화해 둔 계정은 그 레벨이 질주로 그대로 넘어갑니다.",
+    ],
+  },
   {
     version: "2.80",
     date: "2026-09-09",
