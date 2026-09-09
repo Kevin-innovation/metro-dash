@@ -229,24 +229,40 @@ export function applySkin(p, palette, id = "runner") {
 /** Cute DLAB student billboard. Only 카이 uses it; everyone else keeps the boxes. */
 export function setKaiLook(p, on) {
   p.kaiLook = !!on;
+  const showPuppet = p.kaiLook && !!p.puppet;
   if (p.puppet) p.puppet.visible = p.kaiLook;
-  for (const mesh of p.rigMeshes ?? []) mesh.visible = !p.kaiLook;
+  for (const mesh of p.rigMeshes ?? []) mesh.visible = !showPuppet;
 }
 
-/** Back-view run cycle. Opposite strides, plus jump and slide. */
+/** Back-view run cycle. Opposite strides, plus jump, slide, and a planted idle. */
 export const KAI_FRAMES = {
   run0: "/characters/kai/run0.png",
   run1: "/characters/kai/run1.png",
   jump: "/characters/kai/jump.png",
   slide: "/characters/kai/slide.png",
+  idle: "/characters/kai/idle.png",
 };
 
 /** Frame slots per unit of runT. At typical runT speed this is a cartoon pump. */
 export const KAI_STRIDE_RATE = 4;
+export const KAI_PLANE_W = 1.18;
+export const KAI_PLANE_H = 1.58;
+/** Tight slide art on a short plane so the lunge fits under SIGN_BOARD_BOTTOM. */
+export const KAI_SLIDE_W = 0.87;
+export const KAI_SLIDE_H = 0.9;
+export const KAI_SLIDE_Y = KAI_SLIDE_H / 2;
+export const KAI_SLIDE_SCALE_X = KAI_SLIDE_W / KAI_PLANE_W;
+export const KAI_SLIDE_SCALE_Y = KAI_SLIDE_H / KAI_PLANE_H;
+
+/** Top of the slide billboard in world units. Must sit under SIGN_BOARD_BOTTOM. */
+export function kaiSlideTop() {
+  return KAI_SLIDE_Y + KAI_SLIDE_H / 2;
+}
 
 export function pickKaiFrame(p) {
   if (p.sliding) return "slide";
   if (p.flying || p.jumping || p.diving) return "jump";
+  if (p.boarding || p.mounting) return "idle";
   return Math.floor((p.runT ?? 0) * KAI_STRIDE_RATE) % 2 === 0 ? "run0" : "run1";
 }
 
@@ -261,13 +277,12 @@ function prepKaiTexture(tex) {
 
 function attachKaiPuppet(p, maps) {
   const sprite = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.18, 1.58),
+    new THREE.PlaneGeometry(KAI_PLANE_W, KAI_PLANE_H),
     new THREE.MeshBasicMaterial({
       map: maps.run0,
-      transparent: true,
       alphaTest: 0.5,
       depthWrite: true,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
     }),
   );
   // Player faces +Z; the camera sits behind, so the back of the sprite
@@ -286,7 +301,7 @@ function attachKaiPuppet(p, maps) {
 
 /**
  * Load the run-cycle sprites. Missing files must not stop the game booting.
- * 카이의 박스는 applySkin이 먼저 끄고, 스프라이트는 텍스처가 오면 붙는다.
+ * Boxes stay up until a puppet exists; a missing frame aliases to whatever loaded.
  */
 export function loadKaiPuppet(p) {
   if (p.puppet) return;
@@ -298,7 +313,9 @@ export function loadKaiPuppet(p) {
     if (tex) maps[name] = tex;
     left -= 1;
     if (left > 0) return;
-    if (names.some((key) => !maps[key])) return;
+    const fallback = maps.run0 || maps.run1 || maps.idle || maps.jump || maps.slide;
+    if (!fallback) return;
+    for (const key of names) if (!maps[key]) maps[key] = fallback;
     attachKaiPuppet(p, maps);
   };
   for (const name of names) {
@@ -594,12 +611,12 @@ function poseKaiPuppet(p) {
   const frame = pickKaiFrame(p);
   if (p.kaiSprite && p.kaiMaps?.[frame] && p.kaiFrame !== frame) {
     p.kaiSprite.material.map = p.kaiMaps[frame];
-    p.kaiSprite.material.needsUpdate = true;
     p.kaiFrame = frame;
   }
   puppet.scale.set(1, 1, 1);
   if (p.sliding) {
-    puppet.position.y = 0.62;
+    puppet.scale.set(KAI_SLIDE_SCALE_X, KAI_SLIDE_SCALE_Y, 1);
+    puppet.position.y = KAI_SLIDE_Y;
     puppet.rotation.x = 0.08;
     return;
   }
