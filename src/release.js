@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.84";
+export const VERSION = "2.85";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,15 @@ export const VERSION = "2.84";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "2.85",
+    date: "2026-09-10",
+    kind: "minor",
+    title: "까마귀는 10만 점부터",
+    notes: [
+      "까마귀 알이 20만 점이 아니라 10만 점을 넘기면 나옵니다. 그 전엔 한 개도 없고, 그 뒤로는 예전과 같은 간격입니다.",
+    ],
+  },
   {
     version: "2.84",
     date: "2026-09-10",

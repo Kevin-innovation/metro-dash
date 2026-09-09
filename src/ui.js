@@ -464,7 +464,7 @@ export function renderShop(root, view) {
       <div class="shop-body">
         <div class="shop-title">까마귀 해독제 <em>${antidote.owned}/${antidote.max}</em></div>
         <div class="shop-blurb">까마귀 알을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다</div>
-        <div class="shop-meta">까마귀는 20만 점부터 나옵니다</div>
+        <div class="shop-meta">까마귀는 10만 점부터 나옵니다</div>
       </div>
       <button type="button" class="shop-buy" data-buy="antidote" data-id="antidote"
         ${antidote.affordable ? "" : "disabled"}>${

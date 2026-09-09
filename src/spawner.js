@@ -58,7 +58,7 @@ const POWERUP_EVERY = 6;
  * since the magnet now drags the egg in, the power-up that beginners like best
  * was the one delivering it. "Collect everything" is the first thing this game
  * teaches and the crow is the first thing that punishes it, which is a fine
- * lesson at two hundred thousand and a reason to stop playing at two thousand.
+ * lesson at one hundred thousand and a reason to stop playing at two thousand.
  *
  * So the bird is an endgame animal now. Nothing below the threshold, one in
  * nine above it — about eleven seconds apart, which is a real and constant
@@ -69,7 +69,7 @@ const POWERUP_EVERY = 6;
  * player survived; score is how well, and the run that should get hard is the
  * one going well.
  */
-export const HAZARD_FROM_SCORE = 200_000;
+export const HAZARD_FROM_SCORE = 100_000;
 const HAZARD_EVERY = 9;
 /** How far either side of that cadence an egg may fall. */
 const HAZARD_SPREAD = 3;

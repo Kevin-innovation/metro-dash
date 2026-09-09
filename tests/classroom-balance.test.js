@@ -183,8 +183,8 @@ describe("the floor of a run climbs toward two hundred thousand", () => {
     expect(PRESSURE_STARTS_AT).toBeGreaterThanOrEqual(12);
   });
 
-  it("still waits for two hundred thousand before the crow", () => {
-    expect(HAZARD_FROM_SCORE).toBe(200_000);
+  it("lets the crow in from one hundred thousand", () => {
+    expect(HAZARD_FROM_SCORE).toBe(100_000);
   });
 
   it("lets a short, ordinary run bank a six-figure score", () => {
