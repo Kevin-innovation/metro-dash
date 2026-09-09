@@ -246,4 +246,12 @@ describe("version and patch notes", () => {
     const seen = new Set(CHANGELOG.map((e) => e.version));
     expect(seen.size).toBe(CHANGELOG.length);
   });
+
+  it("does not tell players about the wheel's rank handicap", () => {
+    const text = CHANGELOG.flatMap((entry) => [entry.title, ...entry.notes]).join("\n");
+    expect(text).not.toMatch(/1등만/);
+    expect(text).not.toMatch(/운이 보통/);
+    expect(text).not.toMatch(/95%/);
+    expect(text).not.toMatch(/이득 70/);
+  });
 });
