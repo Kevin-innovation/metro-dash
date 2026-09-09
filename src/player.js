@@ -233,45 +233,82 @@ export function setKaiLook(p, on) {
   for (const mesh of p.rigMeshes ?? []) mesh.visible = !p.kaiLook;
 }
 
-const KAI_TEX = "/characters/kai/full.png";
+/** Back-view run cycle. Opposite strides, plus jump and slide. */
+export const KAI_FRAMES = {
+  run0: "/characters/kai/run0.png",
+  run1: "/characters/kai/run1.png",
+  jump: "/characters/kai/jump.png",
+  slide: "/characters/kai/slide.png",
+};
+
+/** Frame slots per unit of runT. At typical runT speed this is a cartoon pump. */
+export const KAI_STRIDE_RATE = 4;
+
+export function pickKaiFrame(p) {
+  if (p.sliding) return "slide";
+  if (p.flying || p.jumping || p.diving) return "jump";
+  return Math.floor((p.runT ?? 0) * KAI_STRIDE_RATE) % 2 === 0 ? "run0" : "run1";
+}
+
+function prepKaiTexture(tex) {
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+
+function attachKaiPuppet(p, maps) {
+  const sprite = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.18, 1.58),
+    new THREE.MeshBasicMaterial({
+      map: maps.run0,
+      transparent: true,
+      alphaTest: 0.5,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+    }),
+  );
+  // Player faces +Z; the camera sits behind, so the back of the sprite
+  // has to look down -Z.
+  sprite.rotation.y = Math.PI;
+  const puppet = new THREE.Group();
+  puppet.add(sprite);
+  puppet.position.y = 0.79;
+  p.root.add(puppet);
+  p.puppet = puppet;
+  p.kaiSprite = sprite;
+  p.kaiMaps = maps;
+  p.kaiFrame = "run0";
+  setKaiLook(p, p.kaiLook);
+}
 
 /**
- * Load the back-view sprite and hide the box rig when 카이 is on.
- *
- * Async on purpose: a missing file must not stop the game booting. The boxes
- * stay up until the texture arrives.
+ * Load the run-cycle sprites. Missing files must not stop the game booting.
+ * 카이의 박스는 applySkin이 먼저 끄고, 스프라이트는 텍스처가 오면 붙는다.
  */
 export function loadKaiPuppet(p) {
+  if (p.puppet) return;
   const loader = new THREE.TextureLoader();
-  loader.load(
-    KAI_TEX,
-    (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = 8;
-      const sprite = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.22, 1.64),
-        new THREE.MeshBasicMaterial({
-          map: tex,
-          transparent: true,
-          alphaTest: 0.22,
-          side: THREE.DoubleSide,
-        }),
-      );
-      // Player faces +Z; the camera sits behind, so the back of the sprite
-      // has to look down -Z.
-      sprite.rotation.y = Math.PI;
-      const puppet = new THREE.Group();
-      puppet.add(sprite);
-      puppet.position.y = 0.82;
-      p.root.add(puppet);
-      p.puppet = puppet;
-      setKaiLook(p, p.kaiLook);
-    },
-    undefined,
-    () => {
-      /* Keep the box rig if the sprite cannot load. */
-    },
-  );
+  const maps = {};
+  const names = Object.keys(KAI_FRAMES);
+  let left = names.length;
+  const finish = (name, tex) => {
+    if (tex) maps[name] = tex;
+    left -= 1;
+    if (left > 0) return;
+    if (names.some((key) => !maps[key])) return;
+    attachKaiPuppet(p, maps);
+  };
+  for (const name of names) {
+    loader.load(
+      KAI_FRAMES[name],
+      (tex) => finish(name, prepKaiTexture(tex)),
+      undefined,
+      () => finish(name, null),
+    );
+  }
 }
 
 export function resetPlayer(p, z = 0) {
@@ -554,27 +591,29 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
 function poseKaiPuppet(p) {
   const puppet = p.puppet;
   if (!puppet || !p.kaiLook) return;
+  const frame = pickKaiFrame(p);
+  if (p.kaiSprite && p.kaiMaps?.[frame] && p.kaiFrame !== frame) {
+    p.kaiSprite.material.map = p.kaiMaps[frame];
+    p.kaiSprite.material.needsUpdate = true;
+    p.kaiFrame = frame;
+  }
+  puppet.scale.set(1, 1, 1);
   if (p.sliding) {
-    puppet.scale.set(1.18, 0.48, 1);
-    puppet.position.y = 0.38;
-    puppet.rotation.x = 0.15;
+    puppet.position.y = 0.62;
+    puppet.rotation.x = 0.08;
     return;
   }
   if (p.flying) {
-    puppet.scale.set(1, 1.06, 1);
     puppet.position.y = 0.9 + Math.sin(p.runT * 6) * 0.05;
-    puppet.rotation.x = -0.12;
+    puppet.rotation.x = -0.1;
     return;
   }
   if (p.jumping || p.diving) {
-    puppet.scale.set(0.96, 1.1, 1);
-    puppet.position.y = 0.92;
-    puppet.rotation.x = p.diving ? 0.35 : -0.08;
+    puppet.position.y = 0.9;
+    puppet.rotation.x = p.diving ? 0.28 : -0.06;
     return;
   }
-  const bob = Math.sin(p.runT * 10) * 0.035;
-  puppet.scale.set(1, 1 + bob * 0.35, 1);
-  puppet.position.y = 0.82 + bob;
+  puppet.position.y = 0.79 + Math.sin(p.runT * 10) * 0.02;
   puppet.rotation.x = 0.04;
 }
 
