@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "2.81";
+export const VERSION = "2.80";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,15 +23,6 @@ export const VERSION = "2.81";
  * takes problems away.
  */
 export const CHANGELOG = [
-  {
-    version: "2.81",
-    date: "2026-09-09",
-    kind: "fix",
-    title: "카이가 달려요",
-    notes: [
-      "카이가 스티커처럼 서 있던 걸 고쳤습니다. 이제 팔다리가 교차하며 달리고, 점프와 슬라이드도 각각 다른 자세입니다.",
-    ],
-  },
   {
     version: "2.80",
     date: "2026-09-09",
