@@ -10,6 +10,7 @@ import {
 import { handleKey, validateHandle } from "../src/nickname.js";
 import { schoolLabel, validateSchool } from "../src/school.js";
 import { rankAt } from "../src/progression.js";
+import { dayKey } from "../src/daily.js";
 import { profileWorth } from "../src/shop.js";
 import { joinSchool } from "./schools.js";
 import { endSession, requirePlayer, startSession } from "./session.js";
@@ -222,6 +223,23 @@ function ledgerBefore(player, spent) {
  * generous — a browser offline all afternoon still lands everything it earned.
  */
 const MAX_XP_GAIN_PER_SYNC = 60000;
+
+/**
+ * And the same walls again, per day rather than per call.
+ *
+ * A guest session is a browser that played before there was an account. It can
+ * only happen once before the sign-in that ends it, so a day's worth of one is
+ * the most this path should ever carry — whatever a call says, and however many
+ * calls there are.
+ *
+ * Sized at two of the per-call walls: generous enough that an afternoon spent
+ * offline still lands in full, and small enough that repeating the call is no
+ * longer a way to spend an evening climbing the rank ladder.
+ */
+const MAX_COIN_STATED_PER_DAY = MAX_COIN_GAIN_PER_SYNC * 2;
+const MAX_XP_STATED_PER_DAY = MAX_XP_GAIN_PER_SYNC * 2;
+
+
 
 function newToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
@@ -469,11 +487,26 @@ export const save = mutation({
     // is bounded by the same wall it always was.
     const held = coinsOf(player);
     const heldXp = xpOf(player);
+
+    // What a browser is still allowed to *state* today.
+    //
+    // The per-call wall was the only bound there had ever been, and a per-call
+    // wall is not a bound at all when calls are free — the client was making
+    // this one on every launch, so sixty thousand experience an account had
+    // been correctly refused went through sixty thousand at a time until it
+    // was all in. Per day, the way the mission allowance is, because a day's
+    // guest play can only happen once a day and a reload can happen forever.
+    const today = dayKey(Date.now());
+    const usedCoins = player.settleDay === today ? (player.settleCoinsToday ?? 0) : 0;
+    const usedXp = player.settleDay === today ? (player.settleXpToday ?? 0) : 0;
+    const coinRoom = Math.max(0, Math.min(MAX_COIN_GAIN_PER_SYNC, MAX_COIN_STATED_PER_DAY - usedCoins));
+    const xpRoom = Math.max(0, Math.min(MAX_XP_GAIN_PER_SYNC, MAX_XP_STATED_PER_DAY - usedXp));
+
     const coins = coinsAbsolute
-      ? Math.max(0, Math.min(Math.floor(profile?.coins ?? 0), held + MAX_COIN_GAIN_PER_SYNC))
+      ? Math.max(0, Math.min(Math.floor(profile?.coins ?? 0), held + coinRoom))
       : Math.max(0, held - spentNow);
     const xp = xpAbsolute
-      ? Math.max(0, Math.min(Math.floor(profile?.xp ?? 0), heldXp + MAX_XP_GAIN_PER_SYNC))
+      ? Math.max(0, Math.min(Math.floor(profile?.xp ?? 0), heldXp + xpRoom))
       : heldXp;
 
     await ctx.db.patch(player._id, {
@@ -484,6 +517,11 @@ export const save = mutation({
       profile: { ...keepEarned(sanitizeProfile(profile, player.best), player.profile), coins, xp },
       coins,
       xp,
+      // Spent only by what was actually stated, so an ordinary delta sync — the
+      // overwhelming majority of these calls — costs an account nothing.
+      settleDay: today,
+      settleCoinsToday: usedCoins + Math.max(0, coins - held),
+      settleXpToday: usedXp + Math.max(0, xp - heldXp),
       // Folded into `coins` by coinsOf; nothing left to hold.
       pendingCoins: 0,
       coinLedger: ledger,

@@ -377,7 +377,7 @@ export class Game {
           window.location.href = "/admin.html";
           return;
         }
-        this.reconcileProfiles(result?.profile, result?.best, result?.coins, result?.xp);
+        this.reconcileProfiles(result?.profile, result?.best, result?.coins, result?.xp, true);
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
@@ -419,7 +419,10 @@ export class Game {
     // is the only truth there is, and pushing it up would be doing the exact
     // thing this method exists to prevent, so nothing is sent either.
     if (!loaded) return;
-    this.reconcileProfiles(loaded.profile, loaded.best, loaded.coins, loaded.xp);
+    // Not a sign-in. This is the same account this browser was already on, so
+    // nothing here is a merge of two histories — see the `absolute` note in
+    // reconcileProfiles for what telling the server otherwise used to cost.
+    this.reconcileProfiles(loaded.profile, loaded.best, loaded.coins, loaded.xp, false);
     this.screens.refreshProfile(this.store.data);
   }
 
@@ -433,7 +436,28 @@ export class Game {
    * answered by students picking the run they had just played and losing the
    * balance of the account they were signing into. See mergeProfiles.
    */
-  reconcileProfiles(cloudProfile, serverBest, serverCoins, serverXp) {
+  /**
+   * @param {boolean} [signingIn] whether this is the one moment a guest session
+   *   is being folded into an account. It decides whether the sync that follows
+   *   *states* the balance and the experience or merely reports the change to
+   *   them, and getting that wrong was expensive.
+   *
+   *   Stating them is right exactly once. A guest played before there was an
+   *   account to play into, and only the browser knows what that session was
+   *   worth; the server allows it, bounded, on that one call.
+   *
+   *   Booting an already-signed-in browser was doing the same thing, on every
+   *   launch. There is no second history to fold in there — it is one account
+   *   and the server owns its own figures — but the browser was stating a total
+   *   anyway, and the browser's total runs ahead: it pays itself experience for
+   *   every mission it finishes while the server honours three thousand a day,
+   *   and it pays itself for runs the validator later refuses. So a surplus
+   *   builds that the server has correctly declined, and every reload pushed up
+   *   to sixty thousand of it through anyway. A level at the top of the ladder
+   *   costs eighty thousand. The daily cap was a cap on missions, not on
+   *   reloading the page, and ranks pay coins — so the leak was not only ranks.
+   */
+  reconcileProfiles(cloudProfile, serverBest, serverCoins, serverXp, signingIn = false) {
     // The blob the server hands back was written by a browser. The record, the
     // balance and the experience are columns the server owns, and they are what
     // a staff correction moves — so they are taken from the answer rather than
@@ -449,9 +473,9 @@ export class Game {
 
     if (!cloud || !hasProgress(cloud)) {
       // Nothing on the server worth keeping: push this browser's save up, and
-      // state the balance rather than a change to it — this is the moment the
-      // account's coins are being decided, not adjusted.
-      this.syncCoins({ absolute: true });
+      // on a sign-in state the balance rather than a change to it — that is the
+      // moment the account's figures are being decided, not adjusted.
+      this.syncCoins({ absolute: signingIn });
       return;
     }
     if (!hasProgress(local)) {
@@ -461,9 +485,11 @@ export class Game {
 
     const { save, carried } = mergeProfiles(local, cloud);
     this.adoptProfile(save);
-    // Absolute, because the merged balance is a total this browser worked out
-    // rather than a change the server can add up for itself.
-    this.syncCoins({ absolute: true });
+    // Absolute only on a sign-in, where the merged balance is a total this
+    // browser worked out and the server has no way to add up for itself. On a
+    // boot it is the account's own balance coming back to it, and restating it
+    // is how a refusal the server had already made got overturned by a reload.
+    this.syncCoins({ absolute: signingIn });
     this.screens.refreshProfile(this.store.data);
     // Said out loud only when the guest session actually brought something. A
     // player who earned coins before logging in should be able to see that they

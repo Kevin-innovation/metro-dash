@@ -63,6 +63,26 @@ export default defineSchema({
     payoutDay: v.optional(v.number()),
     payoutCoinsToday: v.optional(v.number()),
     payoutXpToday: v.optional(v.number()),
+    /**
+     * How much a browser has been allowed to *state* today, and on which day.
+     *
+     * Separate from the payout counters above because it bounds a different
+     * thing. Those cap what a run may claim to have paid; these cap the one
+     * call where a browser reports a total rather than a change — the sign-in
+     * that folds a guest session into an account.
+     *
+     * It needed a cap because it never had one. The client sent that call on
+     * every launch as well as on every sign-in, and the browser's own totals
+     * run ahead of the server's: it pays itself experience for missions the
+     * server caps at three thousand a day, and for runs the validator later
+     * refuses. Each launch pushed up to sixty thousand of that surplus through,
+     * and a level near the top of the ladder costs eighty. The client no longer
+     * states a total on a launch — but the server is what has to be true when
+     * the client is not the one we ship.
+     */
+    settleDay: v.optional(v.number()),
+    settleCoinsToday: v.optional(v.number()),
+    settleXpToday: v.optional(v.number()),
 
     /**
      * Dead fields, kept declared so the deployment can happen at all.

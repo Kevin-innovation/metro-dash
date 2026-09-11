@@ -1580,3 +1580,68 @@ describe("admin:resolveReports", () => {
     });
   });
 });
+
+// --- the reload ratchet ------------------------------------------------------
+
+describe("브라우저가 총액을 선언하는 경로", () => {
+  /** One `players:save` that states a total rather than reporting a change. */
+  const state = (t, token, xp, coins = 0) =>
+    t.mutation(api.players.save, {
+      token,
+      profile: { coins, xp, best: 0 },
+      coinsAbsolute: true,
+      xpAbsolute: true,
+      coinsDelta: 0,
+      coinsEarned: 0,
+      xpDelta: 0,
+    });
+
+  it("하루치를 넘어서까지 반복해서 밀어 올릴 수 없다", async () => {
+    // 이게 Lv.77의 정체였다. 클라이언트가 부팅마다 이 호출을 보냈고, 브라우저의
+    // 총액은 서버보다 앞선다 — 서버가 하루 3,000으로 막는 미션 경험치를 로컬은
+    // 무제한으로 자기한테 주고, 검증에서 떨어질 판의 경험치도 준다. 그 차액이
+    // 새로고침 한 번에 6만씩 통과했다. 사다리 위쪽 한 레벨이 8만이다.
+    const t = backend();
+    const { token } = await signUp(t, "래칫");
+
+    let last = 0;
+    for (let i = 0; i < 12; i++) last = (await state(t, token, 10_000_000)).xp;
+
+    // 한 번에 6만, 하루 12만. 열두 번을 불러도 하루치에서 멈춘다.
+    expect(last).toBe(120_000);
+  });
+
+  it("날이 바뀌면 다시 열린다", async () => {
+    const t = backend();
+    const { token } = await signUp(t, "다음날");
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-11T04:00:00Z"));
+    for (let i = 0; i < 5; i++) await state(t, token, 10_000_000);
+    const first = (await state(t, token, 10_000_000)).xp;
+
+    vi.setSystemTime(new Date("2026-09-13T04:00:00Z"));
+    const second = (await state(t, token, 10_000_000)).xp;
+    expect(second).toBeGreaterThan(first);
+  });
+
+  it("총액을 말하지 않는 보통의 동기화는 하루치를 쓰지 않는다", async () => {
+    // 거의 모든 호출이 이쪽이다. 여기에 비용이 붙으면 정직한 플레이어가
+    // 하루 한도를 아무 이득 없이 태우게 된다.
+    const t = backend();
+    const { token } = await signUp(t, "델타");
+
+    for (let i = 0; i < 30; i++) {
+      await t.mutation(api.players.save, {
+        token,
+        profile: { coins: 0, xp: 0, best: 0 },
+        coinsDelta: 0,
+        coinsEarned: 0,
+        xpDelta: 0,
+      });
+    }
+
+    const after = await state(t, token, 10_000_000);
+    expect(after.xp).toBe(60_000);
+  });
+});

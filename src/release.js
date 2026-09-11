@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "3.31";
+export const VERSION = "3.32";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,19 @@ export const VERSION = "3.31";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "3.32",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "새로고침으로 레벨이 오르던 문제",
+    notes: [
+      "게임을 껐다 켤 때마다 경험치가 서버로 밀려 올라가던 문제를 고쳤습니다. 미션 경험치는 원래 하루 3,000까지만 인정되는데, 새로고침을 하면 그 한도를 넘긴 몫이 한 번에 최대 60,000씩 통과했어요. 사다리 위쪽 한 레벨이 80,000이니 새로고침 27번이 한 레벨이었습니다.",
+      "랭크는 오를 때 코인을 주기 때문에(레벨당 최대 2,500) 코인도 같이 샜습니다.",
+      "게임을 켜는 건 이제 계정 정보를 받아오기만 합니다. 총액을 서버에 선언하는 건 로그인할 때 한 번뿐이에요 — 로그인 안 하고 플레이한 기록을 계정에 합칠 때만 필요한 동작입니다.",
+      "서버에도 하루 한도를 걸었습니다. 고친 클라이언트를 쓰지 않는 경우까지 막으려면 서버가 막아야 하니까요.",
+      "이미 올라간 레벨과 점수는 그대로 둡니다.",
+    ],
+  },
   {
     version: "3.31",
     date: "2026-09-11",
