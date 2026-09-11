@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runTimeLabel } from "../src/ui.js";
+import { runLengthLabel, runTimeLabel } from "../src/ui.js";
 import { RUN_LIMIT_SECONDS } from "../src/config.js";
 import {
   COIN_BASE,
@@ -90,5 +90,19 @@ describe("버틴 시간 표시", () => {
     expect(runTimeLabel(-5)).toBe("0초");
     expect(runTimeLabel(NaN)).toBe("0초");
     expect(runTimeLabel(undefined)).toBe("0초");
+  });
+});
+
+describe("결승선을 말하는 문구", () => {
+  it("상수에서 나온다", () => {
+    // 결승선이 5분에서 3분으로 왔을 때 토스트만 5분이라고 계속 말했다.
+    // 플레이어가 「맥스 5분」이라고 알고 있던 출처가 그 한 줄이다.
+    expect(runLengthLabel(RUN_LIMIT_SECONDS)).toBe("3분");
+  });
+
+  it("어떤 길이로 바뀌어도 말이 된다", () => {
+    expect(runLengthLabel(300)).toBe("5분");
+    expect(runLengthLabel(45)).toBe("45초");
+    expect(runLengthLabel(150)).toBe("2분 30초");
   });
 });

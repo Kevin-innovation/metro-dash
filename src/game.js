@@ -42,6 +42,7 @@ import {
 import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { seasonAt } from "./release.js";
+import { runLengthLabel } from "./ui.js";
 import { Screens } from "./screens.js";
 import {
   QualityGovernor,
@@ -2330,7 +2331,7 @@ export class Game {
     this.bgm.stop({ fadeOut: 0.9 });
     this.screens.hideHint();
     this.store.recordBest(this.run.score);
-    this.screens.showToast("완주! 5분을 달렸습니다");
+    this.screens.showToast(`완주! ${runLengthLabel(RUN_LIMIT_SECONDS)}을 달렸습니다`);
     vibrate([20, 40, 20, 40, 60]);
   }
 

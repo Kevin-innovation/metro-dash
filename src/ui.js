@@ -296,6 +296,21 @@ function renderSpeedGauge(el, state) {
  * Seconds under a minute, because "0분 47초" is a longer way of saying a
  * number that is already short.
  */
+/**
+ * The run's length as a round figure — 「3분」 — for copy that names the limit.
+ *
+ * Derived rather than typed, because it was typed once and went stale the same
+ * day: the finish line moved from five minutes to three and the toast that
+ * announced it went on saying five, which is where the player's idea of how
+ * long a run is came from.
+ */
+export function runLengthLabel(seconds) {
+  const whole = Math.max(0, Math.round(Number(seconds) || 0));
+  if (whole % 60 === 0) return `${whole / 60}분`;
+  if (whole < 60) return `${whole}초`;
+  return `${Math.floor(whole / 60)}분 ${whole % 60}초`;
+}
+
 export function runTimeLabel(seconds) {
   const whole = Math.max(0, Math.floor(Number(seconds) || 0));
   if (whole < 60) return `${whole}초`;

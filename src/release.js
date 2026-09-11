@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.17";
+export const VERSION = "4.18";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.18",
+    date: "2026-09-12",
+    kind: "fix",
+    title: "게임이 「5분」이라고 말하던 문제",
+    notes: [
+      "결승선은 3분인데 완주 안내가 「5분을 달렸습니다」라고 뜨고 있었습니다. 5분에서 3분으로 줄일 때 그 한 줄만 안 고쳤어요. 이제 문구가 결승선 값에서 나오니 다시 어긋날 일이 없습니다.",
+      "다시 확인하면 — 한 판의 최대는 3분(180초)입니다. 거기 닿으면 「완주!」로 끝나고 점수는 전부 들어갑니다.",
+    ],
+  },
   {
     version: "4.17",
     date: "2026-09-12",
