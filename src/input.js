@@ -8,6 +8,8 @@ export const DOUBLE_TAP_MS = 280;
  * places at once and went stale in two of them the moment the control changed.
  */
 export const BOARD_HINT = "점프를 두 번 빠르게";
+/** The same line once a key has been bound to it. */
+export const boardHintFor = (label) => (label ? `${label} 키` : BOARD_HINT);
 export const BOARD_HINT_LONG =
   "달리는 중 점프를 두 번 빠르게 누르면 꺼내지고, 충돌 1회를 막아줍니다";
 /** The rule the shop has to state, since the button is there before the run. */
@@ -26,6 +28,16 @@ export class Input {
     this.start = null;
     this.blocked = false;
     this.lastJumpAt = -Infinity;
+    /**
+     * A key bound to the hoverboard, or null for the double-tap.
+     *
+     * Held here rather than read out of settings on every keystroke: this runs
+     * inside a keydown handler, and the one thing that must not be in there is
+     * a walk through the save file.
+     */
+    this.boardKey = null;
+    /** Set while the settings screen is waiting for a key to bind. */
+    this.capture = null;
     this.held = { jump: false, slide: false, left: false, right: false };
 
     const map = {
@@ -49,6 +61,23 @@ export class Input {
       // character ever being inserted — so typing a name looked like the
       // keyboard was dropping letters, and Enter never submitted the form.
       if (isTyping(e.target) || e.isComposing) return;
+
+      // Binding takes the next key and nothing else acts on it, so a player can
+      // bind Escape's neighbour without pausing the settings screen shut.
+      if (this.capture) {
+        e.preventDefault();
+        const fn = this.capture;
+        this.capture = null;
+        fn(e.code);
+        return;
+      }
+
+      if (this.boardKey && e.code === this.boardKey) {
+        e.preventDefault();
+        if (!e.repeat) this.push("board");
+        return;
+      }
+
       const act = map[e.code];
       if (!act) return;
       e.preventDefault();
@@ -106,6 +135,16 @@ export class Input {
       },
       { passive: true },
     );
+  }
+
+  /** Rebind the board, or pass null to go back to the double-tap. */
+  setBoardKey(code) {
+    this.boardKey = code ?? null;
+  }
+
+  /** Take the next key pressed and hand it to `fn` instead of acting on it. */
+  captureKey(fn) {
+    this.capture = fn;
   }
 
   push(act) {

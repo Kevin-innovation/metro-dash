@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { REACTION_EASY, REACTION_HARD } from "../src/config.js";
+import { PAUSES_PER_RUN, REACTION_EASY, REACTION_HARD } from "../src/config.js";
 import {
   DEFAULT_SETTINGS,
   DOWNGRADE_AFTER,
@@ -10,6 +10,8 @@ import {
   UPGRADE_AFTER,
   UPGRADE_FPS,
   guessStartTier,
+  isBindableKey,
+  keyLabel,
   normalizeSettings,
   qualityProfile,
 } from "../src/settings.js";
@@ -167,5 +169,50 @@ describe("guessStartTier", () => {
   it("handles a browser that reports nothing", () => {
     expect(QUALITY_TIERS).toContain(guessStartTier({}));
     expect(QUALITY_TIERS).toContain(guessStartTier());
+  });
+});
+
+describe("호버보드 키 바인딩", () => {
+  it("기본은 점프 두 번이다", () => {
+    // 제스처가 사라지는 게 아니라 대안이 생기는 것이다. 설정을 한 번도 안
+    // 연 사람에게는 아무것도 안 바뀐다.
+    expect(DEFAULT_SETTINGS.boardKey).toBe(null);
+    expect(normalizeSettings({}).boardKey).toBe(null);
+    expect(keyLabel(null)).toBe("점프 두 번");
+  });
+
+  it("게임이 이미 쓰는 키는 못 뺏는다", () => {
+    for (const code of ["Space", "ArrowUp", "KeyW", "KeyS", "Escape", "Enter"]) {
+      expect(isBindableKey(code), code).toBe(false);
+    }
+  });
+
+  it("평범한 키는 받는다", () => {
+    for (const code of ["KeyF", "KeyJ", "Digit1", "ShiftLeft"]) {
+      expect(isBindableKey(code), code).toBe(true);
+    }
+  });
+
+  it("읽을 수 있는 이름으로 보여준다", () => {
+    expect(keyLabel("KeyF")).toBe("F");
+    expect(keyLabel("Digit3")).toBe("3");
+    expect(keyLabel("Numpad5")).toBe("숫자패드 5");
+  });
+
+  it("더 이상 허용되지 않는 바인딩은 제스처로 되돌아간다", () => {
+    // 게임이 나중에 가져간 키가 세이브에 남아 있을 수 있다. 아무것도 아닌
+    // 상태가 아니라 원래 동작으로 떨어져야 한다.
+    expect(normalizeSettings({ boardKey: "Space" }).boardKey).toBe(null);
+    expect(normalizeSettings({ boardKey: 42 }).boardKey).toBe(null);
+    expect(normalizeSettings({ boardKey: "KeyF" }).boardKey).toBe("KeyF");
+  });
+});
+
+describe("일시정지 횟수", () => {
+  it("한 판에 한 번이다", () => {
+    // 일시정지는 그림이 아니라 트랙을 멈춘다 — 80m/s에서 못 읽는 벽을
+    // 정지 상태에서는 읽을 수 있다. 무제한이면 편의가 아니라 남들은 안 쓰는
+    // 느린 속도 설정이 된다.
+    expect(PAUSES_PER_RUN).toBe(1);
   });
 });

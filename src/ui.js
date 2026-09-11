@@ -15,7 +15,7 @@ import { rankAt, rankProgress, nextRankAt } from "./progression.js";
 import { comboTier } from "./scoring.js";
 import { ANTIDOTE_SECONDS } from "./shop.js";
 import { DIAMOND_GOAL } from "./slots.js";
-import { QUALITY_PROFILES, QUALITY_TIERS } from "./settings.js";
+import { QUALITY_PROFILES, QUALITY_TIERS, keyLabel } from "./settings.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -464,7 +464,23 @@ export function renderSettings(root, settings, activeTier) {
         )}</span>
       </span>
     </div>
-    <div class="quality-row">${qualityOptions}</div>`;
+    <div class="quality-row">${qualityOptions}</div>
+    <div class="setting-row static">
+      <span class="setting-text">
+        <span class="setting-label">호버보드 키</span>
+        <span class="setting-hint">기본은 점프 두 번입니다. 키를 하나 정해두면 그 키로도 꺼낼 수 있어요</span>
+      </span>
+      <span class="key-bind">
+        <button type="button" class="key-pill${settings.boardKey ? " on" : ""}" data-bind="board">${escapeHtml(
+          keyLabel(settings.boardKey),
+        )}</button>
+        ${
+          settings.boardKey
+            ? `<button type="button" class="key-clear" data-bind-clear="board" aria-label="키 지우기">✕</button>`
+            : ""
+        }
+      </span>
+    </div>`;
 }
 
 export function renderShop(root, view) {

@@ -59,8 +59,23 @@ export class Screens {
     // lives on the title screen; this is only the reminder during a run.
     const hint = $("touch-hint");
     if (hint) hint.textContent = `스와이프로 피하기 · 위로 두 번은 호버보드`;
+    this.setBoardHint(null);
+  }
+
+  /**
+   * What the control list says about the hoverboard.
+   *
+   * Rewritten when a key is bound, because a screen that goes on saying
+   * 「점프를 두 번 빠르게」 after the player has set a key is a screen that has
+   * just told them their setting did not take.
+   *
+   * @param {string|null} label the bound key's name, or null for the gesture
+   */
+  setBoardHint(label) {
     const howto = $("howto-board");
-    if (howto) howto.textContent = `${BOARD_HINT} — 충돌을 한 번 막아 줍니다`;
+    if (!howto) return;
+    const how = label ? `${BOARD_HINT} · ${label} 키` : BOARD_HINT;
+    howto.textContent = `${how} — 충돌을 한 번 막아 줍니다`;
   }
 
   /**
@@ -220,7 +235,18 @@ export class Screens {
         const toggle = event.target.closest("[data-setting]");
         if (toggle) return a.toggleSetting(toggle.dataset.setting);
         const quality = event.target.closest("[data-quality]");
-        if (quality) a.setQuality(quality.dataset.quality);
+        if (quality) return a.setQuality(quality.dataset.quality);
+        const clear = event.target.closest("[data-bind-clear]");
+        if (clear) return a.bindBoardKey(null);
+        const bind = event.target.closest("[data-bind]");
+        if (bind) {
+          // The button says what it is waiting for, because a settings screen
+          // that silently starts listening to the keyboard is a settings screen
+          // that has just eaten somebody's next keystroke.
+          bind.textContent = "키를 누르세요…";
+          bind.classList.add("listening");
+          a.captureBoardKey();
+        }
       });
     }
   }
@@ -758,8 +784,14 @@ export class Screens {
     document.body.classList.toggle("running", mode === "hud");
   }
 
-  showPause(visible) {
+  /**
+   * @param {boolean} visible
+   * @param {number} [left] pauses this run has left after this one
+   */
+  showPause(visible, left = 0) {
     $("pause-screen").classList.toggle("hidden", !visible);
+    const note = $("pause-note");
+    if (note) note.classList.toggle("hidden", left > 0);
   }
 
   gameOverVisible() {

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "3.30";
+export const VERSION = "3.31";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "3.30";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "3.31",
+    date: "2026-09-11",
+    kind: "minor",
+    title: "일시정지는 한 판에 한 번 · 호버보드 키 설정",
+    notes: [
+      "일시정지가 한 판에 한 번이 됐습니다. 멈추면 그림이 아니라 트랙이 멈춰서, 80m/s에서 못 읽던 벽을 가만히 서서 읽을 수 있었어요. 무제한이면 편의가 아니라 남들은 안 쓰는 느린 속도 설정이 됩니다. 한 번은 문·선생님·버스처럼 진짜 필요한 경우를 덮습니다.",
+      "탭을 벗어나도 일시정지가 걸리고 횟수를 씁니다. 야박해 보이지만 이게 유일하게 작동하는 방식이에요 — 탭 전환이 바로 이걸 우회하는 방법이거든요.",
+      "설정에서 호버보드 키를 정할 수 있습니다. 점프 두 번은 그대로 두고 그 위에 키를 하나 더 얹는 방식이라, 설정을 안 여시면 아무것도 안 바뀝니다. 학교 키보드에서 두 번째 입력이 씹히거나 빠른 두 번이 잘 안 되시는 분들을 위한 겁니다.",
+      "게임이 이미 쓰는 키(방향키·WASD·스페이스·P·ESC·엔터)는 지정할 수 없습니다. 키 칸을 누르고 원하는 키를 누르면 되고, ESC로 취소합니다.",
+    ],
+  },
   {
     version: "3.30",
     date: "2026-09-11",

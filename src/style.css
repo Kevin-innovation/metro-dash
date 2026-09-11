@@ -3720,3 +3720,68 @@ body.admin {
     0 2px 0 #041018,
     0 0 22px rgba(251, 191, 36, 0.55);
 }
+
+.pause-note {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: rgba(226, 242, 255, 0.6);
+}
+
+/* The key-binding row. The pill is a button that reads as a key. */
+.key-bind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key-pill {
+  min-width: 74px;
+  padding: 6px 12px;
+  border: 1px solid rgba(226, 242, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(4, 16, 24, 0.55);
+  color: rgba(226, 242, 255, 0.78);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.key-pill.on {
+  border-color: var(--gold, #fbbf24);
+  color: var(--gold, #fbbf24);
+}
+
+.key-pill.listening {
+  border-color: var(--gold, #fbbf24);
+  color: var(--gold, #fbbf24);
+  animation: key-listening 900ms ease-in-out infinite;
+}
+
+@keyframes key-listening {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.key-clear {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(226, 242, 255, 0.45);
+  font: inherit;
+  cursor: pointer;
+}
+
+.key-clear:hover {
+  color: rgba(255, 138, 128, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key-pill.listening {
+    animation: none;
+  }
+}

@@ -73,13 +73,60 @@ export const QUALITY_PROFILES = {
   },
 };
 
+/**
+ * A key bound to the hoverboard, or null for the double-tap it has always been.
+ *
+ * The gesture is two quick jumps, which is the same on a keyboard and under a
+ * thumb and costs no extra key. It is also a gesture some people simply cannot
+ * make reliably, and on a school keyboard the second press is the one that gets
+ * eaten. So the double-tap stays as the default and this is an alternative
+ * rather than a replacement: bind a key and it deploys the board outright,
+ * while two quick jumps go on working for everyone who never opens this screen.
+ *
+ * Stored as a KeyboardEvent.code — "KeyF", "ShiftLeft" — because that is the
+ * one identifier that survives a Korean keyboard layout being toggled mid-run.
+ */
+const BOARD_KEY_PATTERN = /^[A-Za-z0-9]{1,24}$/;
+
 export const DEFAULT_SETTINGS = {
   sfx: true,
   music: true,
   haptics: true,
   /** "auto" lets the governor pick; anything else pins the tier. */
   quality: "auto",
+  /** KeyboardEvent.code, or null for the double-tap jump. */
+  boardKey: null,
 };
+
+/** Keys the game already spends, which a board binding must not steal. */
+export const RESERVED_KEYS = new Set([
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "KeyW",
+  "KeyA",
+  "KeyS",
+  "KeyD",
+  "Space",
+  "KeyP",
+  "Escape",
+  "Enter",
+  "Tab",
+]);
+
+export function isBindableKey(code) {
+  return typeof code === "string" && BOARD_KEY_PATTERN.test(code) && !RESERVED_KEYS.has(code);
+}
+
+/** What a bound key is called on screen. "KeyF" is not a label. */
+export function keyLabel(code) {
+  if (!code) return "점프 두 번";
+  if (code.startsWith("Key")) return code.slice(3);
+  if (code.startsWith("Digit")) return code.slice(5);
+  if (code.startsWith("Numpad")) return `숫자패드 ${code.slice(6)}`;
+  return code;
+}
 
 export function normalizeSettings(raw) {
   const base = { ...DEFAULT_SETTINGS };
@@ -90,6 +137,9 @@ export function normalizeSettings(raw) {
     haptics: typeof raw.haptics === "boolean" ? raw.haptics : base.haptics,
     quality:
       raw.quality === "auto" || QUALITY_TIERS.includes(raw.quality) ? raw.quality : base.quality,
+    // A binding that is no longer allowed — a key the game has since taken for
+    // itself — falls back to the gesture rather than to nothing at all.
+    boardKey: isBindableKey(raw.boardKey) ? raw.boardKey : base.boardKey,
   };
 }
 

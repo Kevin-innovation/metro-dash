@@ -13,6 +13,7 @@ import {
   MAX_SIM_STEPS,
   MAX_SPEED,
   ONCOMING_SPEED,
+  PAUSES_PER_RUN,
   PLAYER_HEIGHT,
   RUN_LIMIT_SECONDS,
   START_SPEED,
@@ -41,7 +42,13 @@ import {
 import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { Screens } from "./screens.js";
-import { QualityGovernor, guessStartTier, qualityProfile } from "./settings.js";
+import {
+  QualityGovernor,
+  guessStartTier,
+  isBindableKey,
+  keyLabel,
+  qualityProfile,
+} from "./settings.js";
 import { randomSeed } from "./rng.js";
 import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
@@ -142,6 +149,7 @@ export class Game {
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
     this.finished = false;
+    this.pausesLeft = PAUSES_PER_RUN;
     this.nearMissFx = 0;
 
     this.store = new SaveStore();
@@ -238,8 +246,11 @@ export class Game {
     this.screens.openHowto(roomy.matches);
     roomy.addEventListener("change", (event) => this.screens.openHowto(event.matches));
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden && this.state === "playing") this.pause();
+      if (document.hidden && this.state === "playing") this.pause(true);
     });
+
+    this.input.setBoardKey(this.settings.boardKey);
+    this.screens.setBoardHint(keyLabel(this.settings.boardKey));
 
     resetPlayer(this.player, 0);
     this.seedPreview();
@@ -1084,7 +1095,7 @@ export class Game {
     // hand the run back to a player who is not looking at it. The visibility
     // handler could not do this itself: it only pauses a run that is
     // "playing", and for the last few seconds this one was not.
-    if (document.hidden) this.pause();
+    if (document.hidden) this.pause(true);
   }
 
   /**
@@ -1189,6 +1200,34 @@ export class Game {
   openSettings() {
     this.audio.resume();
     this.screens.openSettings(this.settings, this.activeTier());
+  }
+
+  /**
+   * Wait for the next key and bind the hoverboard to it.
+   *
+   * Escape cancels, which is the one key a binding screen must not take.
+   */
+  captureBoardKey() {
+    this.input.captureKey((code) => {
+      if (code === "Escape") {
+        this.screens.openSettings(this.settings, this.activeTier());
+        return;
+      }
+      this.bindBoardKey(isBindableKey(code) ? code : this.settings.boardKey);
+      if (!isBindableKey(code)) {
+        this.screens.showToast("그 키는 이미 게임이 쓰고 있어요");
+      }
+    });
+  }
+
+  /** @param {string|null} code KeyboardEvent.code, or null for the double-tap */
+  bindBoardKey(code) {
+    this.settings.boardKey = code ?? null;
+    this.store.set("settings", this.settings);
+    this.input.setBoardKey(this.settings.boardKey);
+    this.screens.openSettings(this.settings, this.activeTier());
+    this.screens.setBoardHint(keyLabel(this.settings.boardKey));
+    this.audio.purchase();
   }
 
   toggleSetting(key) {
@@ -1301,6 +1340,7 @@ export class Game {
     this.deadAt = 0;
     this.runTime = 0;
     this.finished = false;
+    this.pausesLeft = PAUSES_PER_RUN;
     this.phaseId = 0;
     this.sawOncoming = false;
     this.hitstop = 0;
@@ -1429,15 +1469,36 @@ export class Game {
     this.update?.poke();
   }
 
-  pause() {
+  /**
+   * Stop the run.
+   *
+   * Once per run, and that is a rule about the leaderboard rather than about
+   * comfort. Pausing stops the world with the track laid out ahead of you: a
+   * wall you cannot read at speed can be read at leisure, and a run that pauses
+   * every couple of seconds is a run played at a speed nobody else is playing
+   * at. One is the number that covers what pausing is honestly for — the door,
+   * the teacher, the bus stop — without being a way to play.
+   *
+   * Losing focus still pauses and still spends the allowance, which sounds
+   * harsh and is the only version that works: a tab switch is exactly the
+   * gesture this would otherwise be farmed with.
+   *
+   * @param {boolean} [forced] the tab went away rather than the player asking
+   */
+  pause(forced = false) {
     // "slots" is already a stopped run; the pause card over the wheel would be
     // a second overlay with a 「계속하기」 button that resumes into a spin the
     // player can no longer see.
     if (this.state !== "playing") return;
+    if (this.pausesLeft <= 0) {
+      if (!forced) this.screens.showToast("일시정지는 한 판에 한 번입니다");
+      return;
+    }
+    this.pausesLeft -= 1;
     this.state = "paused";
     this.accumulator = 0;
     this.bgm.stop({ fadeOut: 0.2 });
-    this.screens.showPause(true);
+    this.screens.showPause(true, this.pausesLeft);
   }
 
   resume() {

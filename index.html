@@ -501,6 +501,9 @@
       <div id="pause-screen" class="overlay hidden">
         <div class="dialog">
           <h2>일시정지</h2>
+          <!-- Says the allowance is spent, because a pause button that stops
+               working without having said anything reads as a broken button. -->
+          <p id="pause-note" class="pause-note">이 판의 일시정지를 다 썼습니다</p>
           <button id="btn-resume" type="button">계속하기</button>
           <button id="btn-quit" type="button" class="ghost">타이틀로</button>
         </div>

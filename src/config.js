@@ -53,6 +53,19 @@ export const MAX_SPEED = 80;
  */
 export const RUN_LIMIT_SECONDS = 300;
 
+/**
+ * How many times one run may be stopped.
+ *
+ * Pausing does not freeze a picture, it freezes the track — the layout ahead is
+ * laid out and readable, and a wall that cannot be solved at eighty metres a
+ * second can be solved at a standstill. Unlimited, it is not a convenience, it
+ * is a slower speed setting that only the player who thought of it is using.
+ *
+ * One covers what the button is honestly for: the door, the teacher, the bus
+ * stop. It does not cover playing the game a second at a time.
+ */
+export const PAUSES_PER_RUN = 1;
+
 export const GRAVITY = -44;
 export const JUMP_V = 16.2;
 export const FAST_FALL = -34;
