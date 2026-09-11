@@ -66,6 +66,22 @@ export function defaultSave() {
     syncedEarned: 0,
     /** The experience the server last confirmed. Same job as syncedCoins. */
     syncedXp: 0,
+    /**
+     * Coins and experience the browser has paid itself between runs — the
+     * attendance streak — waiting for a run to report them with.
+     *
+     * Persisted because the player who closes the tab after collecting the
+     * streak and before finishing a run is the ordinary case, not the strange
+     * one. Held only in memory, that claim was never reported: the coins sat in
+     * this browser's balance with nothing on the server behind them, and every
+     * sync afterwards was one more chance to have them taken back off.
+     *
+     * Cleared by the submission that carries them; see Game#syncRun. The server
+     * bounds what it will honour per day regardless, so a save that is
+     * hand-edited here buys nothing.
+     */
+    pendingClaimCoins: 0,
+    pendingClaimXp: 0,
     /** Consecutive days played, and the day the last run started. */
     streak: 0,
     lastDay: 0,
@@ -104,6 +120,8 @@ export function normalizeSave(raw) {
     missionsDone: clampInt(raw.missionsDone),
     missionDay: clampInt(raw.missionDay),
     missionBonusDay: clampInt(raw.missionBonusDay),
+    pendingClaimCoins: clampInt(raw.pendingClaimCoins),
+    pendingClaimXp: clampInt(raw.pendingClaimXp),
     streak: clampInt(raw.streak),
     lastDay: clampInt(raw.lastDay),
     bestStreak: clampInt(raw.bestStreak),
@@ -423,6 +441,13 @@ export function mergeProfiles(local, cloud) {
 
   // Sound, haptics and graphics belong to the machine in front of you.
   out.settings = a.settings;
+
+  // And so does an unreported claim. It is a note this browser wrote to itself
+  // about coins it has already put in its own balance; the account's copy is
+  // some other device's note, and taking the higher of the two would report one
+  // device's streak from both.
+  out.pendingClaimCoins = a.pendingClaimCoins;
+  out.pendingClaimXp = a.pendingClaimXp;
 
   return { save: out, carried };
 }

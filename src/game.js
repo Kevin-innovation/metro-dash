@@ -245,8 +245,12 @@ export class Game {
     /**
      * Payouts made between runs — the attendance streak — waiting for a run to
      * report them with. Cleared once the server has taken them.
+     *
+     * Read back off the save rather than started at zero: a streak collected
+     * yesterday and never carried by a run is still owed, and it is still
+     * sitting in this browser's balance.
      */
-    this.pendingClaim = { coins: 0, xp: 0 };
+    this.pendingClaim = this.readPendingClaim();
     this.updateReady = false;
     this.update = watchForUpdate(() => {
       this.updateReady = true;
@@ -493,6 +497,9 @@ export class Game {
     this.store.data.syncedCoins = this.store.data.coins;
     this.store.data.syncedXp = this.store.data.xp;
     this.store.flush();
+    // The save under this object has just been replaced; the claim in the field
+    // beside it is whatever the merge decided to keep.
+    this.pendingClaim = this.readPendingClaim();
     this.settings = this.store.data.settings;
     this.syncMissions();
     applySkin(this.player, characterById(this.store.data.character).palette);
@@ -668,6 +675,28 @@ export class Game {
     this.boardGeneration = (this.boardGeneration ?? 0) + 1;
     for (const stop of this.boardSubscriptions ?? []) stop();
     this.boardSubscriptions = [];
+  }
+
+  /** The unreported claim the save is holding. */
+  readPendingClaim() {
+    return {
+      coins: Math.max(0, Math.floor(this.store.data.pendingClaimCoins ?? 0)),
+      xp: Math.max(0, Math.floor(this.store.data.pendingClaimXp ?? 0)),
+    };
+  }
+
+  /**
+   * Write the claim down, in memory and on disk together.
+   *
+   * The two have to move as one. A claim that lives only in the field is lost
+   * to a reload; one that lives only in the save is not seen by the submission
+   * about to go out.
+   */
+  setPendingClaim(coins, xp) {
+    this.pendingClaim = { coins: Math.max(0, coins), xp: Math.max(0, xp) };
+    this.store.data.pendingClaimCoins = this.pendingClaim.coins;
+    this.store.data.pendingClaimXp = this.pendingClaim.xp;
+    this.store.flush();
   }
 
   /**
@@ -869,7 +898,22 @@ export class Game {
     return this.boardRange === "week" ? "이번 주 우리 학교 기록이 없어요" : "아직 학교 순위가 없어요";
   }
 
-  /** Send the finished run up. Never blocks, never fails the local save. */
+  /**
+   * Send the finished run up, then settle the balance against it.
+   *
+   * The settle used to be fired rather than chained, which put two mutations in
+   * the air at once: `scores:submit`, which is the only place a run is paid,
+   * and `players:save`, which reads the balance back. Whichever the server got
+   * to first won. When it was the save, the answer was the balance from
+   * *before* the run — so the browser adopted it and announced
+   * 「코인 N개가 빠졌어요」 for coins the player had just earned, and the next
+   * sync handed them back with 「들어왔어요」. Most visible on the day's first
+   * run, where the attendance bonus had been paid locally seconds earlier and
+   * nothing had reported it yet.
+   *
+   * Chained, the profile goes up after the run has been paid, so what comes
+   * back is a balance with this run already in it.
+   */
   syncRun() {
     if (!this.cloud.signedIn) return null;
     const submitted = this.cloud
@@ -890,16 +934,20 @@ export class Game {
       // the board is about to rank — so the card and the board agree without
       // waiting for the next sync.
       .then((result) => {
-        if (!result?.ok) return result;
-        this.adoptBest(result.best);
-        // The server has settled the balance and the experience; the numbers
-        // the browser was showing were a prediction of these.
-        this.adoptXp(result.xp);
-        this.adoptCoins(result.coins);
-        this.pendingClaim = { coins: 0, xp: 0 };
+        if (result?.ok) {
+          this.adoptBest(result.best);
+          // The server has settled the balance and the experience; the numbers
+          // the browser was showing were a prediction of these.
+          this.adoptXp(result.xp);
+          this.adoptCoins(result.coins);
+          this.setPendingClaim(0, 0);
+        }
+        // The profile itself still has to go up — upgrades, characters, the
+        // day's missions — and a rejected run needs it more than a good one,
+        // because nothing else reported the spending behind it.
+        this.syncCoins();
         return result;
       });
-    this.syncCoins();
     return submitted;
   }
 
@@ -1163,8 +1211,9 @@ export class Game {
     this.store.data.bestStreak = Math.max(this.store.data.bestStreak ?? 0, visit.streak);
     const reward = Math.round(visit.reward * (perkFor(this.store.data.character).streakBonus ?? 1));
     this.store.addCoins(reward);
-    // Paid before there is a run to report it with, so it rides the next one.
-    this.pendingClaim.coins += reward;
+    // Paid before there is a run to report it with, so it rides the next one —
+    // however many days from now that run turns out to be.
+    this.setPendingClaim(this.pendingClaim.coins + reward, this.pendingClaim.xp);
     this.screens.showToast(`${visit.streak}일 연속 출석 · 🪙 +${reward}`);
     this.audio.purchase();
   }

@@ -188,3 +188,34 @@ describe("the merged profile is a valid one", () => {
     expect(twice.characters.sort()).toEqual(once.characters.sort());
   });
 });
+
+describe("보고되지 않은 출석 보상", () => {
+  it("저장되고 다시 읽힌다", () => {
+    // 출석 보상은 런이 시작될 때 로컬 잔액에 먼저 들어가고, 다음 런 제출이
+    // 서버에 보고한다. 그 사이에 탭을 닫으면 예전에는 메모리와 함께 사라졌다.
+    const stored = normalizeSave({
+      ...defaultSave(),
+      coins: 5100,
+      syncedCoins: 5000,
+      pendingClaimCoins: 100,
+    });
+    expect(stored.pendingClaimCoins).toBe(100);
+    expect(normalizeSave(stored).pendingClaimCoins).toBe(100);
+  });
+
+  it("없던 세이브는 0으로 열린다", () => {
+    const old = { ...defaultSave() };
+    delete old.pendingClaimCoins;
+    delete old.pendingClaimXp;
+    expect(normalizeSave(old).pendingClaimCoins).toBe(0);
+    expect(normalizeSave(old).pendingClaimXp).toBe(0);
+  });
+
+  it("로그인 병합에서 이 기기 것이 남는다", () => {
+    // 계정 쪽 값은 다른 기기가 자기 잔액에 넣어둔 메모다. 큰 쪽을 고르면
+    // 한 기기의 출석을 양쪽에서 보고하게 된다.
+    const local = save({ coins: 5100, syncedCoins: 5000, pendingClaimCoins: 100 });
+    const cloud = save({ coins: 47000, syncedCoins: 47000, pendingClaimCoins: 350 });
+    expect(mergeProfiles(local, cloud).save.pendingClaimCoins).toBe(100);
+  });
+});
