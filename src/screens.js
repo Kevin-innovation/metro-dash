@@ -1022,7 +1022,6 @@ export class Screens {
       step: speedStepAt(game.runTime),
       stepProgress: 1 - nextStepIn(game.runTime) / SPEED_STEP_SECONDS,
       sprinting: game.run.powerupActive("focus"),
-      braking: game.run.powerupActive("brake"),
       crow: game.run.crowT > 0 ? { remaining: game.run.crowT, seconds: game.run.crowSeconds } : null,
       diamonds: game.run.diamonds,
       slot:

@@ -439,10 +439,6 @@ export const POWERUP_PATTERNS = {
   jetpack: (z, lane) => [{ type: "jetpack", lane, z, y: 1.15 }, ...jetpackClimb(z + 4, lane)],
   focus: (z, lane) => [{ type: "focus", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 6)],
   sneakers: (z, lane) => [{ type: "sneakers", lane, z, y: 1.05 }, ...coinLine(lane, z + 3, 6)],
-  // A shorter coin trail than the rest. 감속 is taken for the seconds after it,
-  // not for the line it sits in, and a long tail of coins behind a brake reads
-  // as a reward for slowing down rather than as the cost it is.
-  brake: (z, lane) => [{ type: "brake", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 4)],
 };
 
 /**

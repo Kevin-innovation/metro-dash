@@ -151,6 +151,15 @@ export function normalizeSave(raw) {
     if (raw.upgrades.double && !raw.upgrades.focus) {
       out.upgrades.focus = clampInt(raw.upgrades.double, 1, POWERUP_MAX_LEVEL);
     }
+    // 감속 → 질주. 감속은 3.10 한 판만 살아 있었고, 그 사이에 올려둔 레벨이
+    // 있다면 코인은 이미 나갔다. 같은 다이얼의 반대쪽이었으니 그대로 질주로
+    // 옮긴다 — 위에 있는 점수 2배 → 여유 → 질주와 똑같은 이유다.
+    if (raw.upgrades.brake) {
+      out.upgrades.focus = Math.max(
+        out.upgrades.focus,
+        clampInt(raw.upgrades.brake, 1, POWERUP_MAX_LEVEL),
+      );
+    }
   }
 
   // Only characters that actually exist may be owned, and only an owned

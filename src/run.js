@@ -121,7 +121,6 @@ export class Run {
       magnets: 0,
       sneakers: 0,
       focuses: 0,
-      brakes: 0,
       boards: 0,
       gates: 0,
       barriers: 0,

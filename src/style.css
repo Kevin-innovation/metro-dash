@@ -317,9 +317,9 @@ body.running #game-canvas {
    top is how far through the current ten-second step the player is, so the
    next step up is visible as something arriving rather than as a surprise.
 
-   Coloured by what is driving it: ordinary, 질주, 감속. That is the only way
-   the two speed pickups say anything while they are running — the icon in the
-   stack says one was taken, this says what it is doing. */
+   Goes gold while 질주 is running. That is the only way the sprint says
+   anything about itself once it is on — the icon in the stack says one was
+   taken, this says it is still doing something. */
 .speed-gauge {
   display: flex;
   align-items: center;
@@ -332,10 +332,6 @@ body.running #game-canvas {
 
 .speed-gauge.sprinting {
   --speed-hue: #fbbf24;
-}
-
-.speed-gauge.braking {
-  --speed-hue: #38bdf8;
 }
 
 .speed-track {

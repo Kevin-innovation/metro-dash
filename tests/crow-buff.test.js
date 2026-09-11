@@ -170,6 +170,53 @@ describe("the magnet and the crow egg", () => {
   });
 });
 
+describe("what the track hands out", () => {
+  /** Deal `layouts` mid-run layouts and count which pickup each one carried. */
+  function deal(layouts = 4000) {
+    const spawner = new Spawner(fakePool(), 424242);
+    const tally = { diamond: 0, focus: 0, magnet: 0, jetpack: 0, sneakers: 0 };
+    for (let i = 0; i < layouts; i++) {
+      const items = spawner.choose(i * 30, { speed: 40, phaseId: 4, pressure: 0.6, score: 0 });
+      spawner.patternCount += 1;
+      for (const key of Object.keys(tally)) {
+        if (items.some((item) => item && item.type === key)) {
+          tally[key] += 1;
+          break;
+        }
+      }
+    }
+    return tally;
+  }
+
+  it("deals 질주 more often than any other power-up", () => {
+    // The speed steps climb on their own every ten seconds; 질주 is the
+    // player's own handle on the same dial, so it is the one they should meet
+    // regularly rather than twice a run. There was a brake on the other end of
+    // it for one release — it was not fun, and this is what replaced it.
+    const tally = deal();
+    expect(tally.focus).toBeGreaterThan(tally.magnet);
+    expect(tally.focus).toBeGreaterThan(tally.sneakers);
+    expect(tally.focus).toBeGreaterThan(tally.jetpack);
+  });
+
+  it("still deals the jetpack rarest, because flying is a pause", () => {
+    const tally = deal();
+    for (const id of ["focus", "magnet", "sneakers"]) {
+      expect(tally.jetpack, id).toBeLessThan(tally[id]);
+    }
+  });
+
+  it("deals a diamond often enough to spin and seldom enough to interrupt", () => {
+    // Three to a spin. Under one in twelve a run ends having seen the wheel and
+    // never turned it; over one in seven the wheel starts interrupting the run
+    // rather than punctuating it.
+    const layouts = 4000;
+    const every = layouts / deal(layouts).diamond;
+    expect(every).toBeGreaterThan(7.5);
+    expect(every).toBeLessThan(12);
+  });
+});
+
 describe("the diamond on the track", () => {
   it("is dealt, and is collected toward a spin", () => {
     const pool = fakePool();

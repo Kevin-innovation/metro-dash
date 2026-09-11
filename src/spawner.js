@@ -53,18 +53,30 @@ const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
  * The order power-ups are dealt in, shuffled per pass.
  *
  * A deck rather than a roll, so a run cannot go four minutes without a magnet.
- * 감속 gets one slot against 질주's one: they are the two ends of the same
- * dial and neither should be the one you always have.
+ *
+ * 질주 takes four of the ten. It used to take one, and one in seven drops on
+ * a six-layout cadence is a sprint about every seventy seconds — met once or
+ * twice in a whole run, which for the pickup that most changes how a run feels
+ * is barely meeting it at all. At four in ten a sprint is a regular part of
+ * the run rather than an event, which is what the speed steps want: the track
+ * climbs a rung every ten seconds on its own, and 질주 is the player's own
+ * handle on the same dial.
+ *
+ * The jetpack keeps its single slot for the reason its duration is capped —
+ * flying is a pause from the game, and a pause you get every thirty seconds is
+ * most of the game.
  */
 const POWERUP_DECK = [
+  "focus",
   "magnet",
-  "sneakers",
-  "magnet",
-  "jetpack",
+  "focus",
   "sneakers",
   "magnet",
   "focus",
-  "brake",
+  "jetpack",
+  "magnet",
+  "focus",
+  "sneakers",
 ];
 const POWERUP_EVERY = 6;
 
@@ -114,13 +126,15 @@ const HAZARD_SPREAD = 3;
  * never. The wheel is the most interesting object in the game and it was
  * effectively optional content.
  *
- * One in seven from the twelfth puts the first spin inside the first minute
- * and a second one within reach of an ordinary run, which is the cadence the
- * ×0 and ×0.5 faces were priced for: a gamble you take several times is a
- * gamble. A gamble you take once is a coin flip that ends your run.
+ * One in eight from the fourteenth puts the first spin inside the opening
+ * minute and a second within reach of an ordinary run, which is the cadence
+ * the ×0 and ×0.5 faces were priced for: a gamble taken several times is a
+ * gamble, a gamble taken once is a coin flip that ends a run. One in seven was
+ * the first attempt and it was a touch too eager — the wheel started
+ * interrupting the run rather than punctuating it.
  */
-const DIAMOND_EVERY = 7;
-const DIAMOND_AFTER = 12;
+const DIAMOND_EVERY = 8;
+const DIAMOND_AFTER = 14;
 const DIAMOND_SPREAD = 2;
 
 /**

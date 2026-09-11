@@ -1527,14 +1527,7 @@ export class Game {
     this.nearMissFx = Math.max(0, this.nearMissFx - frameDt);
     // Eased rather than linear: the kick lands hard and lets go softly, which
     // is the shape that reads as force instead of as a glitch.
-    //
-    // Decays towards zero from either side. Every kick used to be a widening,
-    // so the floor was zero and the sign never came up; 감속 pulls the lens in
-    // instead, and a negative punch clamped at zero would have been a frame of
-    // nothing at all.
-    const punch = Math.abs(this.fovPunch);
-    const eased = Math.max(0, punch - frameDt * (1.2 + punch * 2.6));
-    this.fovPunch = Math.sign(this.fovPunch) * eased;
+    this.fovPunch = Math.max(0, this.fovPunch - frameDt * (1.2 + this.fovPunch * 2.6));
     this.emitAmbientParticles(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
@@ -2109,11 +2102,6 @@ export class Game {
           this.fovPunch = Math.max(this.fovPunch, 1);
           this.speedBurst(10);
         }
-        // 감속 is the same event played backwards: the lens pulls in rather
-        // than widening, and nothing streaks. A speed pickup that arrived with
-        // the same shove as the sprint would be telling the player the wrong
-        // thing about what they just took.
-        if (event.id === "brake") this.fovPunch = Math.min(this.fovPunch, -1);
         vibrate(18);
       }
     }

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "3.10";
+export const VERSION = "3.11";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "3.10";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "3.11",
+    date: "2026-09-11",
+    kind: "minor",
+    title: "질주를 훨씬 자주 · 감속은 뺍니다",
+    notes: [
+      "바로 앞 버전에서 넣은 「감속」을 뺐습니다. 재미가 없었어요 — 점수를 내고 시간을 사는 아이템은 쫓아다니게 되는 게 아니라 미루게 되더군요. 잠깐이나마 감속을 강화해 두셨다면 그 레벨은 질주로 그대로 옮겨 갑니다.",
+      "대신 「질주」가 훨씬 자주 나옵니다. 파워업 열 장 중 네 장이에요. 예전엔 일곱 장 중 한 장이라 한 판에 한두 번 만나는 게 전부였습니다. 이제 15개 배치마다 하나씩, 파워업 중에 제일 흔합니다.",
+      "제트팩은 그대로 제일 드뭅니다. 나는 동안은 게임이 멈춰 있는 것과 같아서, 자주 나오면 그게 게임의 대부분이 돼요.",
+      "다이아몬드는 조금 줄였습니다. 7개 배치에 하나 → 8개 배치에 하나. 룰렛이 판을 끊는 게 아니라 찍고 가는 정도로요.",
+    ],
+  },
   {
     version: "3.10",
     date: "2026-09-11",

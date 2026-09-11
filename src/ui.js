@@ -265,11 +265,10 @@ function renderSpeedGauge(el, state) {
     last.speed = shown;
   }
 
-  const mode = state.sprinting ? "sprinting" : state.braking ? "braking" : "";
-  if (mode !== last.speedMode) {
-    el.speedGauge.classList.toggle("sprinting", mode === "sprinting");
-    el.speedGauge.classList.toggle("braking", mode === "braking");
-    last.speedMode = mode;
+  const sprinting = Boolean(state.sprinting);
+  if (sprinting !== last.speedMode) {
+    el.speedGauge.classList.toggle("sprinting", sprinting);
+    last.speedMode = sprinting;
   }
 
   // The tick when a step lands. Restarted by taking the class off and forcing
