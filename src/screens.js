@@ -776,9 +776,12 @@ export class Screens {
     this.closeSchool();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
-    // The standing readout belongs to a run in progress. Left up over the
-    // game-over card it would be a clock that had stopped.
-    $("run-stats")?.classList.toggle("hidden", mode !== "hud");
+    // Stays through the death, with the HUD and the chips beside it. The
+    // reasoning for hiding it was that a stopped clock is not worth showing,
+    // and that was backwards: the moment you die is the one moment the time and
+    // the combo are the whole story. Taking them away mid-crash also left the
+    // column with a hole in it, which is what a player actually sees.
+    $("run-stats")?.classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     if (mode !== "hud") $("touch-hint").classList.add("hidden");
     // A pointer sitting in the middle of the track reads as something in the
     // game. It comes back the moment there is a button to press.

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.16";
+export const VERSION = "4.17";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,15 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.17",
+    date: "2026-09-12",
+    kind: "fix",
+    title: "죽는 순간 시간·콤보가 사라지던 문제",
+    notes: [
+      "부딪혀 죽는 동안 오른쪽 정보판만 없어지던 걸 고쳤습니다. 「멈춘 시계는 보여줄 게 없다」고 생각해서 숨겨놨는데 거꾸로였어요 — 죽는 그 순간이야말로 시간과 콤보가 전부인 순간이고, 옆의 칩들은 남아 있으니 기둥에 구멍만 났습니다.",
+    ],
+  },
   {
     version: "4.16",
     date: "2026-09-12",
