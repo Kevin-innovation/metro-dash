@@ -18,8 +18,30 @@ import {
  * a slide-only obstacle, and super sneakers must not turn it into a jump.
  */
 export const SPEC = {
+  /**
+   * Vehicle lengths, and why they are not the lengths of vehicles.
+   *
+   * The roof is standable for `length * 0.94 / speed` seconds — a runner
+   * crosses the top of a stationary bus, they do not ride it — so how long a
+   * player has up there to read the next roof and press is set by a number of
+   * metres against a speed that has doubled. At the old 9.2m a bus roof was
+   * 108 milliseconds at top speed: six frames to make the decision that the
+   * whole roof line is built on.
+   *
+   * Lengthened until the window is one a person can act inside at the speed the
+   * run now reaches, which is the same correction the fog needed and for the
+   * same reason. A train is a metro car and a bus an articulated one, so
+   * nothing here has to look like anything it is not.
+   *
+   *   bus    14m → 165ms at 80 m/s (was 108)
+   *   train  18m → 211ms at 80 m/s (was 141)
+   *
+   * Everything that spaces patterns measures the span it is actually given —
+   * `describePattern` sums these, `leadShortfall` works in seconds off that —
+   * so a longer vehicle pushes the layout around it out by itself.
+   */
   train: {
-    length: 12,
+    length: 18,
     depth: 5.28,
     minY: 0,
     maxY: 2.4,
@@ -28,7 +50,7 @@ export const SPEC = {
     roofY: TRAIN_ROOF,
   },
   bus: {
-    length: 9.2,
+    length: 14,
     depth: 4.05,
     minY: 0,
     maxY: 2.15,

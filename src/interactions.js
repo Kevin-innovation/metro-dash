@@ -188,6 +188,20 @@ export class Interactions {
    * crossed: a gate is a slide, a crate or barrier is a jump. Vehicles are
    * scored on mount, not on walking past in another lane.
    *
+   * The lane check is the whole of the rule and it was missing. Crossing an
+   * obstacle's Z was enough, in any lane — so running down the middle collecting
+   * a coin line flashed JUMP! at every crate in the lanes either side, paid for
+   * each of them, and ran the combo up on obstacles the player never went near.
+   * It was invisible while a clear was worth nothing but a combo tick; the
+   * moment clears started paying it became the cheapest points in the game and
+   * a readout that lied about what the player had just done.
+   *
+   * Being in the lane is the whole test, and it does not need a second one
+   * asking whether they jumped. An obstacle is lethal: a runner who was in its
+   * lane when its Z went by and is still running either cleared it the way it
+   * asks to be cleared, or was riding something, or spent a hoverboard. All
+   * three are the player having dealt with it.
+   *
    * @returns {{ tricks: Array<{ kind: string, gain: number }>, gates: number,
    *   barriers: number }}
    */
@@ -198,6 +212,9 @@ export class Interactions {
     for (const item of this.pool.live) {
       if (!item.lethal || item.scored || item.taken) continue;
       if (player.prevZ - item.prevZ >= 0 || player.z - item.z < 0) continue;
+      // Measured against the same half-width the crash test uses, so the lane
+      // that counts as "through it" is exactly the lane that could have hit it.
+      if (Math.abs(player.x - item.mesh.position.x) >= LANE_TOLERANCE) continue;
       item.scored = true;
       if (item.type === "sign") tally.gates += 1;
       else if (item.type === "barrier") tally.barriers += 1;

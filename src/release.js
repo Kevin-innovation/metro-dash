@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "3.20";
+export const VERSION = "3.21";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,18 @@ export const VERSION = "3.20";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "3.21",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "안 뛰어넘은 장애물에 점수가 붙던 문제",
+    notes: [
+      "가운데 레인에서 코인만 먹고 달려도 양옆 레인의 상자마다 JUMP! 가 뜨고 점수가 붙던 문제를 고쳤습니다. 레인 판정이 아예 없어서, 옆을 지나가기만 해도 넘은 걸로 셌어요. 이제 실제로 지나간 레인만 인정합니다.",
+      "원래 있던 문제인데 3.10에서 슬라이드·점프에 점수를 붙이면서 드러났습니다. 그 사이 기록은 점수가 30%쯤 부풀어 있습니다 — 1분 점수로 21만이 나오던 게 15만이 맞는 값이에요. 미션이 세던 게이트 수도 같이 정직해집니다.",
+      "버스와 기차를 길게 했습니다. 버스 9.2 → 14m, 기차 12 → 18m. 지붕은 올라타서 달리는 게 아니라 위를 가로지르는 거라, 최고 속도에서 버스 지붕은 0.1초밖에 안 됐어요 — 60프레임 기준 6프레임입니다. 이제 버스 10프레임, 기차 13프레임이고, 출발 속도에서는 20/25프레임입니다.",
+      "지붕이 길어져서 지붕 주행 점수도 그만큼 더 들어옵니다.",
+    ],
+  },
   {
     version: "3.20",
     date: "2026-09-11",

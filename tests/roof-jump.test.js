@@ -79,23 +79,28 @@ describe("jumping off a vehicle roof", () => {
     expect(player.roofY).toBe(0);
   });
 
-  it("is not fine at the start of a run either, now the run opens at forty", () => {
-    // It used to be, and that is why the bug read as a late-run problem: at
-    // 20 m/s a bus roof lasted 0.43 seconds against a 0.3 second mount, so the
-    // first minute worked and everything after it did not.
-    //
-    // The opening speed doubled, and now the very first bus gives 0.22 seconds
-    // — under the mount from the first layout of the run. Nothing breaks,
-    // because the fix above is what carries it: a jump pressed during the climb
-    // is honoured rather than swallowed. What changes is that the fix is now
-    // load-bearing for the whole run rather than for the back half of it, which
-    // is worth having written down.
-    expect(roofSeconds("bus", START_SPEED)).toBeLessThan(MOUNT_TIME);
+  it("is roomy at the start of a run again", () => {
+    // It stopped being, for one release. The opening speed doubled and a 9.2m
+    // bus gave 0.22 seconds against a 0.3 second mount, so the very first bus
+    // of the run was already past before the climb onto it had finished.
+    // Vehicles were lengthened for exactly this; see SPEC.
+    expect(roofSeconds("bus", START_SPEED)).toBeGreaterThan(MOUNT_TIME);
+  });
 
-    const { player } = onRoof("bus");
-    expect(player.mounting).toBe(true);
-    applyAction(player, "jump", null, {});
-    expect(player.jumping).toBe(true);
-    expect(player.vy).toBeCloseTo(JUMP_V, 5);
+  it("leaves enough of a window at top speed to act inside", () => {
+    // The number that actually decides whether the roof line is playable. A
+    // runner crosses the top of a stationary vehicle — they do not ride it — so
+    // this is the whole of the time they have up there to read the next roof
+    // and press. At sixty frames a second, a tenth of a second is six of them,
+    // which is not a decision, it is a coin flip.
+    //
+    // An input buffer does not help here and it is worth writing down why: a
+    // press made early is not refused, it jumps — and a jump taken a metre
+    // short of the bus sails the whole thing, because at this speed one lasts
+    // fifty-nine metres. There is nothing to buffer. The window has to be wide
+    // enough to aim at, which makes it a question about how long the vehicle is.
+    const frames = (type) => (roofSeconds(type, MAX_SPEED) * 60);
+    expect(frames("bus"), "bus").toBeGreaterThan(9);
+    expect(frames("train"), "train").toBeGreaterThan(9);
   });
 });

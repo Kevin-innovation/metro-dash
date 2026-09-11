@@ -528,9 +528,31 @@ export function makeDiamond() {
   return g;
 }
 
+/**
+ * Stretch a vehicle to the length its SPEC claims.
+ *
+ * The two builders lay their parts out around a body that was modelled at the
+ * old lengths, and the roof window the game is balanced on is a fraction of the
+ * SPEC figure — so the moment those two disagree, the bus a player is standing
+ * on is not the bus they can see. Scaling the group along Z keeps them the same
+ * object, and every part of both builders is a box laid out along that axis, so
+ * nothing here is a circle being turned into an ellipse.
+ *
+ * The ratio is applied to the modelled length rather than to the SPEC one: the
+ * meshes were always drawn a little shorter than their collision box, which is
+ * what keeps a runner from clipping a corner they cannot see.
+ */
+const MODELLED_LENGTH = { train: 12, bus: 9.2 };
+
+function sized(type, mesh) {
+  const want = SPEC[type].length / MODELLED_LENGTH[type];
+  if (Math.abs(want - 1) > 0.001) mesh.scale.z = want;
+  return mesh;
+}
+
 const FACTORIES = {
-  train: () => makeTrain(TRAIN_COLORS[(Math.random() * TRAIN_COLORS.length) | 0]),
-  bus: () => makeBus(BUS_COLORS[(Math.random() * BUS_COLORS.length) | 0]),
+  train: () => sized("train", makeTrain(TRAIN_COLORS[(Math.random() * TRAIN_COLORS.length) | 0])),
+  bus: () => sized("bus", makeBus(BUS_COLORS[(Math.random() * BUS_COLORS.length) | 0])),
   barrier: makeBarrier,
   sign: makeSign,
   crate: makeCrate,

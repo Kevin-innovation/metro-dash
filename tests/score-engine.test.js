@@ -11,6 +11,8 @@ import {
 } from "../src/scoring.js";
 import { EVENTS, MAX_EVENT_MULTIPLIER, eventById } from "../src/events.js";
 import { Run } from "../src/run.js";
+import { Interactions } from "../src/interactions.js";
+import { LANES } from "../src/config.js";
 import { SaveStore } from "../src/save.js";
 import { MISSION_DEFS } from "../src/missions.js";
 import { perkFor } from "../src/characters.js";
@@ -85,6 +87,53 @@ describe("콤보 유지창", () => {
     run.seconds = 600;
     run.addClear("jump");
     expect(run.comboT).toBeCloseTo(COMBO_WINDOW, 5);
+  });
+});
+
+describe("지나가지 않은 레인은 클리어가 아니다", () => {
+  /** 한 배치를 가로지르며 Z를 넘기는 최소한의 러너. */
+  function crossAt(playerX, itemX) {
+    const run = new Run(store());
+    const item = {
+      type: "crate",
+      lethal: true,
+      depth: 1,
+      minY: 0,
+      maxY: 1,
+      scored: false,
+      taken: false,
+      z: 0,
+      prevZ: 0,
+      mesh: { position: { x: itemX } },
+    };
+    const interactions = new Interactions({ live: [item] }, run);
+    const player = { x: playerX, prevX: playerX, z: 1, prevZ: -1, y: 0, prevY: 0, height: 1, prevHeight: 1, flying: false, mounted: null };
+    return { tally: interactions.scoreClears(player), run, item };
+  }
+
+  it("옆 레인 상자는 JUMP! 도 점수도 아니다", () => {
+    // 코인만 먹고 지나가는데 양옆 레인의 상자마다 JUMP! 가 뜨고 점수가
+    // 붙던 버그. 콤보만 오르던 시절엔 안 보였고, 클리어에 값을 매기는
+    // 순간 게임에서 제일 싼 점수가 됐다.
+    const { tally, run } = crossAt(0, LANES[2]);
+    expect(tally.tricks).toHaveLength(0);
+    expect(run.scoreBonus).toBe(0);
+    expect(run.combo).toBe(0);
+  });
+
+  it("실제로 지나간 레인은 인정한다", () => {
+    const { tally, run } = crossAt(0, 0);
+    expect(tally.tricks).toHaveLength(1);
+    expect(tally.tricks[0].kind).toBe("jump");
+    expect(run.scoreBonus).toBeGreaterThan(0);
+    expect(run.combo).toBe(1);
+  });
+
+  it("미션이 세는 게이트 수도 같이 정직해진다", () => {
+    const far = crossAt(0, LANES[2]);
+    expect(far.tally.barriers + far.tally.gates).toBe(0);
+    const near = crossAt(0, 0);
+    expect(near.tally.barriers).toBe(0);
   });
 });
 
