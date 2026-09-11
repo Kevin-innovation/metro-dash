@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "3.21";
+export const VERSION = "3.22";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,16 @@ export const VERSION = "3.21";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "3.22",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "선생님이 고친 코인이 다시 돌아가던 문제",
+    notes: [
+      "선생님이 코인을 넣거나 빼도 다음에 게임을 켜면 원래대로 돌아가던 문제를 고쳤습니다. 지급은 잘 들어갔는데, 게임을 켤 때 브라우저가 자기 세이브에 적힌 예전 잔액을 서버에 도로 덮어쓰고 있었어요. 이제 켤 때 서버가 가진 잔액을 그대로 받아옵니다.",
+      "최고 점수와 경험치도 같은 방식으로 서버 값을 따릅니다. 최고 점수만은 예외로, 연결이 끊긴 채 세운 기록이 세이브에 남아 있을 수 있어서 내려가지 않습니다.",
+    ],
+  },
   {
     version: "3.21",
     date: "2026-09-11",

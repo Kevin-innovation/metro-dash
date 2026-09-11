@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MAX_GUEST_CARRY, defaultSave, mergeProfiles, normalizeSave } from "../src/save.js";
+import {
+  MAX_GUEST_CARRY,
+  defaultSave,
+  mergeProfiles,
+  normalizeSave,
+  pinServerFigures,
+} from "../src/save.js";
 
 /** A profile with everything at zero unless the test says otherwise. */
 const save = (fields = {}) => normalizeSave({ ...defaultSave(), ...fields });
@@ -217,5 +223,54 @@ describe("보고되지 않은 출석 보상", () => {
     const local = save({ coins: 5100, syncedCoins: 5000, pendingClaimCoins: 100 });
     const cloud = save({ coins: 47000, syncedCoins: 47000, pendingClaimCoins: 350 });
     expect(mergeProfiles(local, cloud).save.pendingClaimCoins).toBe(100);
+  });
+});
+
+describe("스태프가 고친 값이 부팅으로 지워지지 않는다", () => {
+  it("코인 지급이 세이브 안의 낡은 숫자를 이긴다", () => {
+    // 실제로 일어난 일: 대시보드에서 coins 컬럼을 고쳤는데 화면은 그대로였다.
+    // 지급은 컬럼을 패치하고 세이브 블롭은 건드리지 않는다 — 그 블롭은 그
+    // 브라우저의 것이니까. 그런데 부팅이 블롭에서 잔액을 읽어 병합하고 그걸
+    // absolute 로 도로 올려서, 방금 고친 컬럼 위에 낡은 숫자를 덮어썼다.
+    const blob = normalizeSave({ ...defaultSave(), coins: 26355, syncedCoins: 26355 });
+    const pinned = pinServerFigures(blob, { coins: 200000 });
+    expect(pinned.coins).toBe(200000);
+    // 서버가 방금 말한 값이므로 이미 동기화된 것으로 표시된다. 안 그러면
+    // 다음 sync 가 17만을 새로 번 것으로 보고한다.
+    expect(pinned.syncedCoins).toBe(200000);
+  });
+
+  it("코인을 깎는 것도 먹혀야 한다", () => {
+    // best 와 달리 max 가 아니라 대입이다. 회수도 정정이다.
+    const blob = normalizeSave({ ...defaultSave(), coins: 900000, syncedCoins: 900000 });
+    expect(pinServerFigures(blob, { coins: 1000 }).coins).toBe(1000);
+  });
+
+  it("최고 점수는 올리기만 한다", () => {
+    // 연결이 끊긴 채 끝낸 판이 세이브 안에 있고 아직 서버에 못 갔다.
+    const blob = normalizeSave({ ...defaultSave(), best: 500000 });
+    expect(pinServerFigures(blob, { best: 300000 }).best).toBe(500000);
+    expect(pinServerFigures(blob, { best: 900000 }).best).toBe(900000);
+  });
+
+  it("서버가 말하지 않은 값은 건드리지 않는다", () => {
+    const blob = normalizeSave({ ...defaultSave(), coins: 4242, best: 77, xp: 5 });
+    const same = pinServerFigures(blob, {});
+    expect(same.coins).toBe(4242);
+    expect(same.best).toBe(77);
+    expect(same.xp).toBe(5);
+    expect(pinServerFigures(blob, { coins: undefined, xp: null }).coins).toBe(4242);
+  });
+
+  it("지급받은 잔액 위로 이 기기가 번 것이 얹힌다", () => {
+    // 고쳐진 잔액이 병합의 출발점이고, 아직 보고 안 한 수입은 그 위에 더해진다.
+    const local = normalizeSave({ ...defaultSave(), coins: 5300, syncedCoins: 5000 });
+    const cloud = pinServerFigures(
+      normalizeSave({ ...defaultSave(), coins: 26355, syncedCoins: 26355 }),
+      { coins: 200000 },
+    );
+    const { save, carried } = mergeProfiles(local, cloud);
+    expect(carried).toBe(300);
+    expect(save.coins).toBe(200300);
   });
 });

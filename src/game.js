@@ -30,7 +30,13 @@ import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
-import { SaveStore, hasProgress, mergeProfiles, normalizeSave } from "./save.js";
+import {
+  SaveStore,
+  hasProgress,
+  mergeProfiles,
+  normalizeSave,
+  pinServerFigures,
+} from "./save.js";
 import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { Screens } from "./screens.js";
@@ -358,7 +364,7 @@ export class Game {
           window.location.href = "/admin.html";
           return;
         }
-        this.reconcileProfiles(result?.profile, result?.best);
+        this.reconcileProfiles(result?.profile, result?.best, result?.coins, result?.xp);
       }
       this.screens.closeAccount();
       this.screens.refreshProfile(this.store.data);
@@ -400,7 +406,7 @@ export class Game {
     // is the only truth there is, and pushing it up would be doing the exact
     // thing this method exists to prevent, so nothing is sent either.
     if (!loaded) return;
-    this.reconcileProfiles(loaded.profile, loaded.best);
+    this.reconcileProfiles(loaded.profile, loaded.best, loaded.coins, loaded.xp);
     this.screens.refreshProfile(this.store.data);
   }
 
@@ -414,13 +420,18 @@ export class Game {
    * answered by students picking the run they had just played and losing the
    * balance of the account they were signing into. See mergeProfiles.
    */
-  reconcileProfiles(cloudProfile, serverBest) {
-    const cloud = cloudProfile ? normalizeSave(cloudProfile) : null;
-    // The record inside the blob is only as fresh as the last save that got
-    // through; the account's own figure is what a validated run moves. Taking
-    // the higher of the two keeps the choice the player is about to make — and
-    // the profile they end up with — from showing a stale record.
-    if (cloud) cloud.best = Math.max(cloud.best, Math.floor(Number(serverBest) || 0));
+  reconcileProfiles(cloudProfile, serverBest, serverCoins, serverXp) {
+    // The blob the server hands back was written by a browser. The record, the
+    // balance and the experience are columns the server owns, and they are what
+    // a staff correction moves — so they are taken from the answer rather than
+    // read out of the save file. See pinServerFigures for the bug this closes.
+    const cloud = cloudProfile
+      ? pinServerFigures(normalizeSave(cloudProfile), {
+          best: serverBest,
+          coins: serverCoins,
+          xp: serverXp,
+        })
+      : null;
     const local = this.store.data;
 
     if (!cloud || !hasProgress(cloud)) {

@@ -144,8 +144,16 @@ function publicProfile(player) {
     level: levelOf(player),
     school: player.school ?? null,
     schoolLabel: player.school ? schoolLabel(player.school) : "",
-    /** The balance the server holds; see the note in schema.js. */
+    /**
+     * The balance and the experience the server holds; see the note in
+     * schema.js. Both are *columns*, and `profile` above is a blob the browser
+     * wrote — the two disagree whenever staff have touched an account, because
+     * a grant patches the column and has no business rewriting somebody's save
+     * file. The client has to take these over the blob's own figures, the same
+     * way it already takes `best`. See Game#reconcileProfiles.
+     */
     coins: coinsOf(player),
+    xp: xpOf(player),
     staff: player.role === "admin",
   };
 }

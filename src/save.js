@@ -388,6 +388,55 @@ export const MAX_GUEST_CARRY = 5000;
  * @returns {{ save: object, carried: number }} the merged profile, and the
  *   coins the guest session brought with it, for the line shown to the player.
  */
+/**
+ * Overwrite a downloaded save with the figures the server actually owns.
+ *
+ * `profile` is a blob the *browser* wrote and the server stores verbatim. Three
+ * numbers inside it are not the browser's to state any more — the record moves
+ * only when a run passes validation, and the balance and the experience move
+ * when the server pays them or when staff correct them. A grant patches a
+ * column and deliberately leaves the save file alone, because that file belongs
+ * to the player's browser.
+ *
+ * So a client that merges on the blob's own figures is merging on numbers that
+ * were true the last time this browser saved. That is the whole of the bug
+ * where a coin grant appeared to do nothing: the browser booted, took the stale
+ * balance out of the blob, merged, and pushed the result back up as an absolute
+ * — writing the old number straight over the column staff had just corrected.
+ * The grant arrived and the next launch erased it.
+ *
+ * The record is raised rather than replaced, because a run finished offline is
+ * in the save and has not reached the server yet. The balance and the
+ * experience are replaced outright, because a correction that takes something
+ * away has to be able to take it away.
+ *
+ * @param {object} save a normalized profile from the server
+ * @param {{ best?: number, coins?: number, xp?: number }} server the columns
+ */
+export function pinServerFigures(save, server = {}) {
+  const out = { ...save };
+  const num = (value) => (Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null);
+
+  const best = num(server.best);
+  if (best !== null) out.best = Math.max(out.best ?? 0, best);
+
+  const coins = num(server.coins);
+  if (coins !== null) {
+    out.coins = coins;
+    // The blob's marker refers to a balance that is no longer the balance. The
+    // server has just stated this figure, so it is by definition acknowledged.
+    out.syncedCoins = coins;
+  }
+
+  const xp = num(server.xp);
+  if (xp !== null) {
+    out.xp = xp;
+    out.syncedXp = xp;
+  }
+
+  return out;
+}
+
 export function mergeProfiles(local, cloud) {
   const a = normalizeSave(local);
   const b = normalizeSave(cloud);
