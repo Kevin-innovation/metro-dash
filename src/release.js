@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.14";
+export const VERSION = "4.15";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.15",
+    date: "2026-09-12",
+    kind: "fix",
+    title: "정보판이 다이아몬드 칩을 덮던 문제",
+    notes: [
+      "오른쪽 정보판이 다이아몬드 칩 위에 겹쳐 앉던 문제를 고쳤습니다. 다이아몬드가 하나도 없을 때를 기준으로 위치를 잡아놨는데, 첫 다이아몬드를 먹으면 칩이 생기면서 아래 줄이 위로 자랍니다. 이제 같은 줄 안에 들어가 있어서 칩이 몇 개든 겹치지 않습니다.",
+      "이것 때문에 콤보 숫자가 다이아몬드에 가려 안 보였습니다. 게이트 구간에서 콤보가 안 오르는 것처럼 보였다면 그 이유예요 — 콤보는 정상으로 오르고 있었습니다.",
+    ],
+  },
   {
     version: "4.14",
     date: "2026-09-12",

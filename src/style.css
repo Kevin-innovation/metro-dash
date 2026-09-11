@@ -3823,13 +3823,14 @@ body.admin {
    it. Muted on purpose — it is there to be looked at, not to compete with the
    track. */
 .run-stats {
-  position: absolute;
-  right: 16px;
-  bottom: calc(24px + env(safe-area-inset-bottom) + 132px);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* Stretches to the column rather than setting its own width, so the panel and
+     the chips under it share one edge however many chips there are. */
+  align-self: stretch;
   min-width: 112px;
+  margin-bottom: 2px;
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(4, 16, 24, 0.55);
