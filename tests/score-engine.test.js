@@ -6,8 +6,10 @@ import {
   COMBO_WINDOW_TIGHTENS_BY,
   JUMP_BONUS,
   MOUNT_BONUS,
+  HOP_BONUS,
   SLIDE_BONUS,
   comboWindowAt,
+  readableGain,
   survivalGain,
 } from "../src/scoring.js";
 import { EVENTS, MAX_EVENT_MULTIPLIER, eventById } from "../src/events.js";
@@ -219,5 +221,34 @@ describe("룰렛은 시계를 곱하지 않는다", () => {
     // ×2 가 14초 — 생존 점수로 4.7만. 한 판이 100만대인 게임에서 감당되는 크기다.
     const gain = survivalGain(14) * 2 - survivalGain(14);
     expect(gain).toBeLessThan(60_000);
+  });
+});
+
+describe("화면의 숫자가 어디서 왔는지 읽혀야 한다", () => {
+  it("지급액이 고른 숫자로 떨어진다", () => {
+    // 305는 참인 숫자이고 읽을 수 없는 숫자다 — 지붕 200, 콤보로 4분의 1,
+    // 캐릭터로 다시 5분의 1. 자릿수에는 그 중 아무것도 안 보인다. 플레이어는
+    // 그걸 보고 어디서 왔는지 못 짚고, 그러다 숫자를 아예 안 읽게 된다.
+    expect(readableGain(305)).toBe(310);
+    expect(readableGain(244)).toBe(240);
+    expect(readableGain(87)).toBe(85);
+    expect(readableGain(0)).toBe(0);
+  });
+
+  it("런이 실제로 그 고른 숫자를 준다", () => {
+    const run = new Run(store());
+    run.scoreScale = 1.22;
+    run.combo = 3;
+    run.comboT = 999;
+    const gain = run.addMount(false);
+    expect(gain % 10).toBe(0);
+    expect(run.scoreBonus).toBe(gain);
+  });
+
+  it("기본값 자체도 고른 숫자다", () => {
+    // 배수가 안 붙은 첫 지붕이 167 로 뜨면 그때부터 못 읽는다.
+    for (const v of [MOUNT_BONUS, HOP_BONUS, SLIDE_BONUS, JUMP_BONUS]) {
+      expect(v % 10).toBe(0);
+    }
   });
 });

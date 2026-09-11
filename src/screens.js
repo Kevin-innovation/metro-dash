@@ -1151,7 +1151,7 @@ export class Screens {
    * The number is the point of the label. Without it the game was announcing
    * that something had happened and leaving the player to take its word for it.
    */
-  flashTrick(kind, gain = 0) {
+  flashTrick(kind, gain = 0, multiplier = 1) {
     const el = $("near-miss");
     if (!el) return;
     // Korean, because the number beside them is the point and a player should
@@ -1159,7 +1159,16 @@ export class Screens {
     // puzzles stacked: which move is this, and what is 244.
     const labels = { slide: "슬라이드!", jump: "점프!", roof: "지붕!" };
     const points = Math.round(gain);
-    el.textContent = `${labels[kind] ?? "NICE!"}${points > 0 ? ` +${points.toLocaleString()}` : ""}`;
+    // The multiplier beside the number, because without it the number is not
+    // readable. 「지붕 +305」 is 200 for the roof, a quarter more for the combo
+    // and a fifth again for the runner, and a player can see none of that in
+    // the digits — so they stop reading the figure at all. 「지붕 ×1.5 +310」
+    // says where it came from and, more usefully, what to do about it.
+    //
+    // Hidden at ×1, where there is nothing to explain.
+    const times = multiplier > 1.005 ? `<em>×${multiplier.toFixed(2).replace(/\.?0+$/, "")}</em> ` : "";
+    const label = escapeHtml(labels[kind] ?? "NICE!");
+    el.innerHTML = `${label} ${times}${points > 0 ? `+${points.toLocaleString()}` : ""}`;
     el.classList.remove("hidden", "pop");
     void el.offsetWidth;
     el.classList.add("pop");

@@ -132,7 +132,24 @@ export function comboWindowAt(t) {
  * mount that set it up has already been paid, a gate a tenth. They add up over
  * a run without ever competing with the clock itself.
  */
-const perSecond = (fraction) => Math.round(SURVIVAL_RATE * fraction);
+const perSecond = (fraction) => Math.round((SURVIVAL_RATE * fraction) / 10) * 10;
+
+/**
+ * Round a verb's payout to something that looks chosen.
+ *
+ * 305 is a true number and an unreadable one: it is 200 for the roof, a quarter
+ * more for the combo and a fifth again for the runner, and none of that is
+ * visible in the digits. A player sees it, cannot place it, and stops reading
+ * the number at all.
+ *
+ * Rounding does not make the arithmetic legible — the label beside it does that
+ * — but it stops the figure looking like a readout from a machine. 310 reads as
+ * a reward; 305 reads as noise.
+ */
+export function readableGain(points) {
+  const whole = Math.max(0, points);
+  return whole < 100 ? Math.round(whole / 5) * 5 : Math.round(whole / 10) * 10;
+}
 
 export const SLIDE_BONUS = perSecond(0.04);
 export const JUMP_BONUS = perSecond(0.03);

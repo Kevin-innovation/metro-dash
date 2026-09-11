@@ -202,8 +202,8 @@ export class Interactions {
    * asks to be cleared, or was riding something, or spent a hoverboard. All
    * three are the player having dealt with it.
    *
-   * @returns {{ tricks: Array<{ kind: string, gain: number }>, gates: number,
-   *   barriers: number }}
+   * @returns {{ tricks: Array<{ kind: string, gain: number, multiplier: number }>,
+   *   gates: number, barriers: number }}
    */
   scoreClears(player) {
     const tally = { tricks: [], gates: 0, barriers: 0 };
@@ -221,9 +221,17 @@ export class Interactions {
       if (player.mounted === item) continue;
 
       if (item.type === "sign") {
-        tally.tricks.push({ kind: "slide", gain: this.run.addClear("slide") });
+        tally.tricks.push({
+          kind: "slide",
+          multiplier: this.run.multiplier(),
+          gain: this.run.addClear("slide"),
+        });
       } else if (item.type === "barrier" || item.type === "crate") {
-        tally.tricks.push({ kind: "jump", gain: this.run.addClear("jump") });
+        tally.tricks.push({
+          kind: "jump",
+          multiplier: this.run.multiplier(),
+          gain: this.run.addClear("jump"),
+        });
       }
     }
 

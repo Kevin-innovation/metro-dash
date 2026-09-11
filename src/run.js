@@ -19,6 +19,7 @@ import {
   clearBonus,
   comboWindowAt,
   mountBonus,
+  readableGain,
   roofRideGain,
   scoreMultiplier,
   survivalGain,
@@ -258,7 +259,7 @@ export class Run {
 
   /** @returns {number} points awarded, for the readout beside the label */
   addMount(isHop) {
-    const gain = mountBonus(isHop) * this.multiplier();
+    const gain = readableGain(mountBonus(isHop) * this.multiplier());
     this.scoreBonus += gain;
     this.bumpCombo();
     if (!isHop) this.metrics.mounts += 1;
@@ -275,7 +276,7 @@ export class Run {
    * @returns {number} points awarded, for the readout beside the label
    */
   addClear(kind) {
-    const gain = clearBonus(kind) * this.multiplier();
+    const gain = readableGain(clearBonus(kind) * this.multiplier());
     this.scoreBonus += gain;
     this.bumpCombo();
     return gain;

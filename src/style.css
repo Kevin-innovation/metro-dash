@@ -3785,3 +3785,13 @@ body.admin {
     animation: none;
   }
 }
+
+/* The multiplier inside the trick flash. Dimmer and smaller than the points —
+   it is the explanation, not the reward, and a player who already understands
+   it should be able to skip past it with their eyes. */
+.near-miss em {
+  font-style: normal;
+  font-size: 0.62em;
+  opacity: 0.72;
+  vertical-align: 0.12em;
+}

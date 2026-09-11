@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.12";
+export const VERSION = "4.13";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.13",
+    date: "2026-09-12",
+    kind: "minor",
+    title: "화면의 숫자가 어디서 왔는지 보입니다",
+    notes: [
+      "「지붕 +305」처럼 읽을 수 없는 숫자가 뜨던 걸 고쳤습니다. 305는 지붕 200에 콤보로 4분의 1, 캐릭터로 다시 5분의 1이 붙은 값인데, 자릿수에는 그 중 아무것도 안 보였어요.",
+      "이제 배수가 같이 뜹니다 — 「지붕 ×1.52 +310」. 콤보를 살려두면 저 배수가 커지고 숫자도 같이 커집니다. 배수가 1일 때는 설명할 게 없으니 안 뜹니다.",
+      "점수도 10단위로 떨어집니다. 305는 기계가 뱉은 값처럼 보이고 310은 정해둔 값처럼 보이니까요.",
+      "참고로 기본값은 지붕 올라타기 200, 지붕에서 지붕으로 건너뛰기 170, 슬라이드 130, 점프 100입니다. 여기에 콤보 배수와 캐릭터 보너스가 곱해집니다.",
+    ],
+  },
   {
     version: "4.12",
     date: "2026-09-11",

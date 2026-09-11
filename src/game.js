@@ -1986,7 +1986,8 @@ export class Game {
     if (this.state !== "playing") return;
     if (hop) this.audio.hop();
     else this.audio.mount();
-    this.screens.flashTrick("roof", this.run.addMount(hop));
+    const mult = this.run.multiplier();
+    this.screens.flashTrick("roof", this.run.addMount(hop), mult);
     // Landing on a roof is a landing: it gets the same thump as hitting the
     // deck, or riding a bus feels like floating onto it.
     const p = this.player;
@@ -2247,7 +2248,7 @@ export class Game {
     const cleared = this.interactions.scoreClears(this.player);
     for (const trick of cleared.tricks) {
       this.audio.nearMiss();
-      this.screens.flashTrick(trick.kind, trick.gain);
+      this.screens.flashTrick(trick.kind, trick.gain, trick.multiplier);
     }
     if (cleared.tricks.length > 0 && this.nearMissFx <= 0) {
       const p = this.player;
