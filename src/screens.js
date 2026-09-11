@@ -20,6 +20,7 @@ import {
   renderRunTally,
   renderSettings,
   renderShop,
+  runTimeLabel,
 } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
@@ -1181,6 +1182,7 @@ export class Screens {
     $("break-dist").textContent = Math.floor(run.scoreDist).toLocaleString();
     $("break-coins").textContent = Math.floor(run.scoreCoins).toLocaleString();
     $("break-bonus").textContent = Math.floor(run.scoreBonus).toLocaleString();
+    $("final-time").textContent = runTimeLabel(run.seconds);
     $("final-coins").textContent = String(run.coins);
     $("final-dist").textContent = `${Math.floor(run.distance)}m`;
     $("final-combo").textContent = String(run.comboMax);

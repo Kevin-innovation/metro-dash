@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.03";
+export const VERSION = "4.04";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.04",
+    date: "2026-09-11",
+    kind: "minor",
+    title: "버틴 시간을 보여줍니다",
+    notes: [
+      "게임오버 카드 맨 앞에 「버틴 시간」이 나옵니다. 점수가 버틴 시간으로 쌓이는 게임인데 정작 시간이 어디에도 안 보였어요 — 자기 판이 좋았는지 나빴는지를 느낌으로 판단해야 했습니다.",
+      "1분에 20만이니, 이제 시간만 보면 점수가 어디서 왔는지 바로 읽힙니다. 2분 14초에 59만이면 30만은 버틴 값이고 29만은 코인·슬라이드·점프·지붕으로 얹은 값이에요.",
+    ],
+  },
   {
     version: "4.03",
     date: "2026-09-11",

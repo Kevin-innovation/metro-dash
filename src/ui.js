@@ -283,6 +283,18 @@ function renderSpeedGauge(el, state) {
   }
 }
 
+/**
+ * A run's length, in the shape a player reads it.
+ *
+ * Seconds under a minute, because "0분 47초" is a longer way of saying a
+ * number that is already short.
+ */
+export function runTimeLabel(seconds) {
+  const whole = Math.max(0, Math.floor(Number(seconds) || 0));
+  if (whole < 60) return `${whole}초`;
+  return `${Math.floor(whole / 60)}분 ${String(whole % 60).padStart(2, "0")}초`;
+}
+
 export function renderHud(state) {
   const el = hudNodes();
   const last = el.last;
