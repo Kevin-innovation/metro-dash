@@ -11,7 +11,28 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.00";
+export const VERSION = "4.01";
+
+/**
+ * Which season the board is playing.
+ *
+ * A season is a rule set, not a stretch of calendar. Season 4 starts the moment
+ * the scoring does — the week beginning Saturday 12 September 2026, the first
+ * one played on 「1분 20만 · 3분이 끝」. Everything before it was scored on
+ * units that no longer exist, and telling the two apart is the whole reason the
+ * badge is on the title screen.
+ *
+ * A table rather than a constant, so the next one is a line rather than a
+ * question about where the last number came from. Times are the epoch millis of
+ * midnight KST, which is 15:00 UTC on the day before.
+ */
+const SEASONS = [{ season: 4, from: Date.UTC(2026, 8, 11, 15, 0, 0) }];
+
+export function seasonAt(ms = Date.now()) {
+  let current = 3;
+  for (const entry of SEASONS) if (ms >= entry.from) current = entry.season;
+  return current;
+}
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +44,18 @@ export const VERSION = "4.00";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.01",
+    date: "2026-09-11",
+    kind: "major",
+    title: "시즌 4 · 토요일 0시 초기화",
+    notes: [
+      "랭킹이 월요일이 아니라 토요일 0시에 초기화됩니다. 학교의 한 주는 금요일에 끝나는데, 월요일 아침에 초기화하면 정작 게임할 시간이 있는 주말을 버리는 셈이었어요. 이제 한 주가 토요일에 시작합니다.",
+      "「전체」 탭이 없어졌습니다. 이번 주 · 레벨 · 명예의 전당만 남습니다. 전체 기간 순위는 먼저 시작한 사람이 이기는 표라, 늦게 들어온 사람에게는 닫힌 문으로 읽힙니다.",
+      "이번 주가 끝나면 지금까지의 기록은 명예의 전당에 1~3위로 올라가고 보드는 비워집니다. 기록이 사라지는 게 아니라 자리를 옮기는 거예요.",
+      "토요일 0시부터 시즌 4입니다. 점수 규칙이 통째로 바뀌었으니(1분 20만 · 3분이 끝) 그 앞의 점수와는 단위가 다릅니다 — 시즌으로 나누는 이유가 그겁니다.",
+    ],
+  },
   {
     version: "4.00",
     date: "2026-09-11",

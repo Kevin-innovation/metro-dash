@@ -10,7 +10,7 @@ import { SPEED_STEP_SECONDS, nextStepIn, speedStepAt } from "./pace.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
-import { VERSION } from "./release.js";
+import { VERSION, seasonAt } from "./release.js";
 import {
   escapeHtml,
   renderHud,
@@ -40,6 +40,8 @@ export class Screens {
     // badge and the newest patch note can never claim different versions.
     const badge = $("version-badge");
     if (badge) badge.textContent = `ver ${VERSION}`;
+    const season = $("season-badge");
+    if (season) season.textContent = `SEASON ${seasonAt()}`;
     /** Text for the two standing lines, kept together so they move together. */
     this.standings = { mine: "", school: "", schoolNote: "" };
     this.toastTimer = 0;
@@ -151,7 +153,6 @@ export class Screens {
 
     for (const [id, range] of [
       ["tab-board-week", "week"],
-      ["tab-board-all", "all"],
       ["tab-board-level", "level"],
       ["tab-board-hall", "hall"],
     ]) {
@@ -412,7 +413,6 @@ export class Screens {
   setBoardTab(range) {
     for (const [id, value] of [
       ["tab-board-week", "week"],
-      ["tab-board-all", "all"],
       ["tab-board-level", "level"],
       ["tab-board-hall", "hall"],
     ]) {
@@ -432,11 +432,7 @@ export class Screens {
     const school = $("school-note");
     if (school) {
       school.textContent =
-        range === "hall"
-          ? "주간 1~3위"
-          : range === "week"
-            ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
-            : "전체 기간 누적";
+        range === "hall" ? "주간 1~3위" : `토요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`;
     }
 
     const note = $("board-reset");
@@ -446,9 +442,7 @@ export class Screens {
           ? "지난 주의 기록"
           : range === "level"
             ? "누적 경험치 순위 · 미션과 점수로 오릅니다"
-            : range === "week"
-              ? `월요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`
-              : "전체 기간 최고 기록";
+            : `토요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`;
     }
   }
 
