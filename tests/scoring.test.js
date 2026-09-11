@@ -6,7 +6,10 @@ import {
   HOP_BONUS,
   MOUNT_BONUS,
   coinGain,
-  distanceGain,
+  survivalGain,
+  roofRideGain,
+  TARGET_SCORE_PER_MINUTE,
+  ROOF_RIDE_RATE,
   mountBonus,
   totalScore,
 } from "../src/scoring.js";
@@ -31,19 +34,26 @@ describe("coinGain", () => {
   });
 });
 
-describe("distanceGain", () => {
-  it("scales linearly with metres travelled", () => {
-    expect(distanceGain(10)).toBeCloseTo(10 * DIST_SCORE_RATE);
-    expect(distanceGain(0)).toBe(0);
+describe("survivalGain", () => {
+  it("한 판의 1분은 정확히 20만이다", () => {
+    // 이 게임의 점수는 달린 거리가 아니라 버틴 시간으로 쌓인다. 거리로 매기면
+    // 트랙이 빨라지는 만큼 점수도 빨라져서, 세 번째 1분이 첫 1분의 네 배가
+    // 됐다 — 그래서 「1분 20만」과 「3분이 최대」를 동시에 만족하는 배율이
+    // 존재하지 않았다. 시간으로 매기면 그 둘이 같은 숫자의 앞뒤가 된다.
+    expect(survivalGain(60)).toBe(TARGET_SCORE_PER_MINUTE);
+    expect(survivalGain(180)).toBe(TARGET_SCORE_PER_MINUTE * 3);
+    expect(survivalGain(0)).toBe(0);
   });
 
-  it("accumulates identically regardless of step size", () => {
-    const sum = (steps) => {
-      let total = 0;
-      for (let i = 0; i < steps; i++) total += distanceGain(100 / steps);
-      return total;
-    };
-    expect(sum(120)).toBeCloseTo(sum(30), 6);
+  it("쪼개서 더해도 같다", () => {
+    const steps = 240;
+    let total = 0;
+    for (let i = 0; i < steps; i++) total += survivalGain(60 / steps);
+    expect(total).toBeCloseTo(TARGET_SCORE_PER_MINUTE, 6);
+  });
+
+  it("지붕은 땅 위보다 79% 더 준다 — 단위만 옮겼을 뿐이다", () => {
+    expect(roofRideGain(1) / survivalGain(1)).toBeCloseTo(ROOF_RIDE_RATE / DIST_SCORE_RATE, 10);
   });
 });
 

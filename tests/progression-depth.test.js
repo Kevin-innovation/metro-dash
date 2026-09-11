@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { RUN_LIMIT_SECONDS } from "../src/config.js";
+import { survivalGain } from "../src/scoring.js";
 import { JETPACK_ALTITUDE } from "../src/config.js";
 import { MISSION_DEFS, MISSION_TIERS, missionPay, tierStep } from "../src/missions.js";
 import { POWERUP_PATTERNS } from "../src/patterns.js";
@@ -47,11 +49,17 @@ describe("a combo keeps paying past thirty", () => {
   });
 
   it("is known to the run validator, so the best runs still reach the board", () => {
-    const seconds = 240;
+    // Written against the clock rather than the tape measure, because the score
+    // is. A run is paid per second now — see SURVIVAL_RATE — so a ceiling built
+    // out of metres was bounding the wrong thing, and a player who spent the
+    // last of a run going slowly would have looked impossible.
+    const seconds = RUN_LIMIT_SECONDS;
     const distance = Math.floor(maxDistanceIn(seconds) * 0.85);
     const coins = Math.floor(distance / 3);
-    // Every multiplier at once, which is now ten rather than eight.
-    const score = Math.floor(distance * 5.8 * MAX_MULTIPLIER * 0.5 + coins * 30 * MAX_MULTIPLIER);
+    // Every multiplier at once, on the two halves that actually take one.
+    const score = Math.floor(
+      survivalGain(seconds) * 1.8 * MAX_MULTIPLIER + coins * 30 * MAX_MULTIPLIER,
+    );
     expect(validateRun({ score, distance, coins, seconds })).toEqual({ ok: true });
   });
 });

@@ -21,7 +21,38 @@
  */
 export const SCORE_SCALE = 4.3;
 
-/** Score points earned per metre travelled. */
+/**
+ * Score for staying alive, per second.
+ *
+ * Per second, not per metre, and that is the whole shape of the run.
+ *
+ * Per metre, the score accelerated twice over: the track speeds up through the
+ * run and the combo multiplier climbs on top of it, so a minute at the end was
+ * worth four minutes at the start. Measured, an ordinary run scored 2,367 a
+ * second over its first minute and 9,467 a second over its third. That is why a
+ * five-minute run reached 1.7 million and why no single scale factor could give
+ * 20만 in the first minute *and* keep a three-minute run near the wall — raise
+ * it for the opening and the end runs away, lower it for the end and the
+ * opening is worth nothing.
+ *
+ * Time is the thing every player spends at the same rate, so the rate is
+ * written as the answer rather than tuned towards it: a minute of staying alive
+ * is 20만, by construction, at the start of a run and at the end of it. Three
+ * minutes of it is 60만, and everything a player earns on top — the coins, the
+ * slides, the mounts, the roofs — is what separates one run from another.
+ *
+ * Speed is not left without a job. It is what decides how many coins, gates and
+ * roofs go past in each of those seconds, and those are the other half of the
+ * score — so 질주 still pays, and still pays for the reason it should: it puts
+ * more of the game in front of you, not more metres behind you.
+ */
+export const TARGET_SCORE_PER_MINUTE = 200_000;
+export const SURVIVAL_RATE = TARGET_SCORE_PER_MINUTE / 60;
+
+/**
+ * Kept so the run validator and the game-over card still have the figure they
+ * were written against. Nothing scores per metre any more.
+ */
 export const DIST_SCORE_RATE = 26;
 /** Base points for a coin, before the combo bonus. */
 export const COIN_BASE = 78;
@@ -151,12 +182,20 @@ export function coinGain(combo) {
   return COIN_BASE + Math.min(COIN_COMBO_CAP, Math.max(0, combo));
 }
 
-export function distanceGain(metres) {
-  return metres * DIST_SCORE_RATE;
+/** Points for `seconds` of running, before any multiplier. */
+export function survivalGain(seconds) {
+  return seconds * SURVIVAL_RATE;
 }
 
-export function roofRideGain(metres) {
-  return metres * ROOF_RIDE_RATE;
+/**
+ * And for `seconds` spent on a roof, on top of it.
+ *
+ * Held at the same share of the base it always had — a roof was worth an extra
+ * 79% of the ground under it per metre, and it is worth an extra 79% per second
+ * now. The line pays what it always paid; only the unit moved.
+ */
+export function roofRideGain(seconds) {
+  return seconds * SURVIVAL_RATE * (ROOF_RIDE_RATE / DIST_SCORE_RATE);
 }
 
 export function mountBonus(isHop) {

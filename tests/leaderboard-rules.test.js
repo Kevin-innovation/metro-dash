@@ -92,7 +92,7 @@ describe("maxDistanceIn", () => {
 });
 
 describe("validateRun accepts honest runs", () => {
-  it.each([20, 60, 180, 300])("a %is run", (seconds) => {
+  it.each([20, 60, 120, 180])("a %is run", (seconds) => {
     expect(reasonFor(honestRun(seconds))).toBe("ok");
   });
 
@@ -116,7 +116,7 @@ describe("validateRun accepts honest runs", () => {
 
   it("accepts a perfect run that hugs every ceiling", () => {
     // The bounds have to leave room for the best a real player could do.
-    const seconds = 300;
+    const seconds = RUN_LIMIT_SECONDS;
     const distance = maxDistanceIn(seconds);
     const coins = Math.floor(distance / 1.35);
     const score = distance * 5.8 * 4 + coins * 30 * 4;

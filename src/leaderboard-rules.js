@@ -13,6 +13,7 @@ import {
   MOUNT_BONUS,
   ROOF_RIDE_RATE,
   SLIDE_BONUS,
+  SURVIVAL_RATE,
 } from "./scoring.js";
 
 /**
@@ -94,7 +95,19 @@ export const MAX_MULTIPLIER =
   MAX_EVENT_MULTIPLIER *
   SLOT_TOP_MULTIPLIER *
   MAX_CHARACTER_SCORE_BONUS;
-const MAX_PER_METRE = (DIST_SCORE_RATE + ROOF_RIDE_RATE) * MAX_MULTIPLIER;
+/**
+ * Ceiling on what one second of running can be worth.
+ *
+ * It used to be a ceiling per *metre*, because the score used to be paid per
+ * metre. It is paid per second now — see SURVIVAL_RATE — so the bound has to
+ * be written against the same clock or an honest run reads as impossible the
+ * moment it is slower than the speed curve's maximum.
+ *
+ * The roof term takes the multiplier and the flat term does not, which is
+ * exactly how Run pays them.
+ */
+const MAX_PER_SECOND =
+  SURVIVAL_RATE * (1 + (ROOF_RIDE_RATE / DIST_SCORE_RATE) * MAX_MULTIPLIER);
 const MAX_PER_COIN = (COIN_BASE + COIN_COMBO_CAP) * MAX_MULTIPLIER;
 /**
  * The verbs — slides, jumps, mounts — generously bounded per second of running.
@@ -169,7 +182,7 @@ export function validateRun(run) {
   }
 
   const ceiling =
-    (distance * MAX_PER_METRE + coins * MAX_PER_COIN + seconds * MAX_BONUS_PER_SECOND) * SLACK;
+    (seconds * MAX_PER_SECOND + coins * MAX_PER_COIN + seconds * MAX_BONUS_PER_SECOND) * SLACK;
   if (score > ceiling) return { ok: false, reason: REJECT_RUN.SCORE };
 
   return { ok: true };

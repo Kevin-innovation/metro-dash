@@ -198,38 +198,27 @@ describe("20만 · 30만 · 40만 · 50만", () => {
     expect(HAZARD_FROM_SCORE).toBeLessThan(900_000);
   });
 
-  it("1분을 달리면 20만 언저리다", () => {
-    // 이 게임이 무엇을 목표로 조율됐는지 적어두는 자리다. 보통 플레이 —
-    // 지붕은 절반쯤 타고, 콤보는 BLAZING 언저리에서 유지되고, 코인은
-    // 눈에 보이는 것의 절반쯤 먹는 — 한 판의 첫 1분이 20만에 닿는다.
-    // 지붕을 아예 안 타면 13만, 전부 타면 26만이니 폭을 넓게 잡는다.
+  it("1분을 달리면 20만이다", () => {
+    // 이 게임이 무엇을 목표로 조율됐는지 적어두는 자리다. 생존 점수만으로
+    // 1분이 정확히 20만이고, 코인·슬라이드·점프·지붕은 그 위에 얹힌다.
+    // 거리로 매기던 시절엔 같은 1분이 초보 10만 숙련 19만이었고, 세 번째
+    // 1분은 첫 1분의 네 배였다.
     const run = new Run(store());
     const metres = maxDistanceIn(60);
-    const hold = () => {
+    run.advance(60, { travelled: metres, mounted: false });
+    expect(run.scoreDist).toBeCloseTo(200_000, 6);
+
+    // 그 위에 얹히는 몫. 잘한 판이 못한 판보다 높은 건 전적으로 이쪽이다.
+    for (let i = 0; i < 160; i++) run.addCoin();
+    run.combo = 15;
+    run.comboT = 999;
+    for (let i = 0; i < 45; i++) {
+      run.addClear("jump");
       run.combo = 15;
       run.comboT = 999;
-    };
-
-    hold();
-    run.advance(36, { travelled: metres * 0.6, mounted: false });
-    hold();
-    run.advance(24, { travelled: metres * 0.4, mounted: true });
-    for (let i = 0; i < 160; i++) run.addCoin();
-    for (let i = 0; i < 30; i++) {
-      hold();
-      run.addClear("jump");
     }
-    for (let i = 0; i < 15; i++) {
-      hold();
-      run.addClear("slide");
-    }
-    for (let i = 0; i < 12; i++) {
-      hold();
-      run.addMount(false);
-    }
-
-    expect(run.score).toBeGreaterThan(150_000);
-    expect(run.score).toBeLessThan(260_000);
+    expect(run.score).toBeGreaterThan(215_000);
+    expect(run.score).toBeLessThan(300_000);
   });
 
   it("난이도 사다리가 50만 언저리에서 끝난다", () => {
@@ -255,8 +244,10 @@ describe("20만 · 30만 · 40만 · 50만", () => {
     //
     // 결승선은 두 숫자 사이에 있어야 한다. 이미 올라간 기록(4분치)이 아직
     // 깨질 수 있을 만큼 멀고, 더 앉아 있는 게 전략이 아닐 만큼 가깝게.
-    expect(RUN_LIMIT_SECONDS).toBeGreaterThan(240);
-    expect(RUN_LIMIT_SECONDS).toBeLessThanOrEqual(360);
+    // 3분 내외. 난이도 사다리의 마지막 단계가 142초에 오니, 그걸 만나고
+    // 겨룰 시간이 남으면서 더 앉아 있는 게 전략이 되지 않는 길이다.
+    expect(RUN_LIMIT_SECONDS).toBeGreaterThan(150);
+    expect(RUN_LIMIT_SECONDS).toBeLessThanOrEqual(210);
     // 서버도 그 길이만 받는다.
     expect(MAX_RUN_SECONDS).toBeGreaterThan(RUN_LIMIT_SECONDS);
     expect(MAX_RUN_SECONDS).toBeLessThan(RUN_LIMIT_SECONDS * 2);

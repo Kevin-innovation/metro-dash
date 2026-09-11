@@ -40,18 +40,17 @@ export const MAX_SPEED = 80;
  * straight line after it — four minutes is 1.7 million, thirty minutes is
  * nineteen. The board was ranking patience.
  *
- * Five minutes is chosen against two numbers rather than picked. It has to be
- * far enough out that the records already standing can still be beaten — the
- * best run on the board is about four minutes' worth — and near enough that
- * sitting longer stops being the strategy. At three hundred seconds a very good
- * run tops out around 2.6 million, so the board has somewhere to go and nowhere
- * to go forever.
+ * Three minutes, because that is the length of run the whole ladder is built
+ * for: 20만 in the first minute, 50만 where it turns brutal, and the last two
+ * phases arriving with time left to meet them. Five was the first attempt and
+ * it was two minutes of track nobody had designed — the difficulty ladder ends
+ * at 142 seconds, so everything past it was the same minute repeating.
  *
  * It is a finish line and the game says so. A run that reaches it is completed,
  * not cut off: everything scored is banked, and 완주 is the rarest thing on the
  * game-over card precisely because almost nobody will see it.
  */
-export const RUN_LIMIT_SECONDS = 300;
+export const RUN_LIMIT_SECONDS = 180;
 
 /**
  * How many times one run may be stopped.

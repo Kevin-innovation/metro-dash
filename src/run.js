@@ -18,10 +18,10 @@ import {
   COIN_BASE,
   clearBonus,
   comboWindowAt,
-  distanceGain,
   mountBonus,
   roofRideGain,
   scoreMultiplier,
+  survivalGain,
   totalScore,
 } from "./scoring.js";
 
@@ -178,10 +178,22 @@ export class Run {
     this.seconds += dt;
     this.distance += travelled;
     const multiplier = this.multiplier();
-    this.scoreDist += distanceGain(travelled) * multiplier;
-    // Riding a roof is the risky line, so it pays on top of plain distance.
+    // Flat, and not multiplied by anything. This is the one term that decides
+    // the shape of the whole run: a minute of running is worth a minute of
+    // running, at the start and at the end, so the score is a straight line in
+    // time and the milestones land where the difficulty ladder puts them.
+    //
+    // The combo does not touch it, which is the point. Multiplying the term
+    // that dominates the score is what made a third minute worth four first
+    // ones; the combo multiplies everything a player actually *does* instead —
+    // the slides, the jumps, the mounts, the roofs below — so skill still
+    // compounds, on top of a line rather than underneath it.
+    this.scoreDist += survivalGain(dt);
+    // Riding a roof is the risky line, so it pays on top of plain survival, and
+    // it is a thing done rather than a thing endured — so this one does take
+    // the multiplier.
     if (mounted) {
-      this.scoreDist += roofRideGain(travelled) * multiplier * (this.roofScale ?? 1);
+      this.scoreDist += roofRideGain(dt) * multiplier * (this.roofScale ?? 1);
       this.roofDistance += travelled;
     }
 

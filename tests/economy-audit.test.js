@@ -81,7 +81,7 @@ describe("the run validator knows every multiplier that exists", () => {
     // Every multiplier at once is legal play, and it used to be rejected: the
     // ceiling assumed four, and a combo through a ×2 section with the ×2
     // power-up is eight.
-    const seconds = 240;
+    const seconds = 180;
     const distance = Math.floor(maxDistanceIn(seconds) * 0.85);
     const coins = Math.floor(distance / 3);
     const score = Math.floor(distance * 5.8 * 8 * 0.5 + coins * 30 * 8);
@@ -89,7 +89,7 @@ describe("the run validator knows every multiplier that exists", () => {
   });
 
   it("still refuses a score nothing could have produced", () => {
-    const seconds = 240;
+    const seconds = 180;
     const distance = Math.floor(maxDistanceIn(seconds) * 0.85);
     const coins = Math.floor(distance / 3);
     const impossible = distance * 5.8 * MAX_MULTIPLIER * 40 + coins * 30 * MAX_MULTIPLIER * 40;

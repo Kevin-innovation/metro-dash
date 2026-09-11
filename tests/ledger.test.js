@@ -244,7 +244,7 @@ describe("only a validated run pays", () => {
     const t = backend();
     const { token } = await signUp(t);
     // A score big enough to cross the first rank, which pays on arrival.
-    const seconds = 300;
+    const seconds = 180;
     const big = await t.mutation(api.scores.submit, {
       token,
       score: 400_000,
