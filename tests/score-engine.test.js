@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { COIN_BASE } from "../src/scoring.js";
+import {
+  COIN_BASE,
+  COMBO_WINDOW,
+  COMBO_WINDOW_OPEN,
+  COMBO_WINDOW_TIGHTENS_BY,
+  JUMP_BONUS,
+  MOUNT_BONUS,
+  SLIDE_BONUS,
+  comboWindowAt,
+} from "../src/scoring.js";
 import { EVENTS, MAX_EVENT_MULTIPLIER, eventById } from "../src/events.js";
 import { Run } from "../src/run.js";
 import { SaveStore } from "../src/save.js";
@@ -38,13 +47,44 @@ describe("clears feed the combo", () => {
     expect(run.combo).toBe(3);
   });
 
-  it("does not pay a near-miss bonus", () => {
+  it("pays the verb it just asked for, at the multiplier before the bump", () => {
+    // SLIDE! and JUMP! used to flash over a score that did not move. They pay
+    // now — at the tier standing when the obstacle was cleared, because the
+    // clear is what earns the next one.
+    const run = new Run(store());
+    expect(run.addClear("slide")).toBe(SLIDE_BONUS);
+    expect(run.scoreBonus).toBe(SLIDE_BONUS);
+    expect(run.addClear("jump")).toBe(JUMP_BONUS);
+    expect(run.scoreBonus).toBe(SLIDE_BONUS + JUMP_BONUS);
+  });
+
+  it("is still not the near-miss bonus, which is gone", () => {
     const run = new Run(store());
     expect(run.addNearMiss).toBeUndefined();
-    const before = run.score;
-    run.addClear("slide");
-    expect(run.scoreBonus).toBe(0);
-    expect(run.score).toBe(before);
+  });
+
+  it("a gate is worth more than a crate, and a mount more than either", () => {
+    expect(SLIDE_BONUS).toBeGreaterThan(JUMP_BONUS);
+    expect(MOUNT_BONUS).toBeGreaterThan(SLIDE_BONUS);
+  });
+});
+
+describe("콤보 유지창", () => {
+  it("초반엔 넓고 트랙이 촘촘해지면 좁아진다", () => {
+    expect(comboWindowAt(0)).toBe(COMBO_WINDOW_OPEN);
+    expect(comboWindowAt(20)).toBeGreaterThan(COMBO_WINDOW);
+    expect(comboWindowAt(20)).toBeLessThan(COMBO_WINDOW_OPEN);
+    expect(comboWindowAt(COMBO_WINDOW_TIGHTENS_BY)).toBe(COMBO_WINDOW);
+    expect(comboWindowAt(600)).toBe(COMBO_WINDOW);
+  });
+
+  it("런이 실제로 그 값을 쓴다", () => {
+    const run = new Run(store());
+    run.addClear("jump");
+    expect(run.comboT).toBeCloseTo(COMBO_WINDOW_OPEN, 5);
+    run.seconds = 600;
+    run.addClear("jump");
+    expect(run.comboT).toBeCloseTo(COMBO_WINDOW, 5);
   });
 });
 

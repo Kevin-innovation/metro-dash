@@ -8,8 +8,11 @@ import {
   COIN_BASE,
   COIN_COMBO_CAP,
   DIST_SCORE_RATE,
+  JUMP_BONUS,
   MAX_COMBO_MULTIPLIER,
+  MOUNT_BONUS,
   ROOF_RIDE_RATE,
+  SLIDE_BONUS,
 } from "./scoring.js";
 
 /**
@@ -94,13 +97,21 @@ export const MAX_MULTIPLIER =
 const MAX_PER_METRE = (DIST_SCORE_RATE + ROOF_RIDE_RATE) * MAX_MULTIPLIER;
 const MAX_PER_COIN = (COIN_BASE + COIN_COMBO_CAP) * MAX_MULTIPLIER;
 /**
- * Near-miss and mount bonuses, generously bounded per second of running.
+ * The verbs — slides, jumps, mounts — generously bounded per second of running.
  *
- * Scales with the multiplier for the same reason the two above do: a near miss
- * is worth 15 points times whatever is running, and the old flat 90 was written
- * when that could only reach four.
+ * Scales with the multiplier for the same reason the two above do: a bonus is
+ * worth its face value times whatever is running, and the old flat 90 was
+ * written when that could only reach four.
+ *
+ * The figure itself was 22.5, set when the near-miss bonus was the only thing
+ * in here. Slides and jumps pay now, and the tightest stretch of the run deals
+ * an obstacle roughly every quarter second, so the old number was a bound the
+ * game could actually cross. Derived from the pieces rather than written down,
+ * for the same reason MAX_MULTIPLIER is.
  */
-const MAX_BONUS_PER_SECOND = 22.5 * MAX_MULTIPLIER;
+const MAX_CLEARS_PER_SECOND = 4;
+const MAX_BONUS_PER_SECOND =
+  MAX_CLEARS_PER_SECOND * Math.max(SLIDE_BONUS, JUMP_BONUS, MOUNT_BONUS) * MAX_MULTIPLIER;
 
 /** Coins are spaced ~1.35m apart at the tightest, magnet pulls included. */
 const MAX_COINS_PER_METRE = 1 / 1.2;

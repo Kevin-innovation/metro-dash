@@ -15,8 +15,9 @@ import { ANTIDOTE_SECONDS } from "./shop.js";
 import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
-  COMBO_WINDOW,
   COIN_BASE,
+  clearBonus,
+  comboWindowAt,
   distanceGain,
   mountBonus,
   roofRideGain,
@@ -166,7 +167,9 @@ export class Run {
 
   bumpCombo() {
     this.combo += 1;
-    this.comboT = COMBO_WINDOW * this.comboScale;
+    // Read off the clock rather than taken as a constant: the opening deals
+    // fewer things to hit than the window assumes. See comboWindowAt.
+    this.comboT = comboWindowAt(this.seconds) * this.comboScale;
     if (this.combo > this.comboMax) this.comboMax = this.combo;
   }
 
@@ -216,18 +219,29 @@ export class Run {
     return COIN_BASE;
   }
 
+  /** @returns {number} points awarded, for the readout beside the label */
   addMount(isHop) {
-    this.scoreBonus += mountBonus(isHop) * this.multiplier();
+    const gain = mountBonus(isHop) * this.multiplier();
+    this.scoreBonus += gain;
     this.bumpCombo();
     if (!isHop) this.metrics.mounts += 1;
+    return gain;
   }
 
   /**
    * A verb that keeps a combo alive: slide a gate, jump a crate/barrier.
    * Roofs go through addMount. Coins do not come through here.
+   *
+   * Paid at the multiplier standing before the bump, exactly as a mount is: the
+   * clear is what earns the tier, so it cannot also be paid at it.
+   *
+   * @returns {number} points awarded, for the readout beside the label
    */
-  addClear(_kind) {
+  addClear(kind) {
+    const gain = clearBonus(kind) * this.multiplier();
+    this.scoreBonus += gain;
     this.bumpCombo();
+    return gain;
   }
 
   addPowerup(id, level) {

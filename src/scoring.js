@@ -4,8 +4,68 @@ export const DIST_SCORE_RATE = 6;
 export const COIN_BASE = 18;
 /** Combo bonus is capped so a long chain cannot run away with the score. */
 export const COIN_COMBO_CAP = 20;
-/** Seconds a combo survives without a coin, near miss or roof mount. */
+/**
+ * Seconds a combo survives without a clear, once the track is dense.
+ *
+ * A chain dies to the gap between two things to do, and how long that gap is
+ * changes enormously over a run. At speed, with a gauntlet every second and a
+ * pattern carrying half a dozen obstacles, 2.2 seconds is a real deadline that
+ * a careless lane change can miss. In the opening it is not a deadline at all —
+ * it is simply longer than the track is willing to hand anything over.
+ */
 export const COMBO_WINDOW = 2.2;
+
+/**
+ * The window the first seconds run on.
+ *
+ * Measured rather than guessed. The opening pool deals about 0.94 clearable
+ * obstacles per pattern and a third of it — the coin lines, the lone bus, the
+ * lone train — carries none at all, so two of those back to back is a gap of
+ * around three seconds with nothing in it. Under a 2.2 second window the chain
+ * broke there every time, and the opening ran at an average multiplier of
+ * 1.05: a player spent the first twenty seconds of every run being paid the
+ * base rate for distance and nothing else, which is the stretch that decides
+ * whether they play a second one.
+ *
+ * This is not a difficulty change and deliberately not a scoring change: the
+ * tiers, the obstacles and what each is worth are all exactly as they were. It
+ * only stops the combo from being cut by track the game has not laid yet.
+ */
+export const COMBO_WINDOW_OPEN = 3.6;
+
+/**
+ * Seconds over which the window closes to COMBO_WINDOW.
+ *
+ * Ends before RUSH, where the pool is dense enough to carry a chain on its own
+ * — by then the average clear rate has passed one per second and the wide
+ * window would be giving away a chain rather than protecting one.
+ */
+export const COMBO_WINDOW_TIGHTENS_BY = 60;
+
+/**
+ * How long a combo survives a quiet stretch at time `t` into the run.
+ *
+ * Straight line: this is compensation for a thin opening, and the opening
+ * thickens evenly.
+ */
+export function comboWindowAt(t) {
+  const k = Math.min(1, Math.max(0, (Number(t) || 0) / COMBO_WINDOW_TIGHTENS_BY));
+  return COMBO_WINDOW_OPEN + (COMBO_WINDOW - COMBO_WINDOW_OPEN) * k;
+}
+/**
+ * Bonus for the two verbs that are not a mount: sliding a gate, jumping a
+ * crate or barrier.
+ *
+ * These paid nothing at all. 2.80 took the near-miss bonus out and put SLIDE ·
+ * JUMP · ROOF in its place, and only the third of those was ever wired to a
+ * score — so the game flashed a word for the thing it had just asked the
+ * player to do and the number underneath it did not move. A gate is the one
+ * obstacle with no way around it, which is why it is worth more than a crate
+ * you could have changed lane to avoid.
+ */
+export const SLIDE_BONUS = 26;
+export const JUMP_BONUS = 18;
+
 /** Bonus for climbing onto a vehicle roof from the ground. */
 export const MOUNT_BONUS = 30;
 /** Bonus for hopping straight from one roof to the next. */
@@ -21,7 +81,15 @@ export const ROOF_RIDE_RATE = 4.8;
  */
 export const COMBO_TIERS = [
   { at: 0, multiplier: 1, label: "" },
-  { at: 5, multiplier: 1.25, label: "HOT" },
+  // Three, not five. The rungs were set when a coin fed the combo and a chain
+  // ran to a hundred and thirty; 2.80 took the coins out and the opening now
+  // deals about 0.7 clearable obstacles a second, so five was seven unbroken
+  // seconds of running before the first rung paid anything — and the opening
+  // is exactly where a chain is most likely to be cut before it gets there.
+  // Only this rung moves. The ones above it are reachable by anyone riding
+  // roofs, and lowering those would raise the top of the board rather than the
+  // bottom of a run.
+  { at: 3, multiplier: 1.25, label: "HOT" },
   { at: 15, multiplier: 1.5, label: "BLAZING" },
   { at: 30, multiplier: 2, label: "UNREAL" },
   // Above thirty the chain used to pay nothing at all. A player holding a
@@ -70,6 +138,11 @@ export function roofRideGain(metres) {
 
 export function mountBonus(isHop) {
   return isHop ? HOP_BONUS : MOUNT_BONUS;
+}
+
+/** What clearing one obstacle with the right move is worth, before multipliers. */
+export function clearBonus(kind) {
+  return kind === "slide" ? SLIDE_BONUS : JUMP_BONUS;
 }
 
 export function totalScore(distScore, coinScore, bonusScore) {

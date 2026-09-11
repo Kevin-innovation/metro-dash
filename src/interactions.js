@@ -188,7 +188,8 @@ export class Interactions {
    * crossed: a gate is a slide, a crate or barrier is a jump. Vehicles are
    * scored on mount, not on walking past in another lane.
    *
-   * @returns {{ tricks: string[], gates: number, barriers: number }}
+   * @returns {{ tricks: Array<{ kind: string, gain: number }>, gates: number,
+   *   barriers: number }}
    */
   scoreClears(player) {
     const tally = { tricks: [], gates: 0, barriers: 0 };
@@ -203,11 +204,9 @@ export class Interactions {
       if (player.mounted === item) continue;
 
       if (item.type === "sign") {
-        this.run.addClear("slide");
-        tally.tricks.push("slide");
+        tally.tricks.push({ kind: "slide", gain: this.run.addClear("slide") });
       } else if (item.type === "barrier" || item.type === "crate") {
-        this.run.addClear("jump");
-        tally.tricks.push("jump");
+        tally.tricks.push({ kind: "jump", gain: this.run.addClear("jump") });
       }
     }
 

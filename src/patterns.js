@@ -43,7 +43,7 @@ export const PATTERNS = [
   {
     id: "coins",
     minPhase: 0,
-    weight: 2,
+    weight: 1,
     late: 1,
     build: ({ z, lane }) => coinLine(lane, z, 7, 1.6, 0.7),
   },
@@ -70,7 +70,7 @@ export const PATTERNS = [
   {
     id: "barrier",
     minPhase: 0,
-    weight: 2,
+    weight: 3,
     late: 1,
     build: ({ z, lane }) => [
       { type: "barrier", lane, z },
@@ -85,7 +85,7 @@ export const PATTERNS = [
   {
     id: "crate",
     minPhase: 0,
-    weight: 2,
+    weight: 3,
     late: 1,
     build: ({ z, lane }) => [{ type: "crate", lane, z }],
   },
@@ -96,7 +96,7 @@ export const PATTERNS = [
     // an easy game so much as an idle one.
     id: "weave",
     minPhase: 0,
-    weight: 3,
+    weight: 4,
     late: 2,
     build: ({ z, lanes, gap }) => [
       { type: "barrier", lane: lanes[0], z },
@@ -122,7 +122,7 @@ export const PATTERNS = [
     // Coins arc over the barrier, so the jump pays rather than merely survives.
     id: "hop-coins",
     minPhase: 0,
-    weight: 2,
+    weight: 3,
     late: 1,
     build: ({ z, lane, gap }) => [
       { type: "barrier", lane, z },
@@ -139,7 +139,17 @@ export const PATTERNS = [
     id: "sign",
     /** Can only be cleared by sliding: the tunnel leans on these. */
     slide: true,
-    minPhase: 1,
+    /**
+     * Dealt from the very first phase.
+     *
+     * It was held back to phase 1, which left the opening pool with no slide in
+     * it at all — every early pattern was a dodge or a jump. That is a third of
+     * the game's vocabulary missing from the minute a new player is deciding
+     * what the game is, and it left the opening short of the one thing a combo
+     * feeds on. The tutorial has always taught the slide fourth, so the gate is
+     * not new to anyone by the time the draw can hand them one.
+     */
+    minPhase: 0,
     weight: 3,
     late: 1,
     build: ({ z, lane }) => [

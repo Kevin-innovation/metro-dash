@@ -1109,11 +1109,18 @@ export class Screens {
     chip.classList.add("coin-punch");
   }
 
-  flashTrick(kind) {
+  /**
+   * The word, and what it was worth.
+   *
+   * The number is the point of the label. Without it the game was announcing
+   * that something had happened and leaving the player to take its word for it.
+   */
+  flashTrick(kind, gain = 0) {
     const el = $("near-miss");
     if (!el) return;
     const labels = { slide: "SLIDE!", jump: "JUMP!", roof: "ROOF!" };
-    el.textContent = labels[kind] ?? "NICE!";
+    const points = Math.round(gain);
+    el.textContent = `${labels[kind] ?? "NICE!"}${points > 0 ? ` +${points.toLocaleString()}` : ""}`;
     el.classList.remove("hidden", "pop");
     void el.offsetWidth;
     el.classList.add("pop");
