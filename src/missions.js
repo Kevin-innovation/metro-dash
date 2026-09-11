@@ -1,3 +1,6 @@
+import { RUN_LIMIT_SECONDS } from "./config.js";
+import { TARGET_SCORE_PER_MINUTE } from "./scoring.js";
+import { maxDistanceIn } from "./leaderboard-rules.js";
 /**
  * The day's missions. Three, dealt at midnight, gone at the next midnight.
  *
@@ -81,8 +84,13 @@ const AUTHORED_DEFS = [
     targets: [8, 14, 22, 32, 45, 60, 80], label: "콤보 {t} 달성하기", coins: 130, xp: 105 },
   // Multiplied by SCORE_SCALE along with the score itself: the same runs clear
   // the same steps, written on the unit the game now shows.
+  // 생존 20초 · 30초 · 45초 · 65초 · 90초 · 2분 · 2분 30초 어치. 점수 단위가
+  // 바뀔 때마다 이 줄을 손으로 옮기다 한 번 놓쳤고, 그래서 첫 단계가 6초짜리가
+  // 돼 있었다. 이제 1분이 몇 점인지에서 유도한다.
   { id: "score-run", metric: "score", scope: "run",
-    targets: [21000, 42000, 70000, 112000, 168000, 245000, 350000], label: "한 판에 {t}점 얻기", coins: 190, xp: 150 },
+    targets: [20, 30, 45, 65, 90, 120, 150].map((seconds) =>
+      readableTarget((TARGET_SCORE_PER_MINUTE * seconds) / 60),
+    ), label: "한 판에 {t}점 얻기", coins: 190, xp: 150 },
   { id: "mounts-run", metric: "mountsRun", scope: "run",
     targets: [3, 6, 10, 15, 21, 28, 36], label: "한 판에 지붕 {t}번 올라타기", coins: 140, xp: 110 },
   { id: "powerups-run", metric: "powerupsRun", scope: "run",
@@ -116,10 +124,68 @@ const AUTHORED_DEFS = [
 ];
 
 /** The table as the game uses it: authored steps plus the continued ones. */
-export const MISSION_DEFS = AUTHORED_DEFS.map((def) => ({
-  ...def,
-  targets: extendTargets(def.targets),
-}));
+/**
+ * The most a single run can hand back, per metric.
+ *
+ * A run-scoped mission asks for something inside one run, so its hardest step
+ * has to be something one run can actually contain. That was never checked, and
+ * it went wrong the moment the run got a finish line: the ladder was authored
+ * when a run could last as long as the player wanted, so the top of it asked
+ * for 730 seconds of survival and 12,000 metres out of a three-minute run that
+ * covers 11,496. Those are not hard missions, they are missions that cannot be
+ * cleared, handed to the players who have climbed furthest.
+ *
+ * Derived from the run's own limits wherever the limit is knowable — the clock
+ * and the speed curve give two of them outright — and measured against perfect
+ * play for the rest. Perfect means never dying for the full three minutes and
+ * taking every coin, every roof and every gate on the way, which nobody will
+ * do; the fraction below is what keeps the hardest step demanding rather than
+ * theoretical.
+ */
+const PERFECT_RUN = {
+  coins: 1390,
+  comboMax: 891,
+  mountsRun: 407,
+  gatesRun: 223,
+  roofDistance: 3427,
+  score: 1_335_920,
+  // Power-ups are dealt on a fixed cadence rather than by the pattern draw:
+  // one every POWERUP_EVERY layouts, and a three-minute run holds around two
+  // hundred layouts.
+  powerupsRun: 33,
+};
+
+/** The share of a perfect run the hardest step is allowed to ask for. */
+const HARDEST_STEP_SHARE = 0.8;
+
+function ceilingFor(def) {
+  if (def.scope !== "run") return Infinity;
+  if (def.metric === "seconds") return RUN_LIMIT_SECONDS;
+  if (def.metric === "distance") return maxDistanceIn(RUN_LIMIT_SECONDS);
+  const perfect = PERFECT_RUN[def.metric];
+  return perfect === undefined ? Infinity : perfect;
+}
+
+/**
+ * Squeeze a ladder so its top step lands on the ceiling.
+ *
+ * Clamping was the first attempt and it was wrong: the top three steps all came
+ * out at the same number, so the players who had climbed furthest were the ones
+ * whose missions stopped getting harder. A ladder that runs past the ceiling is
+ * the wrong length, not the wrong height — so it is scaled, and every step keeps
+ * its place in the shape the table authored.
+ */
+function fitToCeiling(targets, ceiling) {
+  const top = targets[targets.length - 1];
+  if (!Number.isFinite(ceiling) || top <= ceiling) return targets;
+  const squeeze = ceiling / top;
+  return targets.map((target) => readableTarget(target * squeeze));
+}
+
+export const MISSION_DEFS = AUTHORED_DEFS.map((def) => {
+  const ceiling = ceilingFor(def) * (def.metric === "seconds" ? 0.95 : HARDEST_STEP_SHARE);
+  return { ...def, targets: fitToCeiling(extendTargets(def.targets), ceiling) };
+});
 
 export const MISSION_SLOTS = 3;
 

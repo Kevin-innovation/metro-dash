@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.11";
+export const VERSION = "4.12";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.12",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "깰 수 없던 미션들",
+    notes: [
+      "한 판 안에 끝내야 하는 미션 중 아예 깰 수 없는 것들이 있었습니다. 판이 3분에 끝나는데 「한 판에 730초 버티기」, 「한 판에 12,000m 달리기」(3분 최대는 11,496m) 같은 것들이요. 판에 결승선을 놓으면서 미션 목표를 같이 안 봤습니다.",
+      "이제 목표가 판이 실제로 낼 수 있는 값에서 계산됩니다. 시계와 속도 곡선이 정하는 건 그대로 쓰고, 나머지는 완벽한 3분 플레이의 80%를 최상위로 둡니다.",
+      "점수 미션도 다시 잡았습니다. 첫 단계가 21,000점이었는데 지금 단위로 6초치예요. 이제 생존 20초 · 30초 · 45초 … 2분 30초 어치로 매겨집니다.",
+      "그리고 이런 실수가 다시 나지 않도록 밸런스 감시 테스트를 넣었습니다. 숫자 하나를 옮기면 그 숫자에 맞춰져 있던 다른 것들이 테스트에서 걸립니다.",
+    ],
+  },
   {
     version: "4.11",
     date: "2026-09-11",
