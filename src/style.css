@@ -324,9 +324,12 @@ body.running #game-canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  margin: 0 auto 4px;
-  width: min(190px, 44vw);
+  gap: 9px;
+  /* Room under it. The score below is 64px of white with a glow, and four
+     pixels of gap put a 12px readout inside that glow — which is why the
+     speed was there and could not be read. */
+  margin: 0 auto 9px;
+  width: min(230px, 54vw);
   --speed-hue: rgba(226, 242, 255, 0.92);
 }
 
@@ -337,7 +340,7 @@ body.running #game-canvas {
 .speed-track {
   position: relative;
   flex: 1;
-  height: 6px;
+  height: 9px;
   border-radius: 999px;
   background: rgba(4, 16, 24, 0.55);
   box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.16);
@@ -376,17 +379,22 @@ body.running #game-canvas {
   display: flex;
   align-items: baseline;
   gap: 2px;
+  flex: 0 0 auto;
   font-family: var(--font-numeric);
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1;
   color: var(--speed-hue);
-  text-shadow: 0 2px 0 #041018;
+  /* One hard edge rather than an emboss. At this size the two-pixel drop was
+     reading as a second copy of the digits. */
+  text-shadow:
+    0 1px 0 #041018,
+    0 0 8px rgba(4, 16, 24, 0.9);
   transition: color 180ms linear;
 }
 
 .speed-read span {
-  font-size: 9px;
-  opacity: 0.7;
+  font-size: 10px;
+  opacity: 0.65;
 }
 
 /* The tick a new step gets. Short, and on the gauge only — the world lurch and
@@ -674,21 +682,33 @@ body.running #game-canvas {
 }
 
 .near-miss.pop {
-  animation: nearPop 0.5s ease-out;
+  animation: nearPop 0.95s ease-out;
 }
 
+/* Arrive, hold still long enough to be read, then leave.
+   It used to be arrive-and-leave over half a second, which is fine for one
+   word and not for 「지붕 ×1.5 +310」 — the thing was gone before the eye had
+   finished moving to it. The middle sixty per cent is the reading. */
 @keyframes nearPop {
   0% {
     opacity: 0;
     transform: translate(-50%, 10px) scale(0.8);
   }
-  35% {
+  16% {
     opacity: 1;
     transform: translate(-50%, -4px) scale(1.1);
   }
+  26% {
+    opacity: 1;
+    transform: translate(-50%, -6px) scale(1);
+  }
+  74% {
+    opacity: 1;
+    transform: translate(-50%, -12px) scale(1);
+  }
   100% {
     opacity: 0;
-    transform: translate(-50%, -26px) scale(1);
+    transform: translate(-50%, -30px) scale(1);
   }
 }
 
@@ -3794,4 +3814,72 @@ body.admin {
   font-size: 0.62em;
   opacity: 0.72;
   vertical-align: 0.12em;
+}
+
+/* --- the run's standing state, above the things you are carrying -----------
+
+   Sits directly over .board-wrap and is sized to match it, so the right edge
+   reads as one column: what this run is doing, then what you have to spend on
+   it. Muted on purpose — it is there to be looked at, not to compete with the
+   track. */
+.run-stats {
+  position: absolute;
+  right: 16px;
+  bottom: calc(24px + env(safe-area-inset-bottom) + 132px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 112px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(4, 16, 24, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.14);
+  pointer-events: none;
+}
+
+.run-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1;
+}
+
+.run-stat-label {
+  flex: 1;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: rgba(226, 242, 255, 0.5);
+}
+
+.run-stat strong {
+  font-family: var(--font-numeric);
+  font-size: 17px;
+  color: rgba(226, 242, 255, 0.95);
+  text-shadow: 0 1px 0 #041018;
+}
+
+/* The multiplier is the one number here a player can change on purpose, so it
+   is the one that lights up when it is above one. */
+.run-stat em {
+  font-style: normal;
+  font-family: var(--font-numeric);
+  font-size: 13px;
+  color: rgba(226, 242, 255, 0.35);
+  transition: color 160ms linear;
+}
+
+.run-stats.hot em {
+  color: var(--gold, #fbbf24);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+@media (max-width: 480px) {
+  .run-stats {
+    min-width: 92px;
+    padding: 6px 8px;
+  }
+
+  .run-stat strong {
+    font-size: 15px;
+  }
 }

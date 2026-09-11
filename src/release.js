@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.13";
+export const VERSION = "4.14";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.14",
+    date: "2026-09-12",
+    kind: "minor",
+    title: "읽을 시간이 있는 HUD",
+    notes: [
+      "오른쪽 아래에 「시간 · 콤보 · 배수」가 계속 떠 있습니다. 지금까지 HUD가 말하는 건 전부 한 번 뜨고 사라지는 것들이라, 트랙을 보고 있으면 놓치면 그만이었어요. 이 셋은 판의 상태지 사건이 아니니까 아무 때나 보면 됩니다.",
+      "시간이 맨 위인 이유는 점수가 시간으로 쌓이기 때문입니다 — 1분이 20만이니, 저 시계가 점수의 절반을 미리 보여줍니다. 콤보와 배수가 나머지 절반이고요.",
+      "슬라이드·점프·지붕 표시가 0.5초 만에 사라지던 걸 0.95초로 늘렸습니다. 한 단어였을 때 정한 시간인데 지금은 단어·배수·점수 셋을 말하거든요. 뜨고 사라지는 중간에 가만히 있는 구간을 넣어서 읽을 시간을 만들었습니다.",
+      "속도계가 잘 안 보이던 것도 고쳤습니다. 막대를 두껍게, 숫자를 12px에서 16px로, 그리고 점수와의 간격을 벌렸어요 — 바로 아래 64px짜리 점수의 글로우 안에 12px 글씨가 들어가 있었습니다.",
+    ],
+  },
   {
     version: "4.13",
     date: "2026-09-12",

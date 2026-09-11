@@ -213,6 +213,10 @@ function hudNodes() {
     diamond: $("diamond-chip"),
     diamondCount: $("diamond-count"),
     pace: $("pace-chip"),
+    runStats: $("run-stats"),
+    statTime: $("stat-time"),
+    statCombo: $("stat-combo"),
+    statMult: $("stat-mult"),
     speedGauge: $("speed-gauge"),
     speedFill: $("speed-fill"),
     speedStep: $("speed-step"),
@@ -233,6 +237,9 @@ function hudNodes() {
       speed: null,
       speedMode: null,
       speedStep: null,
+      statTime: null,
+      statCombo: null,
+      statMult: null,
     },
   };
   return hud;
@@ -295,6 +302,45 @@ export function runTimeLabel(seconds) {
   return `${Math.floor(whole / 60)}분 ${String(whole % 60).padStart(2, "0")}초`;
 }
 
+/**
+ * The standing readout on the right.
+ *
+ * Three numbers that are the run's *state* rather than its events. Everything
+ * else the HUD says is told once and taken away — the trick flashes, the
+ * section banner drains, the toast goes — so a player who was looking at the
+ * track when it happened never gets it back. These stay.
+ *
+ * The clock is first because the score is made of it: a minute alive is 20만,
+ * so this is the half of the score you can see coming.
+ */
+function renderRunStats(el, state) {
+  if (!el.runStats) return;
+  const last = el.last;
+
+  const time = runTimeLabel(state.seconds ?? 0).replace("분 ", ":").replace("초", "");
+  if (time !== last.statTime) {
+    el.statTime.textContent = /:/.test(time) ? time : `0:${String(time).padStart(2, "0")}`;
+    last.statTime = time;
+  }
+
+  const combo = Math.max(0, Math.floor(state.combo ?? 0));
+  if (combo !== last.statCombo) {
+    el.statCombo.textContent = String(combo);
+    last.statCombo = combo;
+  }
+
+  // What the verbs are actually being multiplied by, which is the combo tier
+  // and everything standing alongside it — the same figure the trick flash
+  // prints, so the two can never disagree about what is happening.
+  const mult = Number(state.trickMultiplier ?? 1);
+  const shown = `×${mult.toFixed(2).replace(/\.?0+$/, "")}`;
+  if (shown !== last.statMult) {
+    el.statMult.textContent = shown;
+    el.runStats.classList.toggle("hot", mult > 1.005);
+    last.statMult = shown;
+  }
+}
+
 export function renderHud(state) {
   const el = hudNodes();
   const last = el.last;
@@ -323,6 +369,7 @@ export function renderHud(state) {
   renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow, state.slot);
 
   renderSpeedGauge(el, state);
+  renderRunStats(el, state);
 
   if (el.boardWrap) {
     el.boardWrap.classList.toggle("riding", state.boarding);

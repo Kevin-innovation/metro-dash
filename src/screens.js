@@ -11,6 +11,9 @@ import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
 import { VERSION, seasonAt } from "./release.js";
+
+/** How long a 「지붕 ×1.5 +310」 stays up. Long enough to read all three. */
+const TRICK_FLASH_MS = 950;
 import {
   escapeHtml,
   renderHud,
@@ -773,6 +776,9 @@ export class Screens {
     this.closeSchool();
     $("hud").classList.toggle("hidden", mode !== "hud" && mode !== "dead");
     $("btn-pause").classList.toggle("hidden", mode !== "hud");
+    // The standing readout belongs to a run in progress. Left up over the
+    // game-over card it would be a clock that had stopped.
+    $("run-stats")?.classList.toggle("hidden", mode !== "hud");
     if (mode !== "hud") $("touch-hint").classList.add("hidden");
     // A pointer sitting in the middle of the track reads as something in the
     // game. It comes back the moment there is a button to press.
@@ -998,6 +1004,9 @@ export class Screens {
 
   resetHud() {
     $("pace-chip").textContent = "START";
+    // Shown for a run and hidden with it — a clock reading 0:00 over the title
+    // screen is a promise the title screen is not making.
+    $("run-stats")?.classList.remove("hidden");
     $("speed-toast").classList.add("hidden");
     $("coin-gain").classList.add("hidden");
     this.setCrowVeil(0);
@@ -1041,6 +1050,9 @@ export class Screens {
       antidotes: game.store.data.antidotes ?? 0,
       phaseName: game.phaseName(),
       speed: game.speed,
+      // The standing readout on the right; see renderRunStats.
+      seconds: game.run.seconds,
+      trickMultiplier: game.run.multiplier(),
       // The gauge's two ends: the speed every run opens on, and the fastest the
       // curve ever asks for. 질주 pushes past the top and the bar pins at full
       // rather than overflowing, which is the right reading — flat out.
@@ -1173,7 +1185,10 @@ export class Screens {
     void el.offsetWidth;
     el.classList.add("pop");
     clearTimeout(this.nearMissTimer);
-    this.nearMissTimer = setTimeout(() => el.classList.add("hidden"), 520);
+    // 520ms was written when this said one word. It says a word, a multiplier
+    // and a number now, and at a tenth of a second a syllable there was no
+    // reading it — a player saw something flash and went back to the track.
+    this.nearMissTimer = setTimeout(() => el.classList.add("hidden"), TRICK_FLASH_MS);
   }
 
   // --- game over -----------------------------------------------------------

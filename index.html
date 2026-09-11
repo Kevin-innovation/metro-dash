@@ -94,6 +94,28 @@
         </div>
         <div id="near-miss" class="near-miss hidden">아슬아슬!</div>
 
+        <!-- The readout that does not move.
+             Everything else about this run is told once and taken away: the
+             trick flashes for a second, the section banner drains, the toast
+             goes. These three are the run's state rather than its events, and
+             a player should be able to look at them whenever they want rather
+             than catching them going past.
+             Time first, because the score is made of it — a minute of staying
+             alive is 20만, so this is the half of the score you can see coming.
+             Then the combo, which is the other half, and what it is currently
+             multiplying by. -->
+        <div id="run-stats" class="run-stats hidden">
+          <div class="run-stat">
+            <span class="run-stat-label">시간</span>
+            <strong id="stat-time">0:00</strong>
+          </div>
+          <div class="run-stat" id="stat-combo-row">
+            <span class="run-stat-label">콤보</span>
+            <strong id="stat-combo">0</strong>
+            <em id="stat-mult">×1</em>
+          </div>
+        </div>
+
         <!-- What you are carrying into this run. The board is a button because
              it is deployed by hand; the antidote is not, because it spends
              itself the moment a crow egg is taken — so it is shown rather than
