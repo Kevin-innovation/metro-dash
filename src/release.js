@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.01";
+export const VERSION = "4.02";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.02",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "내 시즌 최고 점수 · 안 보이던 벽",
+    notes: [
+      "최고 점수가 시즌별로 바뀝니다. 「내 시즌 최고 점수」예요. 점수 규칙이 통째로 바뀌었으니 예전 단위로 세운 기록을 계속 들고 있으면 그걸 가진 사람은 영원히 자기를 못 넘습니다. 토요일 0시에 시즌 4가 시작되면 모두 새 기록부터 시작해요. 학교 순위 합계도 같이 넘어갑니다.",
+      "버스와 기차가 실제 길이대로 그려지지 않던 문제를 고쳤습니다. 충돌 판정은 14m인데 화면에는 9m로 그려져서, 멀쩡해 보이는 버스 앞에 보이지 않는 벽이 있었어요. 한 판의 첫 대만 맞고 그 뒤로는 전부 어긋나 있었습니다.",
+      "설정에서 호버보드 키가 지정되지 않던 문제도 고쳤습니다. 키를 눌러도 「키를 누르세요…」에서 멈춰 있었어요.",
+    ],
+  },
   {
     version: "4.01",
     date: "2026-09-11",

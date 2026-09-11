@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seasonAt } from "../src/release.js";
 import {
   MAX_GUEST_CARRY,
   defaultSave,
@@ -246,11 +247,19 @@ describe("스태프가 고친 값이 부팅으로 지워지지 않는다", () =>
     expect(pinServerFigures(blob, { coins: 1000 }).coins).toBe(1000);
   });
 
-  it("최고 점수는 올리기만 한다", () => {
+  it("최고 점수는 올리기만 한다 — 같은 시즌 안에서", () => {
     // 연결이 끊긴 채 끝낸 판이 세이브 안에 있고 아직 서버에 못 갔다.
-    const blob = normalizeSave({ ...defaultSave(), best: 500000 });
+    const blob = normalizeSave({ ...defaultSave(), best: 500000, bestSeason: seasonAt() });
     expect(pinServerFigures(blob, { best: 300000 }).best).toBe(500000);
     expect(pinServerFigures(blob, { best: 900000 }).best).toBe(900000);
+  });
+
+  it("지난 시즌 기록은 이 시즌을 막지 못한다", () => {
+    // 174만은 초당 점수가 아니라 미터당 점수로 세운 숫자다. 이 시즌이
+    // 이길 수 있는 값이 아니므로 이 시즌의 기록을 가로막아서도 안 된다.
+    const old = normalizeSave({ ...defaultSave(), best: 1_742_419, bestSeason: seasonAt() - 1 });
+    expect(pinServerFigures(old, { best: 300_000 }).best).toBe(300_000);
+    expect(pinServerFigures(old, { best: 300_000 }).bestSeason).toBe(seasonAt());
   });
 
   it("서버가 말하지 않은 값은 건드리지 않는다", () => {

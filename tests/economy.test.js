@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { restingScaleZ } from "../src/entities.js";
+import { SPEC } from "../src/specs.js";
 import { POWERUP_IDS, POWERUP_MAX_LEVEL } from "../src/powerups.js";
 import { SAVE_KEY } from "../src/config.js";
 import { SaveStore, createMemoryStorage, defaultSave, normalizeSave } from "../src/save.js";
@@ -94,12 +96,21 @@ describe("SaveStore", () => {
     expect(store.data.coins).toBe(0);
   });
 
-  it("only raises the best score", () => {
-    const store = storeWith({ best: 500 });
-    store.recordBest(200);
+  it("only raises the best score, and only within one season", () => {
+    // 기록은 시즌의 기록이다. 시즌 4는 점수를 초로 매기는 첫 시즌이라, 그
+    // 앞의 단위로 세운 숫자는 이 시즌이 이길 수 있는 값이 아니다 — 그대로
+    // 두면 그걸 가진 학생은 영원히 자기를 못 넘는다.
+    const store = storeWith({ best: 500, bestSeason: 4 });
+    store.recordBest(200, 4);
     expect(store.data.best).toBe(500);
-    store.recordBest(900);
+    store.recordBest(900, 4);
     expect(store.data.best).toBe(900);
+
+    // 시즌이 넘어가면 그 900 은 지난 게임의 숫자다.
+    expect(store.seasonBest(5)).toBe(0);
+    store.recordBest(200, 5);
+    expect(store.data.best).toBe(200);
+    expect(store.seasonBest(4)).toBe(0);
   });
 
   it("round-trips through storage", () => {
@@ -342,5 +353,24 @@ describe("mission difficulty ladder", () => {
     const tiers = RANKS.map((rank) => missionTier(rank.xp, MISSION_TIERS));
     expect(new Set(tiers).size).toBe(MISSION_TIERS);
     expect(tiers[1]).toBeGreaterThan(tiers[0]);
+  });
+});
+
+describe("차량 메시는 충돌 박스 길이로 그려진다", () => {
+  it("스폰할 때마다 그 타입의 길이로 돌아온다", () => {
+    // 풀이 같은 메시를 돌려쓰고 spawn 이 스케일을 초기화한다. 팩토리에서
+    // 늘여 두면 첫 대만 맞고 그 뒤로는 14m 충돌 박스가 9m로 그려진다 —
+    // 멀쩡해 보이는 버스 앞의 보이지 않는 벽이다. 브라우저 검증이 잡았다.
+    expect(restingScaleZ("bus")).toBeCloseTo(SPEC.bus.length / 9.2, 6);
+    expect(restingScaleZ("train")).toBeCloseTo(SPEC.train.length / 12, 6);
+    // 늘어난 게 맞는 방향인지도 같이 본다.
+    expect(restingScaleZ("bus")).toBeGreaterThan(1);
+    expect(restingScaleZ("train")).toBeGreaterThan(1);
+  });
+
+  it("늘일 일이 없는 것은 그대로 둔다", () => {
+    for (const type of ["coin", "barrier", "sign", "crate", "diamond"]) {
+      expect(restingScaleZ(type), type).toBe(1);
+    }
   });
 });

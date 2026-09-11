@@ -7,7 +7,8 @@ import { dayKey } from "../src/daily.js";
 import { weekKey } from "../src/week.js";
 import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
-import { coinsOf, levelOf, xpOf } from "./players.js";
+import { bestOf, coinsOf, levelOf, xpOf } from "./players.js";
+import { seasonAt } from "../src/release.js";
 import { schoolLabel } from "../src/school.js";
 
 /**
@@ -99,8 +100,18 @@ export const submit = mutation({
     const week = weekKey(now);
     const weekBest = player.weekKey === week ? (player.weekBest ?? 0) : 0;
 
+    // This season's record, read the way this week's is: the key is checked
+    // before the figure is trusted. A record set under older scoring is not a
+    // number this season can be beaten by, and leaving it in place would have
+    // told the player who holds it that they had not improved — for ever.
+    const season = seasonAt(now);
+    const seasonBest = bestOf(player, season);
+
     const patch = { updatedAt: now };
-    if (score > player.best) patch.best = score;
+    if (score > seasonBest || (player.bestSeason ?? seasonAt(0)) !== season) {
+      patch.best = Math.max(score, seasonBest);
+      patch.bestSeason = season;
+    }
     if (score > weekBest || player.weekKey !== week) {
       patch.weekKey = week;
       patch.weekBest = Math.max(score, weekBest);
@@ -150,10 +161,11 @@ export const submit = mutation({
 
     await ctx.db.patch(player._id, patch);
 
-    if (score > player.best) {
+    if (score > seasonBest) {
       // The school total is the sum of its members' bests, so it moves by the
-      // same amount this player's best just moved by.
-      await adjustSchool(ctx, player.schoolKey, { total: score - player.best });
+      // same amount this player's best just moved by — and it turns over on the
+      // same season boundary, or it would be a sum with two games in it.
+      await adjustSchool(ctx, player.schoolKey, { total: score - seasonBest, season });
     }
     // And the same again for the week, which has its own bests and its own
     // membership: a school's weekly figure counts only who actually played.
@@ -169,7 +181,7 @@ export const submit = mutation({
     // what the browser hoped it would.
     return {
       ok: true,
-      best: Math.max(score, player.best),
+      best: Math.max(score, seasonBest),
       coins: patch.coins,
       xp: patch.xp,
     };
@@ -218,9 +230,9 @@ export const top = query({
   },
 });
 
-/** The figure a board ranks on: this week's best, or the all-time one. */
+/** The figure a board ranks on: this week's best, or this season's. */
 function scoreOf(player, weekly) {
-  if (!weekly) return player.best;
+  if (!weekly) return bestOf(player);
   return player.weekKey === weekKey(Date.now()) ? (player.weekBest ?? 0) : 0;
 }
 

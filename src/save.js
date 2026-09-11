@@ -2,6 +2,7 @@ import { DEFAULT_CHARACTER, isKnownCharacter } from "./characters.js";
 import { BEST_KEY, SAVE_KEY } from "./config.js";
 import { POWERUP_IDS, POWERUP_MAX_LEVEL } from "./powerups.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings.js";
+import { seasonAt } from "./release.js";
 
 export const SAVE_VERSION = 1;
 export { DEFAULT_CHARACTER };
@@ -15,7 +16,21 @@ export function defaultSave() {
   for (const id of POWERUP_IDS) upgrades[id] = 1;
   return {
     version: SAVE_VERSION,
+    /**
+     * The best run of the current season, and which season that is.
+     *
+     * Not all-time, and the pair is why. A season is a rule set — season 4 is
+     * the first one scored per second — so a record set under an older one is
+     * not a number this one can be compared to. Left all-time, the player who
+     * scored 1.74 million on units that no longer exist would have spent every
+     * future run being told they had not beaten themselves, and could not have.
+     *
+     * `bestSeason` is read before `best` is trusted, the same way `weekKey` is
+     * read before `weekBest` on the server: a mismatch means the number belongs
+     * to a game that is over, and it is worth zero here.
+     */
     best: 0,
+    bestSeason: 0,
     coins: 0,
     runs: 0,
     totalDistance: 0,
@@ -126,6 +141,13 @@ export function normalizeSave(raw) {
     lastDay: clampInt(raw.lastDay),
     bestStreak: clampInt(raw.bestStreak),
   };
+
+  // A save from before seasons were tracked has a record but no season on it.
+  // It belongs to the one that was running when the table was empty — season
+  // three — so it stands until that season ends and not a moment longer.
+  // Defaulting it to zero would have wiped everybody's record on the deploy
+  // rather than on the boundary.
+  out.bestSeason = raw.bestSeason === undefined ? seasonAt(0) : clampInt(raw.bestSeason);
 
   // A save written before the balance moved to the server has no marker, and
   // defaulting it to zero would read the player's entire balance as freshly
@@ -259,10 +281,16 @@ export class SaveStore {
     return this.flush();
   }
 
-  recordBest(score) {
+  /** This season's best, zero when the one on file belongs to an older season. */
+  seasonBest(season = seasonAt()) {
+    return this.data.bestSeason === season ? (this.data.best ?? 0) : 0;
+  }
+
+  recordBest(score, season = seasonAt()) {
     const next = Math.floor(Number(score) || 0);
-    if (next > this.data.best) {
+    if (next > this.seasonBest(season)) {
       this.data.best = next;
+      this.data.bestSeason = season;
       this.flush();
     }
     return this.data.best;
@@ -418,7 +446,13 @@ export function pinServerFigures(save, server = {}) {
   const num = (value) => (Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null);
 
   const best = num(server.best);
-  if (best !== null) out.best = Math.max(out.best ?? 0, best);
+  if (best !== null) {
+    // Raised, never lowered — but only against a record from this season. One
+    // set under older rules is not a number this season can be beaten by.
+    const held = out.bestSeason === seasonAt() ? (out.best ?? 0) : 0;
+    out.best = Math.max(held, best);
+    out.bestSeason = seasonAt();
+  }
 
   const coins = num(server.coins);
   if (coins !== null) {

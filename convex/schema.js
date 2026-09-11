@@ -21,6 +21,8 @@ export default defineSchema({
     /** The whole save file — coins, upgrades, missions, rank, characters. */
     profile: v.any(),
     best: v.number(),
+    /** Which season `best` belongs to. A mismatch means it is worth zero. */
+    bestSeason: v.optional(v.number()),
 
     /**
      * Best score inside one week, and which week that was.
@@ -210,6 +212,8 @@ export default defineSchema({
     members: v.number(),
     /** Sum of every member's best score. */
     total: v.number(),
+    /** Which season `total` is the sum of. Reset with the bests it sums. */
+    totalSeason: v.optional(v.number()),
 
     /**
      * The same sum, but of this week's bests.

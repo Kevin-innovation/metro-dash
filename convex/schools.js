@@ -3,6 +3,8 @@ import { query } from "./_generated/server";
 import { isGeneral, schoolKey, schoolLabel } from "../src/school.js";
 import { weekKey } from "../src/week.js";
 import { requirePlayer } from "./session.js";
+import { seasonAt } from "../src/release.js";
+import { bestOf } from "./players.js";
 
 /**
  * The school ranking.
@@ -45,7 +47,7 @@ export async function ensureSchool(ctx, school) {
  * showing up as a nonsense leaderboard, and clamping keeps the board readable
  * until `recomputeSchools` puts it right.
  */
-export async function adjustSchool(ctx, key, { members = 0, total = 0 }) {
+export async function adjustSchool(ctx, key, { members = 0, total = 0, season = seasonAt() }) {
   if (!key || (members === 0 && total === 0)) return;
   const row = await ctx.db
     .query("schools")
@@ -53,9 +55,15 @@ export async function adjustSchool(ctx, key, { members = 0, total = 0 }) {
     .unique();
   if (!row) return;
 
+  // A school's total is the sum of its members' bests, and those are a season's
+  // bests — so the sum has to turn over on the same boundary or it becomes a
+  // number with two games in it. Read as empty and started again when the
+  // season has moved, exactly the way the weekly figure below handles a week.
+  const carry = (row.totalSeason ?? 0) === season;
   await ctx.db.patch(row._id, {
     members: Math.max(0, row.members + members),
-    total: Math.max(0, row.total + total),
+    totalSeason: season,
+    total: Math.max(0, (carry ? row.total : 0) + total),
     updatedAt: Date.now(),
   });
 }
@@ -97,7 +105,7 @@ function weekOf(row, week) {
 export async function joinSchool(ctx, player, school) {
   const row = await ensureSchool(ctx, school);
   await ctx.db.patch(player._id, { school, schoolKey: row.key, updatedAt: Date.now() });
-  await adjustSchool(ctx, row.key, { members: 1, total: player.best });
+  await adjustSchool(ctx, row.key, { members: 1, total: bestOf(player) });
   return row;
 }
 
@@ -111,7 +119,7 @@ export async function joinSchool(ctx, player, school) {
 export async function leaveSchool(ctx, player) {
   if (!player.schoolKey) return;
   const key = player.schoolKey;
-  await adjustSchool(ctx, key, { members: -1, total: -player.best });
+  await adjustSchool(ctx, key, { members: -1, total: -bestOf(player) });
   await ctx.db.patch(player._id, { school: undefined, schoolKey: undefined, updatedAt: Date.now() });
 
   const row = await ctx.db

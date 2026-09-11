@@ -529,30 +529,34 @@ export function makeDiamond() {
 }
 
 /**
- * Stretch a vehicle to the length its SPEC claims.
+ * How long a vehicle's mesh is drawn, against the length its SPEC claims.
  *
- * The two builders lay their parts out around a body that was modelled at the
- * old lengths, and the roof window the game is balanced on is a fraction of the
- * SPEC figure — so the moment those two disagree, the bus a player is standing
- * on is not the bus they can see. Scaling the group along Z keeps them the same
- * object, and every part of both builders is a box laid out along that axis, so
- * nothing here is a circle being turned into an ellipse.
+ * The two builders lay their parts out around a body modelled at the lengths
+ * these vehicles used to be, and the roof window the game is balanced on is a
+ * fraction of the SPEC figure — so the moment they disagree, the bus a player
+ * is standing on is not the bus they can see.
  *
- * The ratio is applied to the modelled length rather than to the SPEC one: the
- * meshes were always drawn a little shorter than their collision box, which is
- * what keeps a runner from clipping a corner they cannot see.
+ * Applied in `spawn` rather than in the factory, which is where the first
+ * attempt put it and where it silently did nothing: the pool hands the same
+ * mesh back out, and `spawn` resets the scale on every reuse. So the first bus
+ * of a run was the right length and every bus after it was a fourteen-metre
+ * collision box drawn nine metres long — an invisible wall in front of a
+ * vehicle that looked clear.
+ *
+ * Every part of both builders is a box laid out along Z, so nothing here is a
+ * circle being turned into an ellipse.
  */
 const MODELLED_LENGTH = { train: 12, bus: 9.2 };
 
-function sized(type, mesh) {
-  const want = SPEC[type].length / MODELLED_LENGTH[type];
-  if (Math.abs(want - 1) > 0.001) mesh.scale.z = want;
-  return mesh;
+/** The Z scale a freshly spawned mesh of this type rests at. */
+export function restingScaleZ(type) {
+  const modelled = MODELLED_LENGTH[type];
+  return modelled ? SPEC[type].length / modelled : 1;
 }
 
 const FACTORIES = {
-  train: () => sized("train", makeTrain(TRAIN_COLORS[(Math.random() * TRAIN_COLORS.length) | 0])),
-  bus: () => sized("bus", makeBus(BUS_COLORS[(Math.random() * BUS_COLORS.length) | 0])),
+  train: () => makeTrain(TRAIN_COLORS[(Math.random() * TRAIN_COLORS.length) | 0]),
+  bus: () => makeBus(BUS_COLORS[(Math.random() * BUS_COLORS.length) | 0]),
   barrier: makeBarrier,
   sign: makeSign,
   crate: makeCrate,
@@ -593,7 +597,12 @@ export class EntityPool {
     // Reset, because the pool hands the same mesh back. The diamond is drawn
     // with a pulsing scale, and one returned to the pool mid-pulse would come
     // back out at whatever size it happened to be parked at.
-    mesh.scale.setScalar(1);
+    //
+    // To the type's own resting size, not to one. A vehicle is drawn shorter
+    // than its collision box and stretched to match; setting every axis to one
+    // here was undoing that on every reuse, which left the first bus of a run
+    // correct and every one after it a wall you could not see.
+    mesh.scale.set(1, 1, restingScaleZ(type));
     const x = LANES[lane + 1];
     // Pickups float at the requested height; obstacles always sit on the deck.
     const lift = spec.lethal ? 0 : y;

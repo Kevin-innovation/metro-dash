@@ -5,6 +5,8 @@ import { GENERAL_LEVEL, TEACHER, canonicalSchool, schoolKey, schoolLabel, valida
 import { adjustSchool, adjustSchoolWeek, ensureSchool, joinSchool, leaveSchool } from "./schools.js";
 import { endAllSessions } from "./session.js";
 import { weekKey, weekStart } from "../src/week.js";
+import { seasonAt } from "../src/release.js";
+import { bestOf } from "./players.js";
 
 /**
  * Teacher tools.
@@ -521,8 +523,18 @@ export const recordRun = mutation({
     const thisWeek = week === weekKey(now);
     const weekBest = player.weekKey === week ? (player.weekBest ?? 0) : 0;
 
+    // The record is a season's record; see bestOf. A run backfilled from an
+    // older season must not land on this season's card, and one recorded now
+    // has to carry the season with it or the next read will discard it.
+    const season = seasonAt(when);
+    const seasonBest = bestOf(player, season);
+    const thisSeason = season === seasonAt(now);
+
     const patch = { updatedAt: now };
-    if (score > player.best) patch.best = score;
+    if (thisSeason && (score > seasonBest || (player.bestSeason ?? seasonAt(0)) !== season)) {
+      patch.best = Math.max(score, seasonBest);
+      patch.bestSeason = season;
+    }
     // Only when the run lands in the week the player's stored figures are for.
     // A run backfilled into March must not present itself as this week's best;
     // the hall reads that week from the runs and will find it there.
@@ -534,8 +546,8 @@ export const recordRun = mutation({
 
     // The same deltas scores:submit moves, so the school boards stay in step
     // without a rebuild.
-    if (score > player.best) {
-      await adjustSchool(ctx, player.schoolKey, { total: score - player.best });
+    if (thisSeason && score > seasonBest) {
+      await adjustSchool(ctx, player.schoolKey, { total: score - seasonBest, season });
     }
     if (thisWeek && score > weekBest) {
       await adjustSchoolWeek(ctx, player.schoolKey, week, {

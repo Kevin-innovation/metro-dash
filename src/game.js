@@ -41,6 +41,7 @@ import {
 } from "./save.js";
 import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
+import { seasonAt } from "./release.js";
 import { Screens } from "./screens.js";
 import {
   QualityGovernor,
@@ -227,6 +228,8 @@ export class Game {
       openSettings: () => this.openSettings(),
       toggleSetting: (key) => this.toggleSetting(key),
       setQuality: (tier) => this.setQuality(tier),
+      captureBoardKey: () => this.captureBoardKey(),
+      bindBoardKey: (code) => this.bindBoardKey(code),
       openAccount: () => this.openAccount(),
       submitAccount: (mode, handle, pin, remember) => this.submitAccount(mode, handle, pin, remember),
       openLeaderboard: () => this.openLeaderboard(),
@@ -817,7 +820,11 @@ export class Game {
    */
   adoptBest(best) {
     const next = Math.floor(Number(best) || 0);
-    if (next <= (this.store.data.best ?? 0)) return;
+    // Against this season's record, not whatever is on file. A save carried in
+    // from an older season holds a number this one cannot be compared to, and
+    // comparing anyway is how it would have sat there for ever.
+    if (next <= this.store.seasonBest()) return;
+    this.store.data.bestSeason = seasonAt();
     this.store.recordBest(next);
     this.screens.refreshProfile(this.store.data);
   }

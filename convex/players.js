@@ -11,6 +11,7 @@ import { handleKey, validateHandle } from "../src/nickname.js";
 import { schoolLabel, validateSchool } from "../src/school.js";
 import { rankAt } from "../src/progression.js";
 import { dayKey } from "../src/daily.js";
+import { seasonAt } from "../src/release.js";
 import { profileWorth } from "../src/shop.js";
 import { joinSchool } from "./schools.js";
 import { endSession, requirePlayer, startSession } from "./session.js";
@@ -141,7 +142,7 @@ function publicProfile(player) {
   return {
     handle: player.handle,
     profile: player.profile,
-    best: player.best,
+    best: bestOf(player),
     level: levelOf(player),
     school: player.school ?? null,
     schoolLabel: player.school ? schoolLabel(player.school) : "",
@@ -175,6 +176,23 @@ export function xpOf(player) {
 /** The rank that experience buys, as shown beside a name. */
 export function levelOf(player) {
   return rankAt(xpOf(player)).level;
+}
+
+/**
+ * The account's best run *of this season*.
+ *
+ * A season is a rule set, not a stretch of calendar — season 4 is the first one
+ * scored per second, and 1.74 million on the units before it is not a number
+ * this season can be measured against. Read the way `weekBest` is: the key is
+ * checked before the figure is trusted, and a figure from a game that is over
+ * is worth zero.
+ */
+export function bestOf(player, season = seasonAt()) {
+  if (!player) return 0;
+  // Untagged means it was set before seasons were tracked: the season that
+  // was running when this table was empty, which stands until that one ends.
+  if ((player.bestSeason ?? seasonAt(0)) !== season) return 0;
+  return Math.max(0, Math.floor(player.best ?? 0));
 }
 
 export function coinsOf(player) {
@@ -514,7 +532,7 @@ export const save = mutation({
       // but the columns above are what decide. Merged with what the account
       // already holds rather than replacing it, so a browser that is behind
       // cannot delete a purchase — see keepEarned.
-      profile: { ...keepEarned(sanitizeProfile(profile, player.best), player.profile), coins, xp },
+      profile: { ...keepEarned(sanitizeProfile(profile, bestOf(player)), player.profile), coins, xp },
       coins,
       xp,
       // Spent only by what was actually stated, so an ordinary delta sync — the
@@ -539,7 +557,7 @@ export const save = mutation({
     // told what it is, or a run played on a phone would raise the account's best
     // everywhere except the screen that displays it. Experience rides along for
     // the same reason: the server settled it, so the server states it.
-    return { ok: true, coins, best: player.best, xp };
+    return { ok: true, coins, best: bestOf(player), xp };
   },
 });
 
