@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.15";
+export const VERSION = "4.16";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.16",
+    date: "2026-09-12",
+    kind: "minor",
+    title: "가운데 줄 칩들의 높이를 맞췄습니다",
+    notes: [
+      "구간 배너와 룰렛과 파워업이 서로 다른 높이로 서 있던 걸 고쳤습니다. 셋 다 안쪽 구조가 달라서 — 구간은 글씨+바, 룰렛은 아이콘+이름+바, 파워업은 아이콘+바 — 바가 세 개의 다른 깊이에 있었고, 그래서 한 줄이 아니라 부딪힌 세 덩어리로 보였어요.",
+      "이제 전부 「내용 한 줄 + 바 한 줄」로 같은 모양입니다. 높이도 모서리도 바 두께도 하나로 맞췄고, 바는 어느 칩이든 같은 높이에 있습니다.",
+      "룰렛 칩의 「점수 ×3」이 아이콘 아래가 아니라 옆으로 갔습니다. 아래에 있으면 그 칩만 한 줄 더 높아지거든요.",
+    ],
+  },
   {
     version: "4.15",
     date: "2026-09-12",

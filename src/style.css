@@ -1,4 +1,14 @@
 :root {
+  /* The centre row's chips: one height, one corner, one bar thickness, so a
+     section banner and a power-up read as the same kind of object. */
+  --chip-h: 42px;
+  --chip-radius: 12px;
+  --chip-bar: 4px;
+  /* The coloured edge along the bottom. Shared, because it is what the bar
+     inside sits on top of — a section with a 1.5px edge beside a power-up with
+     a 2px one put their bars half a pixel apart, which rounds to one and reads
+     as a row that does not line up. */
+  --chip-edge: 1.5px;
   --ink: #071018;
   --paper: #f4fbff;
   --gold: #ffd24a;
@@ -294,7 +304,11 @@ body.running #game-canvas {
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
-  align-items: flex-start;
+  /* Stretch, not flex-start. These are one row of chips and the bar along the
+     bottom of each is the thing the eye lines up on; with three different
+     heights the bars sat at three different depths and the row read as broken
+     rather than as a row. */
+  align-items: stretch;
   gap: 6px;
   margin-top: 10px;
   padding: 0 12px;
@@ -554,6 +568,7 @@ body.running #game-canvas {
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
+  align-items: stretch;
   gap: 6px;
 }
 
@@ -561,16 +576,30 @@ body.running #game-canvas {
    chip, which is four lines of Korean over the track for the length of a
    magnet; the icon carries the same meaning in a fifth of the width and the
    name is still there for a screen reader. */
+/* --- CHIP SYSTEM -----------------------------------------------------------
+
+   Everything in the centre row is the same object: one row of content, one bar
+   under it, the same height and the same corner. What changes between them is
+   only what they are made of — a section says a name, a power-up shows an icon,
+   the wheel shows both — and the colour that says which is which.
+
+   They were three different shapes before, with three heights and three bar
+   depths, which is why a section banner beside a magnet read as two things that
+   had collided rather than as a row. */
 .pw-chip {
   position: relative;
   display: grid;
+  grid-template-rows: 1fr auto;
   justify-items: center;
-  row-gap: 3px;
+  align-items: center;
+  row-gap: 5px;
+  height: var(--chip-h);
   width: 42px;
-  padding: 4px 5px 5px;
-  border-radius: 11px;
-  background: rgba(7, 16, 24, 0.62);
-  border-bottom: 2px solid var(--pw, var(--gold));
+  padding: 5px 5px 6px;
+  border-radius: var(--chip-radius);
+  background: rgba(7, 16, 24, 0.72);
+  border-bottom: var(--chip-edge) solid var(--pw, var(--gold));
+  box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.1);
   backdrop-filter: blur(8px);
   animation: chipIn 0.28s ease-out;
 }
@@ -615,11 +644,20 @@ body.running #game-canvas {
    number that is different every spin, and 「×10」 hidden behind a gem is the
    single most important thing on the screen not being shown at all. */
 /* Wide enough for the label, since the rest of the row is sized for an icon. */
+/* The wheel is the one chip with something to say, so its name sits beside the
+   icon rather than under it — under it made this chip a row taller than every
+   other one, which is most of why the row looked broken. */
 .pw-chip[data-pw="slot"] {
+  grid-template-columns: auto auto;
+  column-gap: 5px;
   width: auto;
   min-width: 42px;
-  padding-left: 9px;
-  padding-right: 9px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.pw-chip[data-pw="slot"] .pw-track {
+  grid-column: 1 / -1;
 }
 
 [data-pw="slot"] .pw-name {
@@ -637,8 +675,9 @@ body.running #game-canvas {
 }
 
 .pw-track {
+  align-self: end;
   width: 100%;
-  height: 4px;
+  height: var(--chip-bar);
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.16);
   overflow: hidden;
@@ -2944,16 +2983,22 @@ button.report-flag:disabled {
 /* The section banner. Sits above the power-up chips, in the section's own
    colour, so「지금 무엇을 하는 구간인가」는 한 줄로 끝난다. */
 .event-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 4px;
+  /* One content row and one bar, the same shape every chip in this row has.
+     See CHIP SYSTEM below. */
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  row-gap: 5px;
+  /* Stated rather than stretched to. Stretch only equalises chips on the same
+     flex line, and on a narrow screen this row wraps — so the height has to be
+     a property of a chip, not of the row it happens to land in. */
+  height: var(--chip-h);
   min-width: 96px;
   max-width: 46vw;
-  padding: 4px 12px 5px;
-  border-radius: 12px;
+  padding: 5px 12px 6px;
+  border-radius: var(--chip-radius);
   background: rgba(7, 16, 24, 0.8);
-  border: 1.5px solid var(--event, var(--gold));
+  border: var(--chip-edge) solid var(--event, var(--gold));
   color: var(--event, var(--gold));
   font-family: var(--font-display);
   font-size: 13px;
@@ -2971,7 +3016,8 @@ button.report-flag:disabled {
 }
 
 .event-track {
-  height: 4px;
+  align-self: end;
+  height: var(--chip-bar);
   border-radius: 99px;
   background: rgba(255, 255, 255, 0.18);
   overflow: hidden;
