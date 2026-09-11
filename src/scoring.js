@@ -117,15 +117,32 @@ export function comboWindowAt(t) {
  * obstacle with no way around it, which is why it is worth more than a crate
  * you could have changed lane to avoid.
  */
-export const SLIDE_BONUS = 112;
-export const JUMP_BONUS = 78;
+/**
+ * What a verb is worth, against the clock it is competing with.
+ *
+ * These were sized when the score was paid per metre and every one of them was
+ * multiplied by a combo that climbed all run. Priced per second, they became
+ * rounding errors: a mount was worth four hundredths of a second of simply
+ * being alive, a roof-to-roof hop one hundredth. The riskiest line in the game
+ * paid less than standing still for a fifth of a second.
+ *
+ * Written as fractions of a second of survival so the comparison is the one
+ * the player is actually making — is doing this worth the risk against just
+ * not dying? A mount is a fifth of a second, a hop a little less because the
+ * mount that set it up has already been paid, a gate a tenth. They add up over
+ * a run without ever competing with the clock itself.
+ */
+const perSecond = (fraction) => Math.round(SURVIVAL_RATE * fraction);
+
+export const SLIDE_BONUS = perSecond(0.04);
+export const JUMP_BONUS = perSecond(0.03);
 
 /** Bonus for climbing onto a vehicle roof from the ground. */
-export const MOUNT_BONUS = 130;
+export const MOUNT_BONUS = perSecond(0.06);
 /** Bonus for hopping straight from one roof to the next. */
-export const HOP_BONUS = 43;
+export const HOP_BONUS = perSecond(0.05);
 /** Bonus for squeezing past an obstacle instead of taking the safe line. */
-export const NEAR_MISS_BONUS = 95;
+export const NEAR_MISS_BONUS = perSecond(0.08);
 /** Points per metre while riding a vehicle roof, on top of the distance score. */
 export const ROOF_RIDE_RATE = 20.6;
 

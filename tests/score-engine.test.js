@@ -8,6 +8,7 @@ import {
   MOUNT_BONUS,
   SLIDE_BONUS,
   comboWindowAt,
+  survivalGain,
 } from "../src/scoring.js";
 import { EVENTS, MAX_EVENT_MULTIPLIER, eventById } from "../src/events.js";
 import { Run } from "../src/run.js";
@@ -134,6 +135,36 @@ describe("지나가지 않은 레인은 클리어가 아니다", () => {
     expect(far.tally.barriers + far.tally.gates).toBe(0);
     const near = crossAt(0, 0);
     expect(near.tally.barriers).toBe(0);
+  });
+});
+
+describe("구간 배수는 생존 점수에도 걸린다", () => {
+  it("「지붕 하이웨이 ×2」가 실제로 ×2다", () => {
+    // 배너는 ×2라고 적는데 생존 점수에는 안 걸려서, 화면이 약속한 것을 점수가
+    // 하지 않고 있었다. 생존 점수가 판의 대부분이라 체감상 아무 일도 안 났다.
+    const plain = new Run(store());
+    plain.advance(10, { travelled: 400, mounted: false });
+
+    const section = new Run(store());
+    section.eventMultiplier = 2;
+    section.advance(10, { travelled: 400, mounted: false });
+
+    expect(section.scoreDist).toBeCloseTo(plain.scoreDist * 2, 6);
+  });
+
+  it("콤보는 여전히 생존 점수를 곱하지 않는다", () => {
+    // 구간과 룰렛은 정해진 창이고, 콤보는 판 내내 올라가기만 한다. 곡선을
+    // 휘게 만든 건 콤보 쪽이었다.
+    const run = new Run(store());
+    run.combo = 100;
+    run.comboT = 999;
+    run.advance(10, { travelled: 400, mounted: false });
+    expect(run.scoreDist).toBeCloseTo(survivalGain(10), 6);
+    // 대신 해낸 것에는 그대로 걸린다.
+    run.combo = 100;
+    run.comboT = 999;
+    const gain = run.addClear("slide");
+    expect(gain).toBeGreaterThan(SLIDE_BONUS);
   });
 });
 

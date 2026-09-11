@@ -153,7 +153,26 @@ export class Run {
    */
   multiplier() {
     const base = scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
-    return base * (this.eventMultiplier ?? 1) * (this.slotMultiplier ?? 1) * (this.scoreScale ?? 1);
+    return base * this.steadyMultiplier();
+  }
+
+  /**
+   * Everything that multiplies except the combo.
+   *
+   * The combo is the one that grows through a run and never comes back down,
+   * and multiplying the score's dominant term by it is what made a third minute
+   * worth four first ones. The rest are not like that: a section lasts eleven
+   * seconds, the wheel's face lasts five to thirty, and a runner's bonus is a
+   * flat figure that is the same on the first second as on the last. None of
+   * them bend the curve; they put bounded windows on top of it.
+   *
+   * So these reach the survival score and the combo does not. It is what makes
+   * 「지붕 하이웨이 ×2」 mean ×2 — before this it doubled the bonuses and left
+   * the term they sit on alone, which is a banner promising something the score
+   * did not do.
+   */
+  steadyMultiplier() {
+    return (this.eventMultiplier ?? 1) * (this.slotMultiplier ?? 1) * (this.scoreScale ?? 1);
   }
 
   /**
@@ -178,17 +197,19 @@ export class Run {
     this.seconds += dt;
     this.distance += travelled;
     const multiplier = this.multiplier();
-    // Flat, and not multiplied by anything. This is the one term that decides
-    // the shape of the whole run: a minute of running is worth a minute of
-    // running, at the start and at the end, so the score is a straight line in
-    // time and the milestones land where the difficulty ladder puts them.
+    // A straight line in time, bent only by the bounded windows. This is the
+    // term that decides the shape of the whole run: a minute of running is
+    // worth a minute of running, at the start and at the end, so the score is
+    // readable against the clock and the milestones land where the difficulty
+    // ladder puts them.
     //
     // The combo does not touch it, which is the point. Multiplying the term
-    // that dominates the score is what made a third minute worth four first
-    // ones; the combo multiplies everything a player actually *does* instead —
-    // the slides, the jumps, the mounts, the roofs below — so skill still
-    // compounds, on top of a line rather than underneath it.
-    this.scoreDist += survivalGain(dt);
+    // that dominates the score by the one thing that climbs all run is what
+    // made a third minute worth four first ones; the combo multiplies
+    // everything a player actually *does* instead — the slides, the jumps, the
+    // mounts, the roofs below — so skill still compounds, on top of a line
+    // rather than underneath it. See steadyMultiplier for what does reach here.
+    this.scoreDist += survivalGain(dt) * this.steadyMultiplier();
     // Riding a roof is the risky line, so it pays on top of plain survival, and
     // it is a thing done rather than a thing endured — so this one does take
     // the multiplier.

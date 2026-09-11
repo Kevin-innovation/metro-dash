@@ -125,11 +125,19 @@ const POWERUP_EVERY = 6;
  * player survived; score is how well, and the run that should get hard is the
  * one going well.
  *
- * Seven hundred thousand is the old hundred thousand written on the new score
- * scale — the same point in the same run, past 50만 and into the stretch where
- * everything else has topped out too. See SCORE_SCALE.
+ * Five hundred thousand, because that is the number the run is built around:
+ * 50만 is where the game is supposed to turn brutal, and the bird is the
+ * strongest thing it has to turn brutal with.
+ *
+ * It was seven hundred thousand, carried over from a scale that no longer
+ * exists and never re-anchored when the scoring moved to seconds. Measured
+ * against the curve that shipped, that put the first egg at 147 seconds of a
+ * 180-second run for an ordinary player and past the finish line entirely for a
+ * new one — the bird had effectively been removed from the game and nothing
+ * said so. At 50만 it arrives around 115 seconds, which is the last minute of a
+ * good run and the stretch the whole difficulty ladder was compressed to reach.
  */
-export const HAZARD_FROM_SCORE = 700_000;
+export const HAZARD_FROM_SCORE = 500_000;
 const HAZARD_EVERY = 9;
 /** How far either side of that cadence an egg may fall. */
 const HAZARD_SPREAD = 3;
