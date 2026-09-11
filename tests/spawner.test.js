@@ -159,8 +159,12 @@ describe("배치는 만날 때의 속도로 지어진다", () => {
     // 계단을 사이에 두고 있어야 의미가 있는 테스트다.
     expect(speedAt(after)).toBeGreaterThan(speedAt(before));
 
-    const near = new Spawner(fakePool(), 7);
-    const far = new Spawner(fakePool(), 7);
+    // 시드는 두 번째 인자가 아니라 reset 으로 준다. 생성자의 두 번째 인자는
+    // hooks 라, 숫자를 넘기면 둘 다 무작위 시드를 받아 비교가 흔들린다.
+    const near = new Spawner(fakePool());
+    const far = new Spawner(fakePool());
+    near.reset(7);
+    far.reset(7);
     const opts = { phaseId: 4, reaction: reactionAt(before), pressure: pressureAt(before) };
     // 같은 씨앗, 같은 위치 — 다른 건 스포너가 어느 속도로 짓느냐뿐이다.
     const placed = near.update(1000, { ...opts, speed: speedAt(before), runTime: before });

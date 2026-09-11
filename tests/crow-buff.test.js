@@ -173,7 +173,9 @@ describe("the magnet and the crow egg", () => {
 describe("what the track hands out", () => {
   /** Deal `layouts` mid-run layouts and count which pickup each one carried. */
   function deal(layouts = 4000) {
-    const spawner = new Spawner(fakePool(), 424242);
+    const spawner = new Spawner(fakePool());
+    // 두 번째 인자는 hooks 다. 시드는 reset 으로 준다.
+    spawner.reset(424242);
     const tally = { diamond: 0, focus: 0, magnet: 0, jetpack: 0, sneakers: 0 };
     for (let i = 0; i < layouts; i++) {
       const items = spawner.choose(i * 30, { speed: 40, phaseId: 4, pressure: 0.6, score: 0 });
