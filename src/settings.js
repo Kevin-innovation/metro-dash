@@ -14,6 +14,29 @@ export const QUALITY_TIERS = ["low", "medium", "high"];
  * so switching this off dims and thickens the world without blurring it.
  */
 
+/**
+ * Sight lines, measured in seconds of track rather than in metres.
+ *
+ * They were metres, and metres are the wrong unit here for the same reason
+ * every other number in this game is written in seconds: how hard a run is to
+ * read depends on how long a thing is visible for, not on how far away it is.
+ *
+ * At 56 m/s a 165-metre fog was 2.95 seconds of warning, and the spawner places
+ * patterns 2.35 seconds ahead — one comfortable step inside the fog, so a
+ * layout was always visible from the moment it existed. Doubling the opening
+ * speed would have made that same 165 metres 2.06 seconds: patterns spawning
+ * *inside* the murk and stepping out of it, and a tunnel (which multiplies the
+ * fog by 0.42) down under a second of warning. Nothing about the timing would
+ * have been unfair — every gap is still the same fraction of a second — but it
+ * would have been unfair to look at, which is the same thing to a player.
+ *
+ * The numbers below are each tier's old metres divided by the old top speed, so
+ * the view at 56 m/s is pixel-for-pixel what it always was. It is the same
+ * sight line written in the unit that keeps it true at any speed.
+ *
+ * `drawSeconds` is the camera's far plane on the same basis, kept well past the
+ * fog so nothing is ever clipped before it has finished fading out.
+ */
 export const QUALITY_PROFILES = {
   low: {
     label: "낮음",
@@ -23,8 +46,8 @@ export const QUALITY_PROFILES = {
     particleBudget: 60,
     speedLines: false,
     screenBlur: false,
-    fog: [34, 120],
-    drawDistance: 150,
+    fogSeconds: [0.61, 2.14],
+    drawSeconds: 2.7,
   },
   medium: {
     label: "보통",
@@ -34,8 +57,8 @@ export const QUALITY_PROFILES = {
     particleBudget: 160,
     speedLines: true,
     screenBlur: true,
-    fog: [48, 165],
-    drawDistance: 210,
+    fogSeconds: [0.86, 2.95],
+    drawSeconds: 3.75,
   },
   high: {
     label: "높음",
@@ -45,8 +68,8 @@ export const QUALITY_PROFILES = {
     particleBudget: 260,
     speedLines: true,
     screenBlur: true,
-    fog: [58, 200],
-    drawDistance: 260,
+    fogSeconds: [1.04, 3.57],
+    drawSeconds: 4.64,
   },
 };
 

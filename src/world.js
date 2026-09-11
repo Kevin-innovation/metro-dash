@@ -1,5 +1,13 @@
 import * as THREE from "three";
-import { BUILDING_COLORS, FOG_COLOR, LANES, SEGMENT_COUNT, SEGMENT_LEN } from "./config.js";
+import {
+  BUILDING_COLORS,
+  FOG_COLOR,
+  LANES,
+  MAX_SPEED,
+  SEGMENT_COUNT,
+  SEGMENT_LEN,
+  START_SPEED,
+} from "./config.js";
 import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
 import { OPEN_CEILING } from "./zones.js";
 
@@ -61,7 +69,13 @@ function recycle(item, cycle, playerZ) {
 
 export function createWorld(scene, quality) {
   scene.background = new THREE.Color(0x8fc6e6);
-  scene.fog = new THREE.Fog(FOG_COLOR, quality.fog[0], quality.fog[1]);
+  // Opened at the run's top speed so the first frame is never short-sighted;
+  // applyLook rewrites both ends every frame from the speed actually running.
+  scene.fog = new THREE.Fog(
+    FOG_COLOR,
+    quality.fogSeconds[0] * MAX_SPEED,
+    quality.fogSeconds[1] * MAX_SPEED,
+  );
 
   const hemi = new THREE.HemisphereLight(0xd6ecff, 0x8f7d63, 1.25);
   scene.add(hemi);
@@ -334,14 +348,22 @@ function makeClouds(scene) {
  *
  * Called every frame with an already-blended look, so nothing here decides
  * anything — zones.js owns the timing and this just paints.
+ *
+ * @param {number} speed metres a second the run is actually travelling at. The
+ *   fog is a number of *seconds* of track — see QUALITY_PROFILES — so this is
+ *   what turns it into the metres THREE.Fog wants. Floored at the run's opening
+ *   speed: the title screen drifts along at a fraction of it, and a fog that
+ *   shrank to match would close the world in around a runner who is standing
+ *   still.
  */
-export function applyLook(world, look, quality) {
+export function applyLookAtSpeed(world, look, quality, speed) {
   world.sky.material.map = skyFor(world, look.sky);
   world.sky.material.needsUpdate = true;
 
   world.scene.fog.color.setHex(look.fogColor);
-  world.scene.fog.near = quality.fog[0] * look.fog[0];
-  world.scene.fog.far = quality.fog[1] * look.fog[1];
+  const metres = Math.max(START_SPEED, Number(speed) || 0);
+  world.scene.fog.near = quality.fogSeconds[0] * metres * look.fog[0];
+  world.scene.fog.far = quality.fogSeconds[1] * metres * look.fog[1];
   world.scene.background.setHex(look.sky[1]);
 
   world.ground.material.color.setHex(look.ground);

@@ -1,5 +1,3 @@
-import { SCORE_SCALE } from "./scoring.js";
-
 /**
  * Rank ladder. XP comes from missions and from banking score at the end of a
  * run, so both careful mission play and one huge run move the needle.
@@ -144,13 +142,19 @@ export function rankUpBetween(fromLevel, toLevel) {
 /**
  * Score per point of experience.
  *
- * Twenty-five on the old score scale, and it has to stay twenty-five: the rank
- * ladder, what a level costs and what arriving at one pays are all built on
- * how much experience a run is worth, and none of that changed. Multiplying
- * the score by seven without dividing it back out here would have handed every
- * player seven times the ranks for the same run.
+ * Pinned to the milestones, not derived from SCORE_SCALE, and the difference
+ * matters. The rank ladder, what a level costs and what arriving at one pays
+ * are all built on how much experience a run is worth, and none of that has
+ * changed — so a minute of running has to keep paying the experience a minute
+ * of running always paid.
+ *
+ * A minute is 20만 by design, at every scale this has been through. Dividing by
+ * a hundred and seventy-five leaves that minute worth about 1,150 experience,
+ * which is what it was worth when the score was five figures and when it was
+ * seven times that. Tying this to SCORE_SCALE instead would have handed out
+ * sixty per cent more ranks for the same run the moment the speed ceiling moved.
  */
-const SCORE_PER_XP = 25 * SCORE_SCALE;
+const SCORE_PER_XP = 175;
 
 /** XP awarded for a finished run, on top of any mission rewards. */
 export function runXp(score) {

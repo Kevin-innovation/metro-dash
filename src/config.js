@@ -3,19 +3,33 @@ export const SEGMENT_LEN = 30;
 export const SEGMENT_COUNT = 12;
 // The run used to open at a third of its cruising speed and take a minute and
 // a half to get there, so the first stretch was not the game — it was a queue
-// for the game.
-export const START_SPEED = 20;
-export const TITLE_SPEED = 10;
+// for the game. Twenty was already the second attempt at fixing that and it
+// was still a warm-up: doubled, the run opens at what used to be the
+// seventy-second mark, which is where it started being the game.
+export const START_SPEED = 40;
+export const TITLE_SPEED = 20;
 /** Speed the run settles at once it is wound up, reached around two minutes. */
-export const CRUISE_SPEED = 50;
+export const CRUISE_SPEED = 72;
 /**
  * Ceiling on speed.
  *
  * Above cruise the run creeps rather than climbs, and only after the reaction
  * gap has finished tightening — at that point every other difficulty dial has
  * stopped moving, and a run that stops changing is a run that stops being read.
+ *
+ * Lifted with the opening rather than left where it was. The ceiling is not
+ * what makes a run hard — every timing in this game is written in seconds and
+ * none of them move when the speed does — it is what leaves the climb room to
+ * happen. A start of forty against a ceiling of fifty-six would have reached
+ * cruise inside half a minute and spent the rest of the run at one speed.
+ *
+ * Eighty rather than the eighty-eight that keeping the old *ratio* would ask
+ * for. The real limit is not the hands, it is the eye: obstacles are placed
+ * 2.35 seconds ahead and the fog has to be further out than that, and every
+ * extra metre of visible track is geometry to draw on a school Chromebook.
+ * Eighty needs about 240 metres of it against the 165 this ran on before.
  */
-export const MAX_SPEED = 56;
+export const MAX_SPEED = 80;
 export const GRAVITY = -44;
 export const JUMP_V = 16.2;
 export const FAST_FALL = -34;
@@ -33,7 +47,24 @@ export const SAVE_KEY = "metro-dash-save";
 
 // Simulation runs on a fixed step so physics and collision are frame-rate
 // independent; rendering still happens once per animation frame.
-export const FIXED_DT = 1 / 120;
+/**
+ * The simulation tick.
+ *
+ * Raised from 1/120 with the speed ceiling. Collision is swept — the runner is
+ * tested along the segment between where they were and where they are, not
+ * sampled at the end of it — so tunnelling was never the risk. The risk is
+ * everything that is *not* swept: a pickup's window, the roof check, the Z
+ * crossing that credits a slide. All of those read a position, and at 80 m/s
+ * a hundred-and-twentieth of a second moves the runner 0.67 metres, which is
+ * wider than the thinnest thing on the track.
+ *
+ * At a hundred and eightieth it is 0.44 metres, back inside the margin the
+ * game was built with. The cost is half again as many simulation steps a
+ * second against a step that walks a few dozen entities — nothing next to the
+ * frame it is drawn in, and cheaper than any of the ways of making the
+ * unswept checks thicker.
+ */
+export const FIXED_DT = 1 / 180;
 // Longest real frame the simulation will honour. Anything beyond this (a
 // backgrounded tab, a long GC pause) is discarded rather than replayed.
 export const MAX_FRAME_DT = 0.25;

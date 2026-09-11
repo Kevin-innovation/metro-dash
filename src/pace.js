@@ -98,19 +98,24 @@ function speedCurve(t) {
   // Steep to begin with and easing off, rather than the old even climb: the
   // first ten seconds are where a player decides whether this is a game about
   // running, and 16m/s does not answer that question.
-  if (t < 20) return START_SPEED + t * 0.45;
-  if (t < 50) return 29 + (t - 20) * 0.28;
-  // The back two segments were drawn to reach cruise at three minutes. They
-  // reach it just before 50만 now, which is the same curve read against the
-  // compressed ramp rather than a steeper one bolted onto the old timings —
-  // the shape, and every metre of sight line it was drawn for, is unchanged.
-  if (t < 80) return 37.4 + (t - 50) * 0.2133;
-  const cruise = Math.min(CRUISE_SPEED, 43.8 + (t - 80) * 0.248);
+  // Four segments and a creep, the same shape this curve has always had:
+  // steep for the first twenty seconds, easing off three times, then barely
+  // moving once every other difficulty dial has stopped.
+  //
+  // Every slope is the old one times 32/30 — the climb used to cover 20→50 by
+  // the hundred-and-fifth second and now covers 40→72 over the same seconds.
+  // So the shape, the timing of each easing, and the second the run reaches
+  // cruise are all exactly what they were; the whole thing simply sits a speed
+  // step and a half higher.
+  if (t < 20) return START_SPEED + t * 0.48;
+  if (t < 50) return 49.6 + (t - 20) * 0.299;
+  if (t < 80) return 58.57 + (t - 50) * 0.2275;
+  const cruise = Math.min(CRUISE_SPEED, 65.395 + (t - 80) * 0.2642);
   if (t <= LATE_PRESSURE_AT) return cruise;
-  // A creep rather than a climb — 50 to 56. Small enough that the sight lines
+  // A creep rather than a climb — 72 to 80. Small enough that the sight lines
   // still work, large enough that the layouts a player has learned start
   // arriving before they are ready for them.
-  return Math.min(MAX_SPEED, CRUISE_SPEED + (t - LATE_PRESSURE_AT) * 0.05);
+  return Math.min(MAX_SPEED, CRUISE_SPEED + (t - LATE_PRESSURE_AT) * 0.0667);
 }
 
 /**

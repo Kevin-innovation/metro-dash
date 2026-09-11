@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { REACTION_EASY, REACTION_HARD } from "../src/config.js";
 import {
   DEFAULT_SETTINGS,
   DOWNGRADE_AFTER,
@@ -51,7 +52,7 @@ describe("quality profiles", () => {
       if (previous) {
         expect(profile.pixelRatio).toBeGreaterThanOrEqual(previous.pixelRatio);
         expect(profile.particleBudget).toBeGreaterThan(previous.particleBudget);
-        expect(profile.drawDistance).toBeGreaterThan(previous.drawDistance);
+        expect(profile.drawSeconds).toBeGreaterThan(previous.drawSeconds);
       }
       previous = profile;
     }
@@ -60,8 +61,34 @@ describe("quality profiles", () => {
   it("keeps fog inside the draw distance so nothing pops in unfogged", () => {
     for (const tier of QUALITY_TIERS) {
       const profile = QUALITY_PROFILES[tier];
-      expect(profile.fog[0]).toBeLessThan(profile.fog[1]);
-      expect(profile.fog[1]).toBeLessThanOrEqual(profile.drawDistance);
+      expect(profile.fogSeconds[0]).toBeLessThan(profile.fogSeconds[1]);
+      expect(profile.fogSeconds[1]).toBeLessThanOrEqual(profile.drawSeconds);
+    }
+  });
+
+  it("sees a layout coming for longer than the gap it was given", () => {
+    // The one that actually matters, and the reason these are seconds rather
+    // than metres.
+    //
+    // Not "further than the spawner places". A layout goes down 2.35 seconds up
+    // the track and the lowest tier only clears 2.14, so the last fifth of a
+    // second of its life it is inside the murk — but fog fades, it does not
+    // cut, and what the player needs is to have seen the thing well before they
+    // have to act on it. The gap the spawner leaves between layouts is the
+    // measure of that: REACTION_EASY at the start of a run, REACTION_HARD once
+    // it is wound up.
+    //
+    // A tunnel is the tightest case in the game — it multiplies the fog by 0.42
+    // — and it still has to clear the gap the run is being dealt at that point.
+    //
+    // Checked here rather than trusted, because the numbers that used to make
+    // this work were metres, and metres stopped being true the moment the speed
+    // ceiling moved.
+    const tunnel = 0.42;
+    for (const tier of QUALITY_TIERS) {
+      const seen = QUALITY_PROFILES[tier].fogSeconds[1];
+      expect(seen, tier).toBeGreaterThan(REACTION_EASY * 1.5);
+      expect(seen * tunnel, `${tier} tunnel`).toBeGreaterThan(REACTION_HARD);
     }
   });
 

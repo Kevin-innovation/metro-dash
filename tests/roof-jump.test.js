@@ -79,8 +79,23 @@ describe("jumping off a vehicle roof", () => {
     expect(player.roofY).toBe(0);
   });
 
-  it("was fine at the start of a run all along", () => {
-    // Which is why it read as a late-run problem rather than as a broken jump.
-    expect(roofSeconds("bus", START_SPEED)).toBeGreaterThan(MOUNT_TIME);
+  it("is not fine at the start of a run either, now the run opens at forty", () => {
+    // It used to be, and that is why the bug read as a late-run problem: at
+    // 20 m/s a bus roof lasted 0.43 seconds against a 0.3 second mount, so the
+    // first minute worked and everything after it did not.
+    //
+    // The opening speed doubled, and now the very first bus gives 0.22 seconds
+    // — under the mount from the first layout of the run. Nothing breaks,
+    // because the fix above is what carries it: a jump pressed during the climb
+    // is honoured rather than swallowed. What changes is that the fix is now
+    // load-bearing for the whole run rather than for the back half of it, which
+    // is worth having written down.
+    expect(roofSeconds("bus", START_SPEED)).toBeLessThan(MOUNT_TIME);
+
+    const { player } = onRoof("bus");
+    expect(player.mounting).toBe(true);
+    applyAction(player, "jump", null, {});
+    expect(player.jumping).toBe(true);
+    expect(player.vy).toBeCloseTo(JUMP_V, 5);
   });
 });

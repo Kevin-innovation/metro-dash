@@ -11,6 +11,7 @@ import {
   JETPACK_ALTITUDE,
   MAX_FRAME_DT,
   MAX_SIM_STEPS,
+  MAX_SPEED,
   ONCOMING_SPEED,
   PLAYER_HEIGHT,
   START_SPEED,
@@ -40,7 +41,7 @@ import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from ".
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
-import { applyLook, applyWorldQuality, createWorld, placeMouth, syncWorld } from "./world.js";
+import { applyLookAtSpeed, applyWorldQuality, createWorld, placeMouth, syncWorld } from "./world.js";
 
 
 /** Gap kept between the camera and a roof overhead. */
@@ -176,7 +177,7 @@ export class Game {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, this.quality.drawDistance);
+    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, this.drawDistance());
 
     // The run's own layout: which zone is where, which section starts when.
     // Replaced at the start of every run, so no two are the same course.
@@ -1113,14 +1114,29 @@ export class Game {
     return this.settings.quality === "auto" ? this.governor.tier : this.settings.quality;
   }
 
+  /**
+   * The camera's far plane, in metres.
+   *
+   * Taken at the run's top speed rather than at the speed of the moment, and
+   * that is on purpose: the fog moves with the run because a sight line is a
+   * number of seconds, but the far plane is a projection matrix, and rewriting
+   * one every frame to chase the fog would be re-uploading the camera for a
+   * change nobody can see. One value, always past the furthest the fog can
+   * ever reach, so nothing is clipped before it has faded out.
+   */
+  drawDistance() {
+    return this.quality.drawSeconds * MAX_SPEED;
+  }
+
   applyQuality(tier) {
     this.quality = qualityProfile(tier);
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.quality.pixelRatio));
     this.renderer.shadowMap.enabled = this.quality.shadows;
-    this.camera.far = this.quality.drawDistance;
+    this.camera.far = this.drawDistance();
     this.camera.updateProjectionMatrix();
-    // Fog is not set here: applyLook owns it, because the distance depends on
-    // the zone as well as the tier and two writers would fight every frame.
+    // Fog is not set here: applyLookAtSpeed owns it, because the distance
+    // depends on the zone and the run's speed as well as the tier, and two
+    // writers would fight every frame.
     applyWorldQuality(this.world, this.quality);
     this.particles.setBudget(this.quality.particleBudget);
     this.resize();
@@ -1540,7 +1556,7 @@ export class Game {
       this.player.z,
       this.speed,
     );
-    applyLook(this.world, this.lookNow(), this.quality);
+    applyLookAtSpeed(this.world, this.lookNow(), this.quality, this.speed);
     // After the zone has written its own look, so this reads as the same world
     // getting murkier rather than as a grey sheet laid over the top of it.
     // Read from the timer, not from the state: the timer is already zeroed on

@@ -10,7 +10,6 @@ import {
   DIST_SCORE_RATE,
   COIN_BASE,
   MAX_COMBO_MULTIPLIER,
-  SCORE_SCALE,
 } from "../src/scoring.js";
 import { PHASES } from "../src/pace.js";
 import { maxDistanceIn } from "../src/leaderboard-rules.js";
@@ -187,9 +186,13 @@ describe("20만 · 30만 · 40만 · 50만", () => {
     expect(PRESSURE_STARTS_AT).toBeGreaterThanOrEqual(12);
   });
 
-  it("까마귀는 50만을 넘긴 뒤에 나온다", () => {
-    // 옛 10만을 새 스케일로 옮긴 값. 판 안에서의 위치는 그대로다.
-    expect(HAZARD_FROM_SCORE).toBe(100_000 * SCORE_SCALE);
+  it("까마귀는 벽을 넘긴 뒤에 나온다", () => {
+    // 문턱을 스케일에서 유도하지 않는다. 스케일은 트랙 속도를 따라 움직이는
+    // 값이고, 까마귀가 있어야 할 자리는 「50만이라는 벽을 넘긴 뒤」라는 판
+    // 안의 위치다. 보통 플레이가 50만을 102초에 지나고 70만을 118초에 지나니,
+    // 이 값은 마지막 두 단계가 시작되는 구간에 새를 놓는다.
+    expect(HAZARD_FROM_SCORE).toBeGreaterThan(500_000);
+    expect(HAZARD_FROM_SCORE).toBeLessThan(900_000);
   });
 
   it("1분을 달리면 20만 언저리다", () => {
@@ -242,9 +245,15 @@ describe("20만 · 30만 · 40만 · 50만", () => {
   });
 
   it("점수 스케일이 랭크까지 밀어 올리지 않는다", () => {
-    // 점수는 7배가 됐고 경험치는 그대로여야 한다. 안 그러면 같은 판으로
-    // 랭크가 일곱 배 빨리 오른다.
-    expect(runXp(100_000 * SCORE_SCALE)).toBe(4000);
+    // 점수 단위는 여러 번 바뀌었고 앞으로도 바뀐다 — 트랙이 빨라지면 같은
+    // 1분에 더 멀리 가고, 마일스톤을 지키려면 배율이 따라 움직여야 한다.
+    // 경험치는 그 움직임을 따라가면 안 된다. 랭크 사다리도, 한 레벨의
+    // 가격도, 도착 보상도 전부 「한 판이 경험치 얼마짜리인가」 위에 서 있다.
+    //
+    // 고정점은 마일스톤이다. 1분은 어느 스케일에서나 20만이고, 그 1분은
+    // 언제나 1,150 언저리의 경험치를 줘야 한다.
+    expect(runXp(200_000)).toBeGreaterThan(1050);
+    expect(runXp(200_000)).toBeLessThan(1250);
   });
 });
 
