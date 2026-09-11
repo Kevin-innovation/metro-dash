@@ -192,3 +192,32 @@ describe("사진부 is not a near-miss skin", () => {
     expect(perk.slideTime).toBeGreaterThan(1);
   });
 });
+
+describe("룰렛은 시계를 곱하지 않는다", () => {
+  it("×10 이 생존 점수에 걸리지 않는다", () => {
+    // 한 판만 그렇게 걸어봤고 57초에 64만이 나왔다. 룰렛 최고 ×10 에 구간
+    // ×2 가 곱해지면 초당 66,660 점이고, 8초면 50만이다 — 한 판을 8초에
+    // 끝내는 값이다. 룰렛은 얼마나 잘하고 있는지에 거는 내기고, 시계는
+    // 플레이하는 대상이 아니다.
+    const run = new Run(store());
+    run.setSlotMultiplier(10, 8);
+    run.eventMultiplier = 2;
+    run.advance(8, { travelled: 500, mounted: false });
+    // 구간 ×2 만 걸린다.
+    expect(run.scoreDist).toBeCloseTo(survivalGain(8) * 2, 6);
+  });
+
+  it("대신 해낸 것에는 그대로 걸린다", () => {
+    const run = new Run(store());
+    const plain = run.addMount(false);
+    run.setSlotMultiplier(10, 8);
+    const spun = run.addMount(false);
+    expect(spun / plain).toBeCloseTo(10, 6);
+  });
+
+  it("구간 배수 하나로는 판이 깨지지 않는다", () => {
+    // ×2 가 14초 — 생존 점수로 4.7만. 한 판이 100만대인 게임에서 감당되는 크기다.
+    const gain = survivalGain(14) * 2 - survivalGain(14);
+    expect(gain).toBeLessThan(60_000);
+  });
+});

@@ -1154,7 +1154,10 @@ export class Screens {
   flashTrick(kind, gain = 0) {
     const el = $("near-miss");
     if (!el) return;
-    const labels = { slide: "SLIDE!", jump: "JUMP!", roof: "ROOF!" };
+    // Korean, because the number beside them is the point and a player should
+    // not have to work out what the word above it was. 「ROOF! +244」 was two
+    // puzzles stacked: which move is this, and what is 244.
+    const labels = { slide: "슬라이드!", jump: "점프!", roof: "지붕!" };
     const points = Math.round(gain);
     el.textContent = `${labels[kind] ?? "NICE!"}${points > 0 ? ` +${points.toLocaleString()}` : ""}`;
     el.classList.remove("hidden", "pop");

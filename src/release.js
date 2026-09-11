@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.10";
+export const VERSION = "4.11";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.11",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "룰렛 한 번에 50만이 들어오던 문제",
+    notes: [
+      "바로 앞 버전에서 룰렛 배수를 생존 점수에도 걸었는데, 그게 잘못이었습니다. 룰렛 최고 ×10 에 구간 ×2 가 겹치면 8초에 50만이 들어왔어요 — 57초짜리 판이 64만으로 끝났습니다. 한 판을 8초에 끝내는 값입니다.",
+      "룰렛은 다시 「해낸 것」만 곱합니다 — 슬라이드·점프·지붕·마운트. 얼마나 잘하고 있는지에 거는 내기지, 시계에 거는 게 아니니까요.",
+      "「지붕 하이웨이 ×2」와 「게이트 회랑 ×2」는 그대로 생존 점수에 걸립니다. 14초에 4.7만이라 판이 감당하는 크기예요.",
+      "화면에 뜨는 SLIDE! JUMP! ROOF! 가 한글이 됐습니다 — 슬라이드! 점프! 지붕!. 옆의 숫자가 그 동작으로 얻은 점수예요. 「ROOF! +244」는 지붕에 올라타서 244점을 얻었다는 뜻이었습니다.",
+    ],
+  },
   {
     version: "4.10",
     date: "2026-09-11",

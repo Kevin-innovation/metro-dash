@@ -153,26 +153,30 @@ export class Run {
    */
   multiplier() {
     const base = scoreMultiplier(this.combo, powerupScoreMultiplier(this.powerups));
-    return base * this.steadyMultiplier();
+    return base * (this.slotMultiplier ?? 1) * this.steadyMultiplier();
   }
 
   /**
    * Everything that multiplies except the combo.
    *
-   * The combo is the one that grows through a run and never comes back down,
-   * and multiplying the score's dominant term by it is what made a third minute
-   * worth four first ones. The rest are not like that: a section lasts eleven
-   * seconds, the wheel's face lasts five to thirty, and a runner's bonus is a
-   * flat figure that is the same on the first second as on the last. None of
-   * them bend the curve; they put bounded windows on top of it.
+   * Two things, and it is a short list on purpose: the section running, and the
+   * runner's own bonus. A section is eleven to fourteen seconds of ×2, which is
+   * what its banner promises and what it failed to do while this did not exist.
+   * A runner's bonus is flat — the same on the first second as on the last — so
+   * it shifts the line without bending it.
    *
-   * So these reach the survival score and the combo does not. It is what makes
-   * 「지붕 하이웨이 ×2」 mean ×2 — before this it doubled the bonuses and left
-   * the term they sit on alone, which is a banner promising something the score
-   * did not do.
+   * The combo is not here, because it climbs all run and multiplying the score's
+   * dominant term by it is what made a third minute worth four first ones.
+   *
+   * And neither is the wheel, which was here for one release and should not have
+   * been. Its best face is ×10 and a section is ×2: on the clock those multiply
+   * out to 8 seconds being worth half a million points, which is an entire run.
+   * A 57-second run scored 640,000. The wheel is a bet on how well you are
+   * playing, and the clock is not something you play — so it multiplies the
+   * slides, the mounts and the roofs, and leaves the seconds alone.
    */
   steadyMultiplier() {
-    return (this.eventMultiplier ?? 1) * (this.slotMultiplier ?? 1) * (this.scoreScale ?? 1);
+    return (this.eventMultiplier ?? 1) * (this.scoreScale ?? 1);
   }
 
   /**
