@@ -55,6 +55,32 @@ export const POWERUPS = {
     latePerLevel: 0.75,
     blurb: "트랙이 빨라집니다. 점수 배수는 없고, 같은 시간에 더 멀리 갑니다",
   },
+  /**
+   * The other end of the same dial.
+   *
+   * 여유 was removed for slowing the track down, and that was right at the
+   * time: the run climbed so gently that nobody was ever going faster than
+   * they wanted to, so a brake was a pickup that took score away and gave
+   * nothing back. The speed steps changed that. A step lands every ten
+   * seconds whether the player is ready for it or not, and past the middle of
+   * a run there is a real difference between the speed the track is at and the
+   * speed the player can read it at.
+   *
+   * So this is not 여유 returning. It costs score — fewer metres go by, and
+   * metres are most of the score — and buys the one thing score cannot: a
+   * stretch where the next wall arrives late enough to be answered. Taking it
+   * at 20만 is throwing points away. Taking it at 50만 is how you see 60만.
+   */
+  brake: {
+    id: "brake",
+    name: "감속",
+    icon: "🛑",
+    colour: "#38bdf8",
+    base: 5,
+    perLevel: 1.1,
+    latePerLevel: 0.55,
+    blurb: "트랙이 느려집니다. 점수는 덜 쌓이고, 대신 읽을 시간이 생깁니다",
+  },
 };
 
 export const POWERUP_IDS = Object.keys(POWERUPS);
@@ -73,6 +99,7 @@ export const POWERUP_METRIC = {
   jetpack: "jetpacks",
   sneakers: "sneakers",
   focus: "focuses",
+  brake: "brakes",
 };
 
 /**
@@ -102,8 +129,27 @@ export const DOUBLE_SCORE_MULTIPLIER = 1;
  */
 export const SPRINT_SPEED = 1.25;
 
-export function runSpeedFactor(sprintActive) {
-  return sprintActive ? SPRINT_SPEED : 1;
+/**
+ * And how much slower 감속 makes it.
+ *
+ * Shallower than the sprint is tall, deliberately. A brake that cut the track
+ * by a quarter would undo two and a half speed steps at once — five-sixths of
+ * a minute of the run handed back for one pickup — and the way to survive the
+ * end of a run would be to hold one rather than to read the track.
+ */
+export const BRAKE_SPEED = 0.82;
+
+/**
+ * What the two speed pickups do to the curve, together.
+ *
+ * Multiplied rather than resolved by priority: holding both is a thing that
+ * can happen, and 1.25 × 0.82 lands just above normal, which is what a player
+ * carrying a sprint and a brake at once should feel.
+ *
+ * @param {object} timers live power-up state
+ */
+export function runSpeedFactor(timers) {
+  return (isActive(timers, "focus") ? SPRINT_SPEED : 1) * (isActive(timers, "brake") ? BRAKE_SPEED : 1);
 }
 
 /** Seconds a pickup lasts at the given shop level (1-based). */

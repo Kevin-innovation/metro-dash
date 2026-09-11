@@ -310,6 +310,116 @@ body.running #game-canvas {
   text-align: center;
 }
 
+/* --- the speed gauge, over the score ---------------------------------------
+
+   Two readings in one strip. The fill is how fast the run is right now, from
+   its opening speed to the fastest it can ever be; the thin marker riding on
+   top is how far through the current ten-second step the player is, so the
+   next step up is visible as something arriving rather than as a surprise.
+
+   Coloured by what is driving it: ordinary, 질주, 감속. That is the only way
+   the two speed pickups say anything while they are running — the icon in the
+   stack says one was taken, this says what it is doing. */
+.speed-gauge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 auto 4px;
+  width: min(190px, 44vw);
+  --speed-hue: rgba(226, 242, 255, 0.92);
+}
+
+.speed-gauge.sprinting {
+  --speed-hue: #fbbf24;
+}
+
+.speed-gauge.braking {
+  --speed-hue: #38bdf8;
+}
+
+.speed-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(4, 16, 24, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.16);
+  overflow: hidden;
+}
+
+.speed-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  /* Written as a transform rather than a width so the browser can composite it;
+     see the animation rules the rest of this sheet is built on. */
+  transform: scaleX(0);
+  border-radius: 999px;
+  background: var(--speed-hue);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--speed-hue) 55%, transparent);
+  transition:
+    background 180ms linear,
+    box-shadow 180ms linear;
+}
+
+/* The step marker. Rides the same track at 45% opacity so it reads as a hint
+   over the fill rather than as a second bar competing with it. */
+.speed-step {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  transform: translateX(-1px);
+  opacity: 0.45;
+}
+
+.speed-read {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-family: var(--font-numeric);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--speed-hue);
+  text-shadow: 0 2px 0 #041018;
+  transition: color 180ms linear;
+}
+
+.speed-read span {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+/* The tick a new step gets. Short, and on the gauge only — the world lurch and
+   the speed lines already carry the rest of it. */
+.speed-gauge.stepped .speed-track {
+  animation: speed-step-pop 360ms ease-out;
+}
+
+@keyframes speed-step-pop {
+  0% {
+    transform: scaleY(1);
+    box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.16);
+  }
+  35% {
+    transform: scaleY(1.9);
+    box-shadow: inset 0 0 0 1px var(--speed-hue);
+  }
+  100% {
+    transform: scaleY(1);
+    box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speed-gauge.stepped .speed-track {
+    animation: none;
+  }
+}
+
 #score {
   font-family: var(--font-numeric);
   font-size: clamp(36px, 8vw, 64px);

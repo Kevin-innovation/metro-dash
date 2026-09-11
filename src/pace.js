@@ -60,7 +60,40 @@ export function phaseAt(t) {
   return current;
 }
 
-export function speedAt(t) {
+/**
+ * How long the runner holds one speed before the next step up.
+ *
+ * The curve below was drawn as a continuous ramp, and a continuous ramp is a
+ * thing nobody can feel: the runner is a hair faster every frame and there is
+ * never a moment where anything happened. Cut into ten-second steps it is the
+ * same curve — every step reads it at the second that step begins — but now
+ * getting faster is an event. The gauge over the score ticks, the world lurches
+ * and the player knows a new speed arrived rather than suspecting one did.
+ *
+ * Ten seconds is short enough that the first minute has six of them and long
+ * enough that a step is a stretch of track rather than a flicker.
+ */
+export const SPEED_STEP_SECONDS = 10;
+
+/** Which step of the run `t` falls in. 0 is the first ten seconds. */
+export function speedStepAt(t) {
+  return Math.max(0, Math.floor((Number(t) || 0) / SPEED_STEP_SECONDS));
+}
+
+/** Seconds until the next step up, for the gauge. */
+export function nextStepIn(t) {
+  const elapsed = Math.max(0, Number(t) || 0);
+  return SPEED_STEP_SECONDS - (elapsed % SPEED_STEP_SECONDS);
+}
+
+/**
+ * The ramp the steps are cut from.
+ *
+ * Kept continuous and kept private: everything in the game reads speedAt, so
+ * there is exactly one place that decides the runner is between steps and it
+ * is not spread across the spawner, the validator and three callers in Game.
+ */
+function speedCurve(t) {
   if (t <= 0) return START_SPEED;
   // Steep to begin with and easing off, rather than the old even climb: the
   // first ten seconds are where a player decides whether this is a game about
@@ -78,6 +111,18 @@ export function speedAt(t) {
   // still work, large enough that the layouts a player has learned start
   // arriving before they are ready for them.
   return Math.min(MAX_SPEED, CRUISE_SPEED + (t - LATE_PRESSURE_AT) * 0.05);
+}
+
+/**
+ * The speed the run is asking for at time `t`, on the step it is standing on.
+ *
+ * Everything reads this: Game drives the runner towards it, the spawner spaces
+ * layouts by it, and the leaderboard integrates it to bound how far a run could
+ * possibly have gone. One stepped curve, so none of them can disagree about
+ * how fast the track was moving.
+ */
+export function speedAt(t) {
+  return speedCurve(speedStepAt(t) * SPEED_STEP_SECONDS);
 }
 
 /**

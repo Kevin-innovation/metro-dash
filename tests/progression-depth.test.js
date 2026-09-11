@@ -179,17 +179,31 @@ describe("the upgrade track has a late game", () => {
     }
   });
 
-  it("holds the jetpack shortest of the four", () => {
+  it("holds the jetpack shortest of the ones that only help", () => {
     // Flying is a pause from the game rather than a better version of it, so
     // it is the one duration that must not keep climbing.
+    //
+    // 감속 is excluded, and only that. Every other power-up is free once
+    // taken — the rule exists to stop the freest of them growing longest.
+    // 감속 is bought with score every second it runs, so a short one is a
+    // small favour rather than a small reward, and asking it to outlast the
+    // jetpack would mean a pickup that hands back three speed steps.
+    const helps = POWERUP_IDS.filter((id) => id !== "jetpack" && id !== "brake");
     const top = (id) => powerupDuration(id, POWERUP_MAX_LEVEL);
-    for (const id of POWERUP_IDS.filter((x) => x !== "jetpack")) {
-      expect(top("jetpack")).toBeLessThan(top(id));
+    for (const id of helps) {
+      expect(top("jetpack"), id).toBeLessThan(top(id));
     }
     // And it grew least of all across the new levels.
     const grew = (id) => powerupDuration(id, POWERUP_MAX_LEVEL) - powerupDuration(id, POWERUP_BASE_LEVELS);
-    for (const id of POWERUP_IDS.filter((x) => x !== "jetpack")) {
-      expect(grew("jetpack")).toBeLessThan(grew(id));
+    for (const id of helps) {
+      expect(grew("jetpack"), id).toBeLessThan(grew(id));
+    }
+  });
+
+  it("holds 감속 shorter than anything, because it is paid for in score", () => {
+    const top = (id) => powerupDuration(id, POWERUP_MAX_LEVEL);
+    for (const id of POWERUP_IDS.filter((x) => x !== "brake")) {
+      expect(top("brake"), id).toBeLessThan(top(id));
     }
   });
 

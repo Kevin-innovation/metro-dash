@@ -49,7 +49,23 @@ const AFTER_EVENT = ["coins", "weave", "bus", "train", "lane-shift"];
  * one jetpack per seven drops, so what a run contains has not changed — only
  * when it turns up.
  */
-const POWERUP_DECK = ["magnet", "sneakers", "magnet", "jetpack", "sneakers", "magnet", "focus"];
+/**
+ * The order power-ups are dealt in, shuffled per pass.
+ *
+ * A deck rather than a roll, so a run cannot go four minutes without a magnet.
+ * 감속 gets one slot against 질주's one: they are the two ends of the same
+ * dial and neither should be the one you always have.
+ */
+const POWERUP_DECK = [
+  "magnet",
+  "sneakers",
+  "magnet",
+  "jetpack",
+  "sneakers",
+  "magnet",
+  "focus",
+  "brake",
+];
 const POWERUP_EVERY = 6;
 
 /**
@@ -89,9 +105,23 @@ const HAZARD_EVERY = 9;
 /** How far either side of that cadence an egg may fall. */
 const HAZARD_SPREAD = 3;
 
-const DIAMOND_EVERY = 11;
-const DIAMOND_AFTER = 20;
-const DIAMOND_SPREAD = 3;
+/**
+ * How often a diamond is dealt, and how long the run waits for the first.
+ *
+ * It was one layout in eleven starting from the twentieth, which is a spin
+ * roughly every two and a half minutes — for a wheel that needs three diamonds
+ * to turn, that is most runs ending having seen the thing twice and spun it
+ * never. The wheel is the most interesting object in the game and it was
+ * effectively optional content.
+ *
+ * One in seven from the twelfth puts the first spin inside the first minute
+ * and a second one within reach of an ordinary run, which is the cadence the
+ * ×0 and ×0.5 faces were priced for: a gamble you take several times is a
+ * gamble. A gamble you take once is a coin flip that ends your run.
+ */
+const DIAMOND_EVERY = 7;
+const DIAMOND_AFTER = 12;
+const DIAMOND_SPREAD = 2;
 
 /**
  * How far a pattern's own spacing may open up, as a share of itself.
@@ -397,10 +427,25 @@ export class Spawner {
       return POWERUP_PATTERNS[this.powerupDeck.shift()](z, context.lane);
     }
 
-    // Before the crow, so the wheel is not the thing crowded out once the
-    // frenzy starts dealing an egg every fifth layout.
-    if (this.patternCount >= DIAMOND_AFTER && --this.diamondIn <= 0) {
+    // Both hazard clocks tick here, before either is allowed to claim the
+    // layout, and that ordering matters more than it looks.
+    //
+    // The diamond used to be counted first and to return on the spot, which
+    // left the crow's countdown untouched on every layout the wheel took. That
+    // was harmless while a diamond came one layout in eleven. At one in seven
+    // it stretched the bird from an egg every ten and a half layouts to one
+    // every thirteen — the wheel quietly bought the player out of a third of
+    // the crows, and nothing in either number said so. Ticking both and then
+    // deciding means each cadence is what it says it is, and the only thing
+    // the collision costs is which of the two lands on this particular layout.
+    const diamondDue = this.patternCount >= DIAMOND_AFTER && --this.diamondIn <= 0;
+    const hazardDue = --this.hazardIn <= 0;
+
+    // The wheel wins the tie. It is the better thing to meet, and the egg it
+    // displaces comes back on the next layout rather than being skipped.
+    if (diamondDue) {
       this.diamondIn = DIAMOND_EVERY + Math.floor(this.rng() * DIAMOND_SPREAD * 2) - DIAMOND_SPREAD;
+      if (hazardDue) this.hazardIn = 1;
       return diamondPattern(z, context);
     }
 
@@ -421,7 +466,7 @@ export class Spawner {
     // So below the threshold the same slot deals the coin line without the
     // trap. The rhythm of the run is identical either side of two hundred
     // thousand; what changes is whether there is something in the line.
-    if (--this.hazardIn <= 0) {
+    if (hazardDue) {
       this.hazardIn = HAZARD_EVERY + Math.floor(this.rng() * HAZARD_SPREAD * 2) - HAZARD_SPREAD;
       if (score >= HAZARD_FROM_SCORE) return crowEggPattern(z, context);
       const rest = patternById("coins");

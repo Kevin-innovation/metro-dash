@@ -8,7 +8,16 @@ import {
   REACTION_HARD,
   START_SPEED,
 } from "../src/config.js";
-import { PHASES, phaseAt, pressureAt, reactionAt, speedAt } from "../src/pace.js";
+import {
+  PHASES,
+  SPEED_STEP_SECONDS,
+  nextStepIn,
+  phaseAt,
+  pressureAt,
+  reactionAt,
+  speedAt,
+  speedStepAt,
+} from "../src/pace.js";
 
 describe("speedAt", () => {
   it("starts at the run's opening speed", () => {
@@ -24,12 +33,37 @@ describe("speedAt", () => {
     }
   });
 
-  it("is continuous across every phase boundary", () => {
-    for (const phase of PHASES.slice(1)) {
-      const before = speedAt(phase.t - 1e-6);
-      const after = speedAt(phase.t);
-      expect(Math.abs(after - before)).toBeLessThan(0.5);
+  it("holds one speed for a whole step and then moves", () => {
+    // Continuity used to be the contract here — no boundary allowed to move
+    // the speed by more than half a metre a second. The curve is cut into
+    // ten-second steps now, on purpose: a ramp that moves every frame is a
+    // ramp nobody can feel. So the contract is the other one. Flat inside a
+    // step, and the only place it may move is the edge of one.
+    for (let t = 0; t < 400; t += 0.25) {
+      const step = speedStepAt(t);
+      expect(speedAt(t), `t=${t}`).toBe(speedAt(step * SPEED_STEP_SECONDS));
     }
+  });
+
+  it("steps up by a readable amount and never by a lurch", () => {
+    // Big enough to notice — the gauge ticks and the world lurches — and small
+    // enough that the layouts a player has just learned to read do not arrive
+    // at a speed they have never seen.
+    let moves = 0;
+    for (let step = 1; step * SPEED_STEP_SECONDS <= 400; step++) {
+      const before = speedAt((step - 1) * SPEED_STEP_SECONDS);
+      const after = speedAt(step * SPEED_STEP_SECONDS);
+      expect(after, `step ${step}`).toBeGreaterThanOrEqual(before);
+      expect(after - before, `step ${step}`).toBeLessThan(5);
+      if (after > before) moves += 1;
+    }
+    // And it really is stepping, rather than a constant dressed up as one.
+    expect(moves).toBeGreaterThan(10);
+  });
+
+  it("gives the gauge the seconds left on the step", () => {
+    expect(nextStepIn(0)).toBe(SPEED_STEP_SECONDS);
+    expect(nextStepIn(SPEED_STEP_SECONDS * 3 + 4)).toBeCloseTo(SPEED_STEP_SECONDS - 4, 6);
   });
 
   it("is clamped to MAX_SPEED forever", () => {

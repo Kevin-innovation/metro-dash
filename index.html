@@ -58,6 +58,19 @@
               <div id="pace-chip">START</div>            </div>
           </div>
           <div class="score-stack">
+            <!-- The speed gauge sits above the score because speed is the thing
+                 the score is made of: metres go by faster, the number climbs
+                 faster. The bar fills from the run's opening speed to its top
+                 one, and the ticks under it are the ten-second steps — so a
+                 player can see both how fast they are and how close the next
+                 step up is, without doing arithmetic on a clock. -->
+            <div id="speed-gauge" class="speed-gauge" aria-label="속도">
+              <div class="speed-track">
+                <div id="speed-fill" class="speed-fill"></div>
+                <div id="speed-step" class="speed-step"></div>
+              </div>
+              <div class="speed-read"><strong id="speed-value">20</strong><span>m/s</span></div>
+            </div>
             <div id="score">0</div>
             <!-- No `hidden` here: the combo line is shown and hidden by
                  visibility so its space is always reserved. -->

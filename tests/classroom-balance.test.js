@@ -34,6 +34,7 @@ import {
   powerupDuration,
   powerupScoreMultiplier,
   runSpeedFactor,
+  BRAKE_SPEED,
 } from "../src/powerups.js";
 import { POWERUP_PATTERNS } from "../src/patterns.js";
 import { SLOT_FACES } from "../src/slots.js";
@@ -158,12 +159,35 @@ describe("질주 replaces 여유", () => {
   it("speeds the run instead of slowing it, and does not multiply the score", () => {
     expect(SPRINT_SPEED).toBeGreaterThan(1);
     expect(SPRINT_SPEED).toBeLessThan(1.5);
-    expect(runSpeedFactor(false)).toBe(1);
-    expect(runSpeedFactor(true)).toBe(SPRINT_SPEED);
     const timers = createPowerupState();
+    expect(runSpeedFactor(timers)).toBe(1);
     activatePowerup(timers, "focus", 1);
     expect(isActive(timers, "focus")).toBe(true);
+    expect(runSpeedFactor(timers)).toBe(SPRINT_SPEED);
     expect(powerupScoreMultiplier(timers)).toBe(1);
+  });
+
+  it("감속 is the other end of the same dial", () => {
+    expect(BRAKE_SPEED).toBeLessThan(1);
+    // Shallower than the sprint is tall: a brake that undid two and a half
+    // speed steps would beat reading the track.
+    expect(1 - BRAKE_SPEED).toBeLessThan(SPRINT_SPEED - 1);
+    const timers = createPowerupState();
+    activatePowerup(timers, "brake", 1);
+    expect(runSpeedFactor(timers)).toBe(BRAKE_SPEED);
+    // Holding both lands just above normal rather than one cancelling the other.
+    activatePowerup(timers, "focus", 1);
+    expect(runSpeedFactor(timers)).toBeCloseTo(SPRINT_SPEED * BRAKE_SPEED, 10);
+    expect(runSpeedFactor(timers)).toBeGreaterThan(1);
+    // And it costs score rather than paying it, like every other speed change.
+    expect(powerupScoreMultiplier(timers)).toBe(1);
+  });
+
+  it("감속 reaches the track and the shop like any other pickup", () => {
+    expect(POWERUP_IDS).toContain("brake");
+    expect(SPEC.brake.powerup).toBe("brake");
+    expect(POWERUP_PATTERNS.brake).toBeTypeOf("function");
+    expect(normalizeSave({}).upgrades.brake).toBe(1);
   });
 
   it("keeps spent 점수 2배 / 여유 upgrades so nobody is reset to Lv.1", () => {

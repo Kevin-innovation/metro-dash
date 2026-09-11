@@ -1,11 +1,12 @@
 import { readRemember } from "./cloud.js";
-import { HOVERBOARD_TIME } from "./config.js";
+import { HOVERBOARD_TIME, MAX_SPEED, START_SPEED } from "./config.js";
 import { BOARD_HINT } from "./input.js";
 import { HANDLE_MAX } from "./nickname.js";
 import { GENERAL_LEVEL, LEVELS, REGIONS, levelLabel, previewLabel, validateSchool } from "./school.js";
 import { loadSchoolNames } from "./school-list.js";
 import { MISSION_TIERS, missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
+import { SPEED_STEP_SECONDS, nextStepIn, speedStepAt } from "./pace.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
@@ -1013,6 +1014,15 @@ export class Screens {
       antidotes: game.store.data.antidotes ?? 0,
       phaseName: game.phaseName(),
       speed: game.speed,
+      // The gauge's two ends: the speed every run opens on, and the fastest the
+      // curve ever asks for. 질주 pushes past the top and the bar pins at full
+      // rather than overflowing, which is the right reading — flat out.
+      speedMin: START_SPEED,
+      speedMax: MAX_SPEED,
+      step: speedStepAt(game.runTime),
+      stepProgress: 1 - nextStepIn(game.runTime) / SPEED_STEP_SECONDS,
+      sprinting: game.run.powerupActive("focus"),
+      braking: game.run.powerupActive("brake"),
       crow: game.run.crowT > 0 ? { remaining: game.run.crowT, seconds: game.run.crowSeconds } : null,
       diamonds: game.run.diamonds,
       slot:

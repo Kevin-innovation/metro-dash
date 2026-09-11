@@ -56,6 +56,7 @@ export const SPEC = {
   jetpack: { length: 0.7, depth: 0.32, minY: 0, maxY: 3.2, lethal: false, powerup: "jetpack" },
   focus: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "focus" },
   sneakers: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "sneakers" },
+  brake: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, powerup: "brake" },
   // Not lethal and not a power-up: taking it costs you sight rather than the
   // run. Given the same band as the power-ups so it can be placed among them
   // and has to be told apart by looking at it, which is the whole point.

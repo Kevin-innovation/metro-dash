@@ -386,6 +386,32 @@ export function makeSneakers() {
 }
 
 /**
+ * 감속: an octagon on its side, which is the one road sign everybody can read
+ * at a glance. Cool blue against the sprint's yellow — the two speed pickups
+ * are the only pair in the game that do opposite things, so they are the pair
+ * that has to be told apart at draw distance.
+ */
+export function makeBrake() {
+  const g = powerupShell(0x38bdf8, 0x0284c7);
+  const plate = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.34, 0.1, 8),
+    new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.7 }),
+  );
+  plate.rotation.x = Math.PI / 2;
+  plate.rotation.z = Math.PI / 8;
+  plate.position.y = 0.24;
+  g.add(plate);
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(0.4, 0.1, 0.12),
+    new THREE.MeshLambertMaterial({ color: 0xf0f9ff, emissive: 0x7dd3fc, emissiveIntensity: 0.5 }),
+  );
+  bar.position.y = 0.24;
+  bar.position.z = 0.02;
+  g.add(bar);
+  return g;
+}
+
+/**
  * The crow egg: the one pickup you are meant to leave alone.
  *
  * Built on the same halo shell as the power-ups so it is unmistakably a thing
@@ -539,6 +565,7 @@ const FACTORIES = {
   jetpack: makeJetpack,
   focus: makeFocus,
   sneakers: makeSneakers,
+  brake: makeBrake,
   crowEgg: makeCrowEgg,
   diamond: makeDiamond,
 };

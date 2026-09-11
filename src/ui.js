@@ -213,6 +213,10 @@ function hudNodes() {
     diamond: $("diamond-chip"),
     diamondCount: $("diamond-count"),
     pace: $("pace-chip"),
+    speedGauge: $("speed-gauge"),
+    speedFill: $("speed-fill"),
+    speedStep: $("speed-step"),
+    speedValue: $("speed-value"),
     event: $("event-chip"),
     eventName: $("event-name"),
     eventFill: $("event-fill"),
@@ -226,9 +230,58 @@ function hudNodes() {
       event: null,
       antidotes: null,
       diamonds: null,
+      speed: null,
+      speedMode: null,
+      speedStep: null,
     },
   };
   return hud;
+}
+
+/**
+ * The gauge over the score.
+ *
+ * The fill is the live speed against the run's whole range, so it is doing
+ * something on every frame — that is the point of putting it where the eye
+ * already is. The rounded m/s and the mode are written only when they change,
+ * because those are string writes and the fill is a transform.
+ */
+function renderSpeedGauge(el, state) {
+  if (!el.speedGauge) return;
+  const last = el.last;
+
+  const span = Math.max(1, state.speedMax - state.speedMin);
+  const fill = Math.min(1, Math.max(0, (state.speed - state.speedMin) / span));
+  if (el.speedFill) el.speedFill.style.transform = `scaleX(${fill.toFixed(4)})`;
+
+  // How far through the current ten-second step, as a position on the same
+  // track. It keeps sweeping after the speed has topped out, which is right:
+  // by then it is the only thing on screen still counting the run's rhythm.
+  if (el.speedStep) el.speedStep.style.left = `${(state.stepProgress * 100).toFixed(2)}%`;
+
+  const shown = Math.round(state.speed);
+  if (shown !== last.speed) {
+    if (el.speedValue) el.speedValue.textContent = String(shown);
+    last.speed = shown;
+  }
+
+  const mode = state.sprinting ? "sprinting" : state.braking ? "braking" : "";
+  if (mode !== last.speedMode) {
+    el.speedGauge.classList.toggle("sprinting", mode === "sprinting");
+    el.speedGauge.classList.toggle("braking", mode === "braking");
+    last.speedMode = mode;
+  }
+
+  // The tick when a step lands. Restarted by taking the class off and forcing
+  // a reflow, the same way every other one-shot in this file is.
+  if (state.step !== last.speedStep) {
+    if (last.speedStep !== null) {
+      el.speedGauge.classList.remove("stepped");
+      void el.speedGauge.offsetWidth;
+      el.speedGauge.classList.add("stepped");
+    }
+    last.speedStep = state.step;
+  }
 }
 
 export function renderHud(state) {
@@ -257,6 +310,8 @@ export function renderHud(state) {
   }
 
   renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow, state.slot);
+
+  renderSpeedGauge(el, state);
 
   if (el.boardWrap) {
     el.boardWrap.classList.toggle("riding", state.boarding);
