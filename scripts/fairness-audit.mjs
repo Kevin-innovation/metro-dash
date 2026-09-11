@@ -103,6 +103,8 @@ function simulate(seconds, seed) {
       playerZ += speed * STEP;
       spawner.update(playerZ, {
         speed,
+        // So the spawner builds each layout for the speed it will be met at.
+        runTime: time,
         phaseId,
         reaction: reactionAt(time),
         pressure: pressureAt(time),

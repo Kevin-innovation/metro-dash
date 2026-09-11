@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.02";
+export const VERSION = "4.03";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.03",
+    date: "2026-09-11",
+    kind: "fix",
+    title: "피할 수 없던 배치를 고쳤습니다",
+    notes: [
+      "넘을 방법이 없는 배치가 나오던 문제를 고쳤습니다. 속도를 10초 계단으로 바꾸면서 생긴 것이었어요 — 배치는 놓는 순간의 속도로 간격을 계산하는데 주자는 2.35초 뒤에 만나고, 그 사이에 계단이 하나 올라가면 배치 안의 모든 간격이 그만큼 짧아집니다.",
+      "공정성 감사로 재면 피할 수 없는 배치가 16건에서 50건으로 늘어 있었습니다. 지금은 18건이고, 남은 것은 계단을 넣기 전부터 있던 종류입니다.",
+      "이제 배치를 지을 때 「놓는 순간」이 아니라 「만날 때」의 속도를 씁니다.",
+    ],
+  },
   {
     version: "4.02",
     date: "2026-09-11",

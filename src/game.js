@@ -2091,6 +2091,10 @@ export class Game {
     const playing = this.state === "playing";
     this.spawner.update(this.player.z, {
       speed: this.speed,
+      // The clock, so the spawner can build each layout for the speed it will
+      // actually be met at rather than the one it is placed at. Null on the
+      // title screen, which has no run. See PLACEMENT_LEAD_SECONDS.
+      runTime: playing ? this.runTime : null,
       phaseId: playing ? phase.id : 1,
       // The title-screen preview stays at the gentlest pacing.
       reaction: playing ? reactionAt(this.runTime) : reactionAt(0),

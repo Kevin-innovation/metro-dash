@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_SPEED, START_SPEED } from "../src/config.js";
-import { LEAD_CONVERGENCE_METRES } from "../src/spawner.js";
+import { LEAD_CONVERGENCE_METRES, PLACEMENT_LEAD_SECONDS } from "../src/spawner.js";
 import { pressureAt, reactionAt, speedAt } from "../src/pace.js";
 import { BOOSTED_AIRTIME, BASE_LEAD_SECONDS, DISMOUNT_LEAD_SECONDS } from "../src/patterns.js";
 import { SPEC } from "../src/specs.js";
@@ -144,5 +144,30 @@ describe("spawner scheduling", () => {
         ).not.toThrow();
       }
     }
+  });
+});
+
+describe("배치는 만날 때의 속도로 지어진다", () => {
+  it("놓는 순간이 아니라 도착 시점의 속도를 쓴다", () => {
+    // 배치는 미터로 지어지고 주자는 2.35초 뒤에 만난다. 속도 곡선이 한 프레임에
+    // 머리카락만큼 움직이던 시절엔 그 차이가 반올림돼 사라졌다. 10초 계단으로
+    // 끊은 뒤로는 아니다 — 계단 직전에 놓인 배치는 계단 직후에 만나고, 그 안의
+    // 모든 간격이 속도가 오른 비율만큼 짧아진다. 공정성 감사가 잡아낸 값으로
+    // 「피할 수 없는 배치」가 16건에서 50건으로 뛰었다.
+    const before = 39.5;
+    const after = before + PLACEMENT_LEAD_SECONDS;
+    // 계단을 사이에 두고 있어야 의미가 있는 테스트다.
+    expect(speedAt(after)).toBeGreaterThan(speedAt(before));
+
+    const near = new Spawner(fakePool(), 7);
+    const far = new Spawner(fakePool(), 7);
+    const opts = { phaseId: 4, reaction: reactionAt(before), pressure: pressureAt(before) };
+    // 같은 씨앗, 같은 위치 — 다른 건 스포너가 어느 속도로 짓느냐뿐이다.
+    const placed = near.update(1000, { ...opts, speed: speedAt(before), runTime: before });
+    const arrival = far.update(1000, { ...opts, speed: speedAt(before) });
+    expect(placed).not.toBeNull();
+    expect(arrival).not.toBeNull();
+    // 도착 속도로 지은 쪽이 더 길게 펼쳐진다 — 같은 초를 더 많은 미터로 산다.
+    expect(placed.span).toBeGreaterThan(arrival.span);
   });
 });

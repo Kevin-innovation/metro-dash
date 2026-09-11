@@ -1,4 +1,5 @@
 import { jitter, makeRng, pickFrom, randomSeed, shuffled } from "./rng.js";
+import { speedAt } from "./pace.js";
 import {
   CLEARANCE_SECONDS_EASY,
   CLEARANCE_SECONDS_HARD,
@@ -26,6 +27,22 @@ import {
  * testing whether a particular run happened to converge cleanly.
  */
 export const LEAD_CONVERGENCE_METRES = 0.01;
+
+/**
+ * How far ahead of the runner a layout is placed, in seconds of travel.
+ *
+ * Named and exported because Game has to know it: a pattern is laid out in
+ * *metres*, from a speed, and it is met this long afterwards — so the speed it
+ * should be built for is the speed at arrival, not the speed now.
+ *
+ * That distinction used to cost nothing, because the curve moved by a hair a
+ * second and two and a bit seconds of it rounded away. It stopped being free
+ * the moment the curve was cut into ten-second steps: a layout placed a
+ * fraction before a step is met a fraction after one, at a speed up to ten per
+ * cent higher, and every gap authored inside it is short by that ratio. The
+ * fairness audit went from sixteen unclearable layouts to fifty.
+ */
+export const PLACEMENT_LEAD_SECONDS = 2.35;
 
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
 const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
@@ -286,11 +303,16 @@ export class Spawner {
   update(playerZ, options) {
     if (playerZ <= this.nextSpawn) return null;
 
-    const { speed, reaction, pressure = 0 } = options;
-    const ahead = Math.max(46, speed * 2.35);
+    const { reaction, pressure = 0, runTime = null } = options;
+    // The speed this layout will be *met* at, which is not the speed it is
+    // placed at. See PLACEMENT_LEAD_SECONDS. Falls back to the caller's figure
+    // for the title-screen preview, which has no clock.
+    const speed =
+      runTime === null ? options.speed : speedAt(runTime + PLACEMENT_LEAD_SECONDS);
+    const ahead = Math.max(46, speed * PLACEMENT_LEAD_SECONDS);
     // Where the runner is standing when this is placed, so a vehicle coming the
     // other way can be resolved to where the two actually meet.
-    const meta = this.place(playerZ + ahead, { ...options, fromZ: playerZ });
+    const meta = this.place(playerZ + ahead, { ...options, speed, fromZ: playerZ });
 
     // The next pattern starts however far the runner travels before the timer
     // fires, so it must not fire until this one is cleared plus a margin. Both
