@@ -3710,3 +3710,13 @@ body.admin {
     transform: scale(1);
   }
 }
+
+/* The one run in a thousand that reaches five minutes. Gold, and it glows —
+   this heading is the only thing on the card that is about the run rather than
+   about the numbers, and it has to look like something that was earned. */
+#gameover-title.finished {
+  color: var(--gold, #fbbf24);
+  text-shadow:
+    0 2px 0 #041018,
+    0 0 22px rgba(251, 191, 36, 0.55);
+}

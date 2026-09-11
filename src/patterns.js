@@ -431,6 +431,55 @@ export const PATTERNS = [
   },
 ];
 
+/**
+ * SURGE and MAYHEM, which until now were two toasts over an unchanged track.
+ *
+ * Every other dial is finished by the time these arrive — the speed has topped
+ * out, the pressure has been at one since 105 seconds, and the gap between
+ * layouts has been at the floor its own pattern lengths impose for longer than
+ * that. The only thing left that can make the last of a run harder than the
+ * middle of it is *what arrives*, and nothing had been written for these two.
+ *
+ * Both are built from moves the run has already taught. Nothing here is
+ * unclearable and nothing here is new: they are the existing vocabulary asked
+ * for in a shorter breath than anywhere else in the table.
+ */
+const LATE_PATTERNS = [
+  {
+    // A wall to land on, and the lane you land in is the one that is blocked
+    // when you come down. The gate is the only way through, so the roof is a
+    // detour that has to be paid for rather than a free ride over the top.
+    id: "roof-gate",
+    minPhase: 7,
+    weight: 3,
+    late: 5,
+    build: ({ z, lanes, gap }) => [
+      ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
+      ...coinLine(lanes[0], z - 2, 4, 1.35, 2.55),
+      ...ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + gap(1.2, 26) })),
+    ],
+  },
+  {
+    // Three verbs with no ordinary track between them: slide, jump, and a lane
+    // that has to be found while still coming down from the second.
+    id: "triple-verb",
+    minPhase: 8,
+    weight: 3,
+    late: 5,
+    build: ({ z, lanes, gap }) => {
+      const second = gap(0.95, 22, 0.7);
+      const third = second + gap(0.85, 20, 0.62);
+      return [
+        ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
+        ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + second })),
+        { type: "train", lane: lanes[0], z: z + third },
+        { type: "bus", lane: lanes[1], z: z + third },
+        ...coinLine(lanes[2], z + third - 1, 4),
+      ];
+    },
+  },
+];
+
 /** Power-up patterns are dealt on a fixed cadence rather than by weight. */
 export const POWERUP_PATTERNS = {
   magnet: (z, lane) => [{ type: "magnet", lane, z, y: 1.1 }, ...coinLine(lane, z + 3, 8)],
@@ -678,8 +727,15 @@ export function describePattern(z, placements) {
  */
 export const SLIDE_BIAS_MAX = 3;
 
-/** The phase at which `late` weights are fully in effect. */
-const FULL_PHASE = 6;
+/**
+ * The phase at which `late` weights are fully in effect.
+ *
+ * It was six, and the last two phases are eight and nine tenths of the way into
+ * a run — so the pile stopped changing at CHAOS and SURGE and MAYHEM inherited
+ * it unaltered. Eight lets the drift run to the end of the ladder, which is
+ * where the gauntlets are supposed to have taken the table over.
+ */
+const FULL_PHASE = 8;
 
 /**
  * A pattern's share of the pile at this phase.
@@ -691,6 +747,8 @@ const FULL_PHASE = 6;
  * out and lets the gauntlets take the space. Never below one copy, so nothing
  * ever disappears from the run entirely.
  */
+PATTERNS.push(...LATE_PATTERNS);
+
 export function weightAt(pattern, phaseId) {
   const late = pattern.late ?? pattern.weight;
   const span = Math.max(1, FULL_PHASE - pattern.minPhase);

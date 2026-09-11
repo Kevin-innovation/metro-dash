@@ -1139,8 +1139,17 @@ export class Screens {
 
   // --- game over -----------------------------------------------------------
 
-  showGameOver(run, save, result, promotion = null) {
+  showGameOver(run, save, result, promotion = null, { finished = false } = {}) {
     const rounded = Math.floor(run.score);
+
+    // A run that reached the finish line says so, because almost nobody will.
+    // The heading is the one place on this card that is about the run rather
+    // than about the numbers it produced.
+    const heading = $("gameover-title");
+    if (heading) {
+      heading.textContent = finished ? "완주!" : "충돌!";
+      heading.classList.toggle("finished", finished);
+    }
 
     $("final-score").textContent = rounded.toLocaleString();
     $("break-dist").textContent = Math.floor(run.scoreDist).toLocaleString();

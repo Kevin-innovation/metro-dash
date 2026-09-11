@@ -12,7 +12,10 @@ import {
   MAX_COMBO_MULTIPLIER,
 } from "../src/scoring.js";
 import { PHASES } from "../src/pace.js";
-import { maxDistanceIn } from "../src/leaderboard-rules.js";
+import { RUN_LIMIT_SECONDS } from "../src/config.js";
+import { MAX_RUN_SECONDS, maxDistanceIn } from "../src/leaderboard-rules.js";
+import { candidatesFor } from "../src/patterns.js";
+
 import { runXp } from "../src/progression.js";
 import {
   PRESSURE_STARTS_AT,
@@ -242,6 +245,30 @@ describe("20만 · 30만 · 40만 · 50만", () => {
     for (let i = 1; i < PHASES.length; i++) {
       expect(PHASES[i].t, PHASES[i].name).toBeGreaterThan(PHASES[i - 1].t + 8);
     }
+  });
+
+  it("판이 끝난다", () => {
+    // 이 게임은 끝날 수가 없었다. 공정성 감사가 모든 배치를 클리어 가능하게
+    // 보장하고, 모든 배치를 넘기는 사람은 죽지 않고, 죽지 않으면 앉아 있는
+    // 만큼 점수가 난다 — 4분 174만, 30분 1,952만. 리더보드가 재던 건 실력이
+    // 아니라 인내심이었다.
+    //
+    // 결승선은 두 숫자 사이에 있어야 한다. 이미 올라간 기록(4분치)이 아직
+    // 깨질 수 있을 만큼 멀고, 더 앉아 있는 게 전략이 아닐 만큼 가깝게.
+    expect(RUN_LIMIT_SECONDS).toBeGreaterThan(240);
+    expect(RUN_LIMIT_SECONDS).toBeLessThanOrEqual(360);
+    // 서버도 그 길이만 받는다.
+    expect(MAX_RUN_SECONDS).toBeGreaterThan(RUN_LIMIT_SECONDS);
+    expect(MAX_RUN_SECONDS).toBeLessThan(RUN_LIMIT_SECONDS * 2);
+  });
+
+  it("마지막 두 단계가 빈 단계가 아니다", () => {
+    // SURGE 와 MAYHEM 은 토스트만 뜨는 단계였다. minPhase 7·8 배치가 하나도
+    // 없어서 CHAOS 의 풀을 그대로 물려받았고, FULL_PHASE 가 6이라 가중치
+    // 드리프트도 102초에 멈춰 있었다.
+    const size = (phase) => candidatesFor(phase).length;
+    expect(size(7)).toBeGreaterThan(size(6));
+    expect(size(8)).toBeGreaterThan(size(7));
   });
 
   it("점수 스케일이 랭크까지 밀어 올리지 않는다", () => {

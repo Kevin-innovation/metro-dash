@@ -30,6 +30,29 @@ export const CRUISE_SPEED = 72;
  * Eighty needs about 240 metres of it against the 165 this ran on before.
  */
 export const MAX_SPEED = 80;
+/**
+ * The finish line, in seconds.
+ *
+ * This game could not end, and that is not a figure of speech. The fairness
+ * audit guarantees every layout is clearable; a player who clears every layout
+ * never dies; a player who never dies scores for as long as they sit there.
+ * Measured, the last dial stops moving at 225 seconds and the score is a
+ * straight line after it — four minutes is 1.7 million, thirty minutes is
+ * nineteen. The board was ranking patience.
+ *
+ * Five minutes is chosen against two numbers rather than picked. It has to be
+ * far enough out that the records already standing can still be beaten — the
+ * best run on the board is about four minutes' worth — and near enough that
+ * sitting longer stops being the strategy. At three hundred seconds a very good
+ * run tops out around 2.6 million, so the board has somewhere to go and nowhere
+ * to go forever.
+ *
+ * It is a finish line and the game says so. A run that reaches it is completed,
+ * not cut off: everything scored is banked, and 완주 is the rarest thing on the
+ * game-over card precisely because almost nobody will see it.
+ */
+export const RUN_LIMIT_SECONDS = 300;
+
 export const GRAVITY = -44;
 export const JUMP_V = 16.2;
 export const FAST_FALL = -34;

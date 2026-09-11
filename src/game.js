@@ -14,6 +14,7 @@ import {
   MAX_SPEED,
   ONCOMING_SPEED,
   PLAYER_HEIGHT,
+  RUN_LIMIT_SECONDS,
   START_SPEED,
   TITLE_SPEED,
 } from "./config.js";
@@ -140,6 +141,7 @@ export class Game {
     this.boardPages = { players: 0, schools: 0 };
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
+    this.finished = false;
     this.nearMissFx = 0;
 
     this.store = new SaveStore();
@@ -1261,7 +1263,9 @@ export class Game {
     if (promotion?.coins) this.store.addCoins(promotion.coins);
 
     const submitted = this.syncRun();
-    const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion);
+    const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion, {
+      finished: this.finished,
+    });
     this.showRunRanks(submitted);
     if (promotion) this.audio.purchase();
     else if (cleared) this.audio.mission();
@@ -1296,6 +1300,7 @@ export class Game {
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
+    this.finished = false;
     this.phaseId = 0;
     this.sawOncoming = false;
     this.hitstop = 0;
@@ -1794,6 +1799,14 @@ export class Game {
   advanceRun(dt) {
     this.runTime += dt;
 
+    // The finish line. Checked before anything else this frame reads the clock,
+    // so the last step of a completed run is the one that ends it rather than
+    // one that spawns a layout nobody will meet.
+    if (this.runTime >= RUN_LIMIT_SECONDS) {
+      this.finishRun();
+      return;
+    }
+
     const phase = phaseAt(this.runTime);
     // The wheel's one nasty face rides on top of the curve rather than
     // replacing it, so the run still slows back down at a phase boundary and
@@ -2195,6 +2208,31 @@ export class Game {
     vibrate(40);
     this.screens.hideHint();
     this.store.recordBest(this.run.score);
+  }
+
+  /**
+   * The run reached the finish line.
+   *
+   * Deliberately not `die`. Nothing crashed, so there is no shake, no burst and
+   * no crash sound — the runner simply stops, and the card that follows says
+   * 완주. Everything else is the same path a death takes, because everything
+   * else *is* the same: the score is banked, the run is submitted, the card is
+   * shown. Only the reason differs, and only the player needs to know it.
+   */
+  finishRun() {
+    if (this.state !== "playing") return;
+    this.state = "dead";
+    this.player.alive = false;
+    this.finished = true;
+    this.deadAt = performance.now();
+    this.run.clearPowerups();
+    this.stowBoard();
+    this.audio.purchase();
+    this.bgm.stop({ fadeOut: 0.9 });
+    this.screens.hideHint();
+    this.store.recordBest(this.run.score);
+    this.screens.showToast("완주! 5분을 달렸습니다");
+    vibrate([20, 40, 20, 40, 60]);
   }
 
   // --- run completion -----------------------------------------------------

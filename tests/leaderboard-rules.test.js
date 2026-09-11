@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RUN_LIMIT_SECONDS } from "../src/config.js";
 import { MAX_SPEED } from "../src/config.js";
 import {
   FREE_ATTEMPTS,
@@ -91,8 +92,26 @@ describe("maxDistanceIn", () => {
 });
 
 describe("validateRun accepts honest runs", () => {
-  it.each([20, 60, 180, 600, 1800])("a %is run", (seconds) => {
+  it.each([20, 60, 180, 300])("a %is run", (seconds) => {
     expect(reasonFor(honestRun(seconds))).toBe("ok");
+  });
+
+  it("accepts a run that went the whole way to the finish line", () => {
+    expect(reasonFor(honestRun(RUN_LIMIT_SECONDS))).toBe("ok");
+  });
+
+  it("leaves slack past it for a clock that drifted", () => {
+    // A phone that was asleep can hand back a few seconds either way, and an
+    // honest run must never be the thing this check catches.
+    expect(reasonFor(honestRun(RUN_LIMIT_SECONDS + 20))).toBe("ok");
+  });
+
+  it("refuses a run far longer than the game can produce", () => {
+    // Six hundred and eighteen hundred second runs used to be accepted, because
+    // a run could not end. It ends at the finish line now, so anything well
+    // past it came from a client that is not the one we ship.
+    expect(reasonFor(honestRun(600))).toBe(REJECT_RUN.DURATION);
+    expect(reasonFor(honestRun(1800))).toBe(REJECT_RUN.DURATION);
   });
 
   it("accepts a perfect run that hugs every ceiling", () => {

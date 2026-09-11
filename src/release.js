@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "3.22";
+export const VERSION = "3.30";
 
 /**
  * Newest first. `date` is the day it went out, `title` is the one line that
@@ -23,6 +23,19 @@ export const VERSION = "3.22";
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "3.30",
+    date: "2026-09-11",
+    kind: "major",
+    title: "5분 결승선 · 마지막 두 단계",
+    notes: [
+      "판에 결승선이 생겼습니다. 5분을 달리면 「완주!」로 끝납니다. 잘리는 게 아니라 끝까지 간 거예요 — 점수는 전부 그대로 들어갑니다. 거의 아무도 못 볼 화면입니다.",
+      "왜 필요했는지 솔직히 적습니다. 이 게임은 끝날 수가 없었어요. 모든 배치는 넘을 수 있게 만들어져 있고, 다 넘는 사람은 안 죽고, 안 죽으면 앉아 있는 만큼 점수가 납니다. 4분에 174만, 30분에 1,952만 — 랭킹이 재고 있던 건 실력이 아니라 시간이었습니다.",
+      "5분은 두 숫자 사이에서 골랐습니다. 지금 올라와 있는 기록(4분치)이 아직 깨질 수 있을 만큼 멀고(상한 약 260만), 더 앉아 있는 게 전략이 아닐 만큼 가깝게요. 이미 올라간 점수는 그대로 둡니다.",
+      "SURGE(120초)와 MAYHEM(142초)이 진짜 단계가 됐습니다. 지금까지는 토스트만 뜨고 트랙은 CHAOS와 똑같았어요 — 이 두 단계 전용 배치가 하나도 없었습니다. 「지붕 위 게이트」와 「슬라이드-점프-레인」 두 개를 넣었고, 배치 구성도 마지막까지 계속 어려워집니다.",
+      "서버가 받는 판 길이도 3시간에서 결승선 기준으로 줄였습니다.",
+    ],
+  },
   {
     version: "3.22",
     date: "2026-09-11",

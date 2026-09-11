@@ -1,4 +1,4 @@
-import { MAX_SPEED } from "./config.js";
+import { MAX_SPEED, RUN_LIMIT_SECONDS } from "./config.js";
 import { MAX_CHARACTER_SCORE_BONUS } from "./characters.js";
 import { MAX_EVENT_MULTIPLIER } from "./events.js";
 import { speedAt } from "./pace.js";
@@ -127,8 +127,16 @@ export const REJECT_RUN = {
   SCORE: "score",
 };
 
-/** Longest run accepted, so a tab left running forever cannot bank a number. */
-export const MAX_RUN_SECONDS = 60 * 60 * 3;
+/**
+ * Longest run accepted.
+ *
+ * Three hours, back when a run could not end. It ends now — at
+ * RUN_LIMIT_SECONDS the game stops the runner itself — so anything meaningfully
+ * past the finish line is a client that is not the one we ship. Generous slack
+ * on top, because a phone that was asleep can still hand back a clock a few
+ * seconds out and an honest run must never be the thing this catches.
+ */
+export const MAX_RUN_SECONDS = RUN_LIMIT_SECONDS + 30;
 
 /**
  * Reject runs that could not have happened.
