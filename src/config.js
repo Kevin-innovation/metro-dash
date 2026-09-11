@@ -57,13 +57,16 @@ export const PATTERN_CLEARANCE = 6;
 /** Seconds before the run starts winding up, and when it is fully wound. */
 export const PRESSURE_STARTS_AT = 14;
 /**
- * Brought in from 240s. The first ramp used to finish at four minutes, by which
- * point a good player was around forty thousand points — and everything past it
- * was the same minute on repeat, so the strongest runs were the least
- * interesting. The first ramp now finishes at three, and LATE_PRESSURE_AT picks
- * the run up from there.
+ * Brought in from 180s, which came in from 240s before that.
+ *
+ * The run is now scored and paced around four numbers a player can hold in
+ * their head: 20만 in the first minute, 30만 where it gets genuinely hard, and
+ * 40만 · 50만 as the wall. Those land at roughly 60 · 80 · 95 · 110 seconds,
+ * and a first ramp that did not finish until three minutes meant every one of
+ * them happened while the run was still winding up. Fully wound at 105 puts the
+ * top of the ramp on 50만, which is where it is supposed to be.
  */
-export const PRESSURE_FULL_AT = 180;
+export const PRESSURE_FULL_AT = 105;
 
 /** Seconds between patterns at the start of a run, and once fully wound up. */
 export const REACTION_EASY = 1.15;
@@ -72,10 +75,10 @@ export const REACTION_HARD = 0.45;
 /**
  * The second, much slower squeeze.
  *
- * Runs it from the end of the first ramp to REACTION_LATE over four more
- * minutes. Gentle by design: the floor of what a person can read is somewhere
- * near here, and the patterns' own spacing floors are what actually keep a
- * layout clearable — this only decides how soon the next one starts.
+ * Runs it from the end of the first ramp to REACTION_LATE. Gentle by design:
+ * the floor of what a person can read is somewhere near here, and the patterns'
+ * own spacing floors are what actually keep a layout clearable — this only
+ * decides how soon the next one starts.
  */
 // Starts exactly where the first ramp ends, so there is no stretch in the
 // middle where nothing at all is changing.

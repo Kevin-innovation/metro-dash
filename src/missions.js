@@ -79,8 +79,10 @@ const AUTHORED_DEFS = [
     targets: [500, 900, 1400, 2000, 2800, 3800, 5000], label: "한 판에 {t}m 달리기", coins: 140, xp: 110 },
   { id: "combo-run", metric: "comboMax", scope: "run",
     targets: [8, 14, 22, 32, 45, 60, 80], label: "콤보 {t} 달성하기", coins: 130, xp: 105 },
+  // Multiplied by SCORE_SCALE along with the score itself: the same runs clear
+  // the same steps, written on the unit the game now shows.
   { id: "score-run", metric: "score", scope: "run",
-    targets: [3000, 6000, 10000, 16000, 24000, 35000, 50000], label: "한 판에 {t}점 얻기", coins: 190, xp: 150 },
+    targets: [21000, 42000, 70000, 112000, 168000, 245000, 350000], label: "한 판에 {t}점 얻기", coins: 190, xp: 150 },
   { id: "mounts-run", metric: "mountsRun", scope: "run",
     targets: [3, 6, 10, 15, 21, 28, 36], label: "한 판에 지붕 {t}번 올라타기", coins: 140, xp: 110 },
   { id: "powerups-run", metric: "powerupsRun", scope: "run",

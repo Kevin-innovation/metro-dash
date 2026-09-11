@@ -10,7 +10,11 @@ import {
   DIST_SCORE_RATE,
   COIN_BASE,
   MAX_COMBO_MULTIPLIER,
+  SCORE_SCALE,
 } from "../src/scoring.js";
+import { PHASES } from "../src/pace.js";
+import { maxDistanceIn } from "../src/leaderboard-rules.js";
+import { runXp } from "../src/progression.js";
 import {
   PRESSURE_STARTS_AT,
   MAGNET_RANGE,
@@ -169,7 +173,7 @@ describe("질주 replaces 여유", () => {
   });
 });
 
-describe("the floor of a run climbs toward two hundred thousand", () => {
+describe("20만 · 30만 · 40만 · 50만", () => {
   it("pays more per metre and per coin than the old rates", () => {
     expect(DIST_SCORE_RATE).toBeGreaterThanOrEqual(4);
     expect(COIN_BASE).toBeGreaterThanOrEqual(14);
@@ -183,17 +187,64 @@ describe("the floor of a run climbs toward two hundred thousand", () => {
     expect(PRESSURE_STARTS_AT).toBeGreaterThanOrEqual(12);
   });
 
-  it("lets the crow in from one hundred thousand", () => {
-    expect(HAZARD_FROM_SCORE).toBe(100_000);
+  it("까마귀는 50만을 넘긴 뒤에 나온다", () => {
+    // 옛 10만을 새 스케일로 옮긴 값. 판 안에서의 위치는 그대로다.
+    expect(HAZARD_FROM_SCORE).toBe(100_000 * SCORE_SCALE);
   });
 
-  it("lets a short, ordinary run bank a six-figure score", () => {
+  it("1분을 달리면 20만 언저리다", () => {
+    // 이 게임이 무엇을 목표로 조율됐는지 적어두는 자리다. 보통 플레이 —
+    // 지붕은 절반쯤 타고, 콤보는 BLAZING 언저리에서 유지되고, 코인은
+    // 눈에 보이는 것의 절반쯤 먹는 — 한 판의 첫 1분이 20만에 닿는다.
+    // 지붕을 아예 안 타면 13만, 전부 타면 26만이니 폭을 넓게 잡는다.
     const run = new Run(store());
-    // ~90 seconds of cruising, a mid combo, no character bonus, no wheel.
-    run.combo = 20;
-    run.advance(90, { travelled: 3200, mounted: false });
-    for (let i = 0; i < 400; i++) run.addCoin();
-    expect(run.score).toBeGreaterThan(30_000);
+    const metres = maxDistanceIn(60);
+    const hold = () => {
+      run.combo = 15;
+      run.comboT = 999;
+    };
+
+    hold();
+    run.advance(36, { travelled: metres * 0.6, mounted: false });
+    hold();
+    run.advance(24, { travelled: metres * 0.4, mounted: true });
+    for (let i = 0; i < 160; i++) run.addCoin();
+    for (let i = 0; i < 30; i++) {
+      hold();
+      run.addClear("jump");
+    }
+    for (let i = 0; i < 15; i++) {
+      hold();
+      run.addClear("slide");
+    }
+    for (let i = 0; i < 12; i++) {
+      hold();
+      run.addMount(false);
+    }
+
+    expect(run.score).toBeGreaterThan(150_000);
+    expect(run.score).toBeLessThan(260_000);
+  });
+
+  it("난이도 사다리가 50만 언저리에서 끝난다", () => {
+    // 30만에서 엄청 어려워지고 40만 · 50만이 벽이라는 게 이 곡선의 요구다.
+    // 보통 플레이가 그 넷을 지나는 시각이 대략 60 · 77 · 89 · 100초이므로,
+    // 마지막 단계는 그 뒤에 바로 붙어 있어야 한다 — 5분 30초에 오던 시절엔
+    // 50만이 사다리의 한중간이었다.
+    const byId = Object.fromEntries(PHASES.map((phase) => [phase.name, phase.t]));
+    expect(byId.MAX).toBeLessThan(85);
+    expect(byId.CHAOS).toBeLessThan(110);
+    expect(byId.MAYHEM).toBeLessThan(160);
+    // 그러면서도 순서와 간격은 지켜야 한다.
+    for (let i = 1; i < PHASES.length; i++) {
+      expect(PHASES[i].t, PHASES[i].name).toBeGreaterThan(PHASES[i - 1].t + 8);
+    }
+  });
+
+  it("점수 스케일이 랭크까지 밀어 올리지 않는다", () => {
+    // 점수는 7배가 됐고 경험치는 그대로여야 한다. 안 그러면 같은 판으로
+    // 랭크가 일곱 배 빨리 오른다.
+    expect(runXp(100_000 * SCORE_SCALE)).toBe(4000);
   });
 });
 

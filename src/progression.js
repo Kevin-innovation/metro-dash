@@ -1,3 +1,5 @@
+import { SCORE_SCALE } from "./scoring.js";
+
 /**
  * Rank ladder. XP comes from missions and from banking score at the end of a
  * run, so both careful mission play and one huge run move the needle.
@@ -139,9 +141,20 @@ export function rankUpBetween(fromLevel, toLevel) {
   return { ranks: gained, coins: gained.reduce((sum, rank) => sum + rankReward(rank.level), 0) };
 }
 
+/**
+ * Score per point of experience.
+ *
+ * Twenty-five on the old score scale, and it has to stay twenty-five: the rank
+ * ladder, what a level costs and what arriving at one pays are all built on
+ * how much experience a run is worth, and none of that changed. Multiplying
+ * the score by seven without dividing it back out here would have handed every
+ * player seven times the ranks for the same run.
+ */
+const SCORE_PER_XP = 25 * SCORE_SCALE;
+
 /** XP awarded for a finished run, on top of any mission rewards. */
 export function runXp(score) {
-  return Math.floor(Math.max(0, score) / 25);
+  return Math.floor(Math.max(0, score) / SCORE_PER_XP);
 }
 
 export function rankAt(xp) {

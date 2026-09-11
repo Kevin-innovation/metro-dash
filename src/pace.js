@@ -19,21 +19,39 @@ import {
  * they can be read. Pressure — how much time the player gets to decide — keeps
  * tightening for far longer, and that is what actually makes a run hard.
  */
+/**
+ * The phases, and the score each one lands on.
+ *
+ * The run is built around four numbers now — 20만 · 30만 · 40만 · 50만 — and
+ * the seconds below are where a run that is going well crosses them. The tail
+ * used to run to five and a half minutes, which put 50만 barely past the middle
+ * of the ramp: a player was told the game had topped out and then spent three
+ * more minutes on the same minute. The whole ladder is climbed inside two and a
+ * half minutes now, so the milestones and the difficulty land together.
+ *
+ * The scores in the comments are an ordinary run. Somebody riding every roof
+ * gets there sooner, which is the intended shape: play better and the game
+ * comes at you harder, rather than paying you to survive the same track.
+ */
 export const PHASES = [
   { id: 0, t: 0, name: "START", toast: null },
   { id: 1, t: 16, name: "WARM UP", toast: "속도 상승!" },
   { id: 2, t: 34, name: "RUSH", toast: "더 빠르게!" },
+  // 20만 is crossed in here, around a minute in.
   { id: 3, t: 56, name: "INTENSE", toast: "정신 집중!" },
-  { id: 4, t: 84, name: "MAX", toast: "MAX SPEED" },
-  { id: 5, t: 130, name: "OVERDRIVE", toast: "밀도 상승!" },
-  { id: 6, t: 190, name: "CHAOS", toast: "쉴 틈 없다!" },
+  // 30만. Speed has topped out; from here only the spacing tightens.
+  { id: 4, t: 78, name: "MAX", toast: "MAX SPEED" },
+  // 40만.
+  { id: 5, t: 90, name: "OVERDRIVE", toast: "밀도 상승!" },
+  // 50만. The wall.
+  { id: 6, t: 102, name: "CHAOS", toast: "쉴 틈 없다!" },
   // Past this point speed and pressure have both topped out, so the run used to
   // become the same minute repeating forever — hardest on the players who got
   // there, which is backwards. These bring new layouts rather than new numbers:
   // `weightAt` keeps handing more of the pile to the gauntlets, and the two
   // rows below unlock the sections built for exactly this stretch.
-  { id: 7, t: 250, name: "SURGE", toast: "한계 돌파!" },
-  { id: 8, t: 330, name: "MAYHEM", toast: "여기서부터는 기록이다" },
+  { id: 7, t: 120, name: "SURGE", toast: "한계 돌파!" },
+  { id: 8, t: 142, name: "MAYHEM", toast: "여기서부터는 기록이다" },
 ];
 
 export function phaseAt(t) {
@@ -49,13 +67,17 @@ export function speedAt(t) {
   // running, and 16m/s does not answer that question.
   if (t < 20) return START_SPEED + t * 0.45;
   if (t < 50) return 29 + (t - 20) * 0.28;
-  if (t < 90) return 37.4 + (t - 50) * 0.16;
-  const cruise = Math.min(CRUISE_SPEED, 43.8 + (t - 90) * 0.069);
+  // The back two segments were drawn to reach cruise at three minutes. They
+  // reach it just before 50만 now, which is the same curve read against the
+  // compressed ramp rather than a steeper one bolted onto the old timings —
+  // the shape, and every metre of sight line it was drawn for, is unchanged.
+  if (t < 80) return 37.4 + (t - 50) * 0.2133;
+  const cruise = Math.min(CRUISE_SPEED, 43.8 + (t - 80) * 0.248);
   if (t <= LATE_PRESSURE_AT) return cruise;
-  // A creep rather than a climb — 50 to 56 over four minutes. Small enough that
-  // the sight lines still work, large enough that the layouts a player has
-  // learned start arriving before they are ready for them.
-  return Math.min(MAX_SPEED, CRUISE_SPEED + (t - LATE_PRESSURE_AT) * 0.025);
+  // A creep rather than a climb — 50 to 56. Small enough that the sight lines
+  // still work, large enough that the layouts a player has learned start
+  // arriving before they are ready for them.
+  return Math.min(MAX_SPEED, CRUISE_SPEED + (t - LATE_PRESSURE_AT) * 0.05);
 }
 
 /**
@@ -91,6 +113,6 @@ export function reactionAt(t) {
   // Past the first ramp the gap keeps closing, just far more slowly. Without
   // this the run stopped getting harder at exactly the point most players stop
   // improving, which is the wrong way round.
-  const late = Math.min(1, (t - LATE_PRESSURE_AT) / 240);
+  const late = Math.min(1, (t - LATE_PRESSURE_AT) / 120);
   return REACTION_HARD + (REACTION_LATE - REACTION_HARD) * late;
 }

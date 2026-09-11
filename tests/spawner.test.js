@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_SPEED, START_SPEED } from "../src/config.js";
+import { LEAD_CONVERGENCE_METRES } from "../src/spawner.js";
 import { pressureAt, reactionAt, speedAt } from "../src/pace.js";
 import { BOOSTED_AIRTIME, BASE_LEAD_SECONDS, DISMOUNT_LEAD_SECONDS } from "../src/patterns.js";
 import { SPEC } from "../src/specs.js";
@@ -76,8 +77,17 @@ describe("spawner scheduling", () => {
     // The core fairness guarantee. A wall has exactly one way through, so it
     // must never land on a runner who is mid-jump or stuck on a roof — at any
     // point in the run, including once the pacing is fully wound up.
+    //
+    // Tolerance comes from the scheduler rather than being a number typed in
+    // here. It pushes a pattern downtrack until the shortfall is under a
+    // centimetre and then stops, so a lead may legitimately land that far
+    // short — at 29 m/s, three tenths of a millisecond. The old flat 2e-5
+    // seconds was tighter than the loop the test is checking, so whether it
+    // passed was down to whether a run happened to leave a residue inside the
+    // band, which is how it came to fail only after the pacing moved.
     for (const runTime of RUN_TIMES) {
       const { rows, speed } = runTrack({ runTime });
+      const slack = LEAD_CONVERGENCE_METRES / speed + 2e-5;
       for (let i = 1; i < rows.length; i++) {
         const previous = rows[i - 1];
         const wall = rows[i];
@@ -86,7 +96,7 @@ describe("spawner scheduling", () => {
         expect(
           seconds,
           `t=${runTime}: ${previous.requires ?? "lane"} -> ${wall.requires} wall`,
-        ).toBeGreaterThanOrEqual(leadNeededFor(previous, wall) - 2e-5);
+        ).toBeGreaterThanOrEqual(leadNeededFor(previous, wall) - slack);
       }
     }
   });

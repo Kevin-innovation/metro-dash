@@ -16,6 +16,17 @@ import {
   requiredGapSeconds,
 } from "./patterns.js";
 
+/**
+ * How close the lead correction below has to get before it stops.
+ *
+ * Named and exported because the fairness test has to check its leads against
+ * the same figure. A centimetre of runway is three tenths of a millisecond at
+ * running speed — under the correction loop's own resolution and far under
+ * anything a player could meet — but a test that demanded exactness was really
+ * testing whether a particular run happened to converge cleanly.
+ */
+export const LEAD_CONVERGENCE_METRES = 0.01;
+
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
 const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
 
@@ -58,7 +69,7 @@ const POWERUP_EVERY = 6;
  * since the magnet now drags the egg in, the power-up that beginners like best
  * was the one delivering it. "Collect everything" is the first thing this game
  * teaches and the crow is the first thing that punishes it, which is a fine
- * lesson at one hundred thousand and a reason to stop playing at two thousand.
+ * lesson deep into a run and a reason to stop playing in the first ten seconds.
  *
  * So the bird is an endgame animal now. Nothing below the threshold, one in
  * nine above it — about eleven seconds apart, which is a real and constant
@@ -68,8 +79,12 @@ const POWERUP_EVERY = 6;
  * Keyed to score rather than to the clock, as it always was. Time is what the
  * player survived; score is how well, and the run that should get hard is the
  * one going well.
+ *
+ * Seven hundred thousand is the old hundred thousand written on the new score
+ * scale — the same point in the same run, past 50만 and into the stretch where
+ * everything else has topped out too. See SCORE_SCALE.
  */
-export const HAZARD_FROM_SCORE = 100_000;
+export const HAZARD_FROM_SCORE = 700_000;
 const HAZARD_EVERY = 9;
 /** How far either side of that cadence an egg may fall. */
 const HAZARD_SPREAD = 3;
@@ -285,7 +300,7 @@ export class Spawner {
     let shift = 0;
     for (let attempt = 0; attempt < 4; attempt++) {
       const extra = this.leadShortfall(described, speed);
-      if (extra <= 0.01) break;
+      if (extra <= LEAD_CONVERGENCE_METRES) break;
       shift += extra;
       placements = placements.map((placement) => ({ ...placement, z: placement.z + extra }));
       described = describePattern(z + shift, met(placements));

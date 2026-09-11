@@ -1,9 +1,27 @@
+/**
+ * The scale everything below is written on.
+ *
+ * A run is meant to read as 20만 in the first minute, 30만 where it turns hard,
+ * and 40만 · 50만 as the wall — numbers a player can hold in their head and
+ * aim at. The old scale put an ordinary minute at about 29,000, so the whole
+ * ladder lived in five figures and nothing on it was a landmark.
+ *
+ * Seven, applied to every score source at once, so nothing's worth relative to
+ * anything else moves: a metre, a coin, a slide and a mount are in exactly the
+ * proportions they were. It is the unit that changed, not the balance.
+ *
+ * Scores banked before this are on the old unit and are left alone rather than
+ * multiplied — see the release note. Experience is *not* on this scale: runXp
+ * divides it back out, or a rank would arrive seven times faster.
+ */
+export const SCORE_SCALE = 7;
+
 /** Score points earned per metre travelled. */
-export const DIST_SCORE_RATE = 6;
+export const DIST_SCORE_RATE = 42;
 /** Base points for a coin, before the combo bonus. */
-export const COIN_BASE = 18;
+export const COIN_BASE = 126;
 /** Combo bonus is capped so a long chain cannot run away with the score. */
-export const COIN_COMBO_CAP = 20;
+export const COIN_COMBO_CAP = 140;
 /**
  * Seconds a combo survives without a clear, once the track is dense.
  *
@@ -63,17 +81,17 @@ export function comboWindowAt(t) {
  * obstacle with no way around it, which is why it is worth more than a crate
  * you could have changed lane to avoid.
  */
-export const SLIDE_BONUS = 26;
-export const JUMP_BONUS = 18;
+export const SLIDE_BONUS = 182;
+export const JUMP_BONUS = 126;
 
 /** Bonus for climbing onto a vehicle roof from the ground. */
-export const MOUNT_BONUS = 30;
+export const MOUNT_BONUS = 210;
 /** Bonus for hopping straight from one roof to the next. */
-export const HOP_BONUS = 10;
+export const HOP_BONUS = 70;
 /** Bonus for squeezing past an obstacle instead of taking the safe line. */
-export const NEAR_MISS_BONUS = 22;
+export const NEAR_MISS_BONUS = 154;
 /** Points per metre while riding a vehicle roof, on top of the distance score. */
-export const ROOF_RIDE_RATE = 4.8;
+export const ROOF_RIDE_RATE = 33.6;
 
 /**
  * Combo tiers. Keeping a chain alive raises a run-wide multiplier, which is
