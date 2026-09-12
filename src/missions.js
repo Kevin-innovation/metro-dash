@@ -1,4 +1,4 @@
-import { RUN_LIMIT_SECONDS } from "./config.js";
+import { TYPICAL_RUN_SECONDS } from "./config.js";
 import { TARGET_SCORE_PER_MINUTE } from "./scoring.js";
 import { maxDistanceIn } from "./leaderboard-rules.js";
 /**
@@ -160,8 +160,8 @@ const HARDEST_STEP_SHARE = 0.8;
 
 function ceilingFor(def) {
   if (def.scope !== "run") return Infinity;
-  if (def.metric === "seconds") return RUN_LIMIT_SECONDS;
-  if (def.metric === "distance") return maxDistanceIn(RUN_LIMIT_SECONDS);
+  if (def.metric === "seconds") return TYPICAL_RUN_SECONDS;
+  if (def.metric === "distance") return maxDistanceIn(TYPICAL_RUN_SECONDS);
   const perfect = PERFECT_RUN[def.metric];
   return perfect === undefined ? Infinity : perfect;
 }

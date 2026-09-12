@@ -31,26 +31,21 @@ export const CRUISE_SPEED = 72;
  */
 export const MAX_SPEED = 80;
 /**
- * The finish line, in seconds.
+ * How long a run is worth planning around.
  *
- * This game could not end, and that is not a figure of speech. The fairness
- * audit guarantees every layout is clearable; a player who clears every layout
- * never dies; a player who never dies scores for as long as they sit there.
- * Measured, the last dial stops moving at 225 seconds and the score is a
- * straight line after it — four minutes is 1.7 million, thirty minutes is
- * nineteen. The board was ranking patience.
+ * Not a limit any more. There used to be a finish line here: every layout is
+ * audited to be clearable, so a good enough player never died and the score had
+ * no ceiling — three minutes was where the run was stopped for them. What that
+ * bought in tidiness it paid for in the thing an endless runner is for, and the
+ * difficulty that ends a run now comes from the track rather than from a clock.
  *
- * Three minutes, because that is the length of run the whole ladder is built
- * for: 20만 in the first minute, 50만 where it turns brutal, and the last two
- * phases arriving with time left to meet them. Five was the first attempt and
- * it was two minutes of track nobody had designed — the difficulty ladder ends
- * at 142 seconds, so everything past it was the same minute repeating.
- *
- * It is a finish line and the game says so. A run that reaches it is completed,
- * not cut off: everything scored is banked, and 완주 is the rarest thing on the
- * game-over card precisely because almost nobody will see it.
+ * The number stays because two things still need one. A mission that has to be
+ * finishable inside a single run has to assume some length, and this is the
+ * length it assumes; sized so the day's set is reachable by an ordinary player
+ * rather than only by a long one. And the run validator needs a shape to check
+ * against — though its own ceiling is far above this, see MAX_RUN_SECONDS.
  */
-export const RUN_LIMIT_SECONDS = 180;
+export const TYPICAL_RUN_SECONDS = 180;
 
 /**
  * How many times one run may be stopped.

@@ -12,7 +12,6 @@ import {
   MAX_COMBO_MULTIPLIER,
 } from "../src/scoring.js";
 import { PHASES } from "../src/pace.js";
-import { RUN_LIMIT_SECONDS } from "../src/config.js";
 import { MAX_RUN_SECONDS, maxDistanceIn } from "../src/leaderboard-rules.js";
 import { candidatesFor } from "../src/patterns.js";
 
@@ -238,21 +237,21 @@ describe("20만 · 30만 · 40만 · 50만", () => {
     }
   });
 
-  it("판이 끝난다", () => {
-    // 이 게임은 끝날 수가 없었다. 공정성 감사가 모든 배치를 클리어 가능하게
-    // 보장하고, 모든 배치를 넘기는 사람은 죽지 않고, 죽지 않으면 앉아 있는
-    // 만큼 점수가 난다 — 4분 174만, 30분 1,952만. 리더보드가 재던 건 실력이
-    // 아니라 인내심이었다.
+  it("시계가 판을 끝내지 않는다", () => {
+    // 여기엔 결승선이 있었다. 공정성 감사가 모든 배치를 클리어 가능하게
+    // 보장하니 충분히 잘하는 사람은 죽지 않고, 죽지 않으면 앉아 있는 만큼
+    // 점수가 났다 — 4분 174만, 30분 1,952만. 그래서 3분에서 끊었다.
     //
-    // 결승선은 두 숫자 사이에 있어야 한다. 이미 올라간 기록(4분치)이 아직
-    // 깨질 수 있을 만큼 멀고, 더 앉아 있는 게 전략이 아닐 만큼 가깝게.
-    // 3분 내외. 난이도 사다리의 마지막 단계가 142초에 오니, 그걸 만나고
-    // 겨룰 시간이 남으면서 더 앉아 있는 게 전략이 되지 않는 길이다.
-    expect(RUN_LIMIT_SECONDS).toBeGreaterThan(150);
-    expect(RUN_LIMIT_SECONDS).toBeLessThanOrEqual(210);
-    // 서버도 그 길이만 받는다.
-    expect(MAX_RUN_SECONDS).toBeGreaterThan(RUN_LIMIT_SECONDS);
-    expect(MAX_RUN_SECONDS).toBeLessThan(RUN_LIMIT_SECONDS * 2);
+    // 그 거래를 물렸다. 판을 끝내는 건 트랙이어야지 시계가 아니다. 대신
+    // 서버가 받는 길이는 말이 되는 선에서만 막는다: 스무 분을 달린 정직한
+    // 기록이 부정으로 거부되면 안 되고, 열 시간짜리는 우리가 배포한
+    // 클라이언트가 아니다.
+    expect(MAX_RUN_SECONDS).toBeGreaterThanOrEqual(30 * 60);
+    // 길이를 안 막는 대신 거리와 점수를 막는다. 그쪽은 판이 길어질수록
+    // 느슨해지는 게 아니라 조여야 한다.
+    const tenMinutes = maxDistanceIn(600);
+    const oneMinute = maxDistanceIn(60);
+    expect(tenMinutes / 600).toBeLessThan((oneMinute / 60) * 2);
   });
 
   it("마지막 두 단계가 빈 단계가 아니다", () => {

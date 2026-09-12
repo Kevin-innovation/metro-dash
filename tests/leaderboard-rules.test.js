@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RUN_LIMIT_SECONDS } from "../src/config.js";
+import { TYPICAL_RUN_SECONDS } from "../src/config.js";
 import { MAX_SPEED } from "../src/config.js";
 import {
   FREE_ATTEMPTS,
@@ -97,26 +97,28 @@ describe("validateRun accepts honest runs", () => {
   });
 
   it("accepts a run that went the whole way to the finish line", () => {
-    expect(reasonFor(honestRun(RUN_LIMIT_SECONDS))).toBe("ok");
+    expect(reasonFor(honestRun(TYPICAL_RUN_SECONDS))).toBe("ok");
   });
 
   it("leaves slack past it for a clock that drifted", () => {
     // A phone that was asleep can hand back a few seconds either way, and an
     // honest run must never be the thing this check catches.
-    expect(reasonFor(honestRun(RUN_LIMIT_SECONDS + 20))).toBe("ok");
+    expect(reasonFor(honestRun(TYPICAL_RUN_SECONDS + 20))).toBe("ok");
   });
 
-  it("refuses a run far longer than the game can produce", () => {
-    // Six hundred and eighteen hundred second runs used to be accepted, because
-    // a run could not end. It ends at the finish line now, so anything well
-    // past it came from a client that is not the one we ship.
-    expect(reasonFor(honestRun(600))).toBe(REJECT_RUN.DURATION);
-    expect(reasonFor(honestRun(1800))).toBe(REJECT_RUN.DURATION);
+  it("refuses a run longer than any sitting", () => {
+    // This used to be the finish line plus slack, and it had to stop being
+    // that: with no clock ending a run, somebody going for twenty minutes is a
+    // real run and refusing it would throw away the best score of the week.
+    // What is left is a bound on the absurd.
+    expect(reasonFor(honestRun(600))).toBe("ok");
+    expect(reasonFor(honestRun(1800))).toBe("ok");
+    expect(reasonFor(honestRun(MAX_RUN_SECONDS + 60))).toBe(REJECT_RUN.DURATION);
   });
 
   it("accepts a perfect run that hugs every ceiling", () => {
     // The bounds have to leave room for the best a real player could do.
-    const seconds = RUN_LIMIT_SECONDS;
+    const seconds = TYPICAL_RUN_SECONDS;
     const distance = maxDistanceIn(seconds);
     const coins = Math.floor(distance / 1.35);
     const score = distance * 5.8 * 4 + coins * 30 * 4;

@@ -83,6 +83,51 @@ export class AudioBus {
     o.stop(t + 0.4);
   }
 
+  /**
+   * The crack, and the roll after it.
+   *
+   * Noise rather than a tone: a bolt has no pitch, and every beep in here is a
+   * tone, so lightning built out of one would sound like a power-up. White
+   * noise through a filter that closes as it decays is the cheapest thing that
+   * reads as weather instead of as an alarm.
+   */
+  thunder() {
+    if (this.muted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const seconds = 1.1;
+    const frames = Math.floor(this.ctx.sampleRate * seconds);
+    const buffer = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < frames; i++) {
+      // Decaying noise. The square of the ramp so the crack is over quickly and
+      // the tail is long, which is the shape of the real thing.
+      const fade = 1 - i / frames;
+      data[i] = (Math.random() * 2 - 1) * fade * fade;
+    }
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(2200, t);
+    filter.frequency.exponentialRampToValueAtTime(160, t + seconds);
+
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.55, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + seconds);
+
+    source.connect(filter);
+    filter.connect(g);
+    g.connect(this.master);
+    source.start(t);
+    source.stop(t + seconds);
+  }
+
+  /** The low warning under a strike that has been painted but not landed. */
+  rumble() {
+    this.beep(70, 0.42, "sine", 0.22);
+  }
+
   switchLane() {
     this.beep(440, 0.05, "triangle", 0.2);
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RUN_LIMIT_SECONDS } from "../src/config.js";
+import { TYPICAL_RUN_SECONDS } from "../src/config.js";
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
 import { MISSION_DEFS, MISSION_TIERS } from "../src/missions.js";
 import { maxDistanceIn } from "../src/leaderboard-rules.js";
@@ -51,7 +51,7 @@ describe("판이 읽히는 숫자들", () => {
     const wall = TARGET_SCORE_PER_MINUTE * 2.5;
     expect(HAZARD_FROM_SCORE).toBe(wall);
     // 그리고 판 안에서 닿을 수 있는 곳이어야 한다.
-    expect(HAZARD_FROM_SCORE).toBeLessThan(survivalGain(RUN_LIMIT_SECONDS) * 1.5);
+    expect(HAZARD_FROM_SCORE).toBeLessThan(survivalGain(TYPICAL_RUN_SECONDS) * 1.5);
   });
 });
 
@@ -73,14 +73,14 @@ describe("생존 점수를 곱하는 것들", () => {
     const run = maxed();
     run.advance(10, { travelled: 700, mounted: false });
     // 10초가 한 판(3분)의 5분의 1을 넘으면 안 된다.
-    expect(run.scoreDist).toBeLessThan(survivalGain(RUN_LIMIT_SECONDS) * 0.2);
+    expect(run.scoreDist).toBeLessThan(survivalGain(TYPICAL_RUN_SECONDS) * 0.2);
   });
 
   it("판 내내 걸려도 곡선이 달아나지 않는다", () => {
     // 판 전체에 걸 수 있는 것은 캐릭터 보너스뿐이고, 나머지는 정해진 창이다.
     const run = maxed();
-    run.advance(RUN_LIMIT_SECONDS, { travelled: 11_000, mounted: false });
-    expect(run.scoreDist).toBeLessThan(survivalGain(RUN_LIMIT_SECONDS) * 3);
+    run.advance(TYPICAL_RUN_SECONDS, { travelled: 11_000, mounted: false });
+    expect(run.scoreDist).toBeLessThan(survivalGain(TYPICAL_RUN_SECONDS) * 3);
   });
 });
 
@@ -93,8 +93,8 @@ describe("한 판짜리 미션은 한 판 안에 끝낼 수 있어야 한다", (
     // 어려운 미션이 아니라 깰 수 없는 미션이었고, 제일 멀리 온 사람에게
     // 주어지고 있었다.
     const limit = {
-      seconds: RUN_LIMIT_SECONDS,
-      distance: maxDistanceIn(RUN_LIMIT_SECONDS),
+      seconds: TYPICAL_RUN_SECONDS,
+      distance: maxDistanceIn(TYPICAL_RUN_SECONDS),
     };
     for (const def of runDefs) {
       const ceiling = limit[def.metric];

@@ -15,11 +15,11 @@ import {
   ONCOMING_SPEED,
   PAUSES_PER_RUN,
   PLAYER_HEIGHT,
-  RUN_LIMIT_SECONDS,
   START_SPEED,
   TITLE_SPEED,
 } from "./config.js";
 import { CROW, applyCrowGloom, crowVeil, makeCrow, updateCrow } from "./crow.js";
+import { LightningStorm, makeLightning, updateLightning } from "./lightning.js";
 import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
@@ -42,7 +42,6 @@ import {
 import { GENERAL, TEACHER } from "./school.js";
 import { watchForUpdate } from "./version.js";
 import { seasonAt } from "./release.js";
-import { runLengthLabel } from "./ui.js";
 import { Screens } from "./screens.js";
 import {
   QualityGovernor,
@@ -150,7 +149,6 @@ export class Game {
     this.boardPages = { players: 0, schools: 0 };
     /** Short lens kick, 0..1. Used for the moments speed itself is the event. */
     this.fovPunch = 0;
-    this.finished = false;
     this.pausesLeft = PAUSES_PER_RUN;
     this.nearMissFx = 0;
 
@@ -209,6 +207,11 @@ export class Game {
     // Rides the runner rather than the track, so it is not in the entity pool.
     this.crow = makeCrow();
     this.scene.add(this.crow.root);
+    // Rides the runner too, and for the same reason: a bolt picks a lane, not
+    // a place on the track, so there is nothing for the pool to hold.
+    this.storm = new LightningStorm();
+    this.lightning = makeLightning();
+    this.scene.add(this.lightning.root);
     this.pool = new EntityPool(this.scene);
     this.particles = new ParticleField(this.scene, 260);
     this.spawner = new Spawner(this.pool, { onOncoming: (item) => this.makeItemOncoming(item) });
@@ -1358,9 +1361,7 @@ export class Game {
     if (promotion?.coins) this.store.addCoins(promotion.coins);
 
     const submitted = this.syncRun();
-    const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion, {
-      finished: this.finished,
-    });
+    const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion);
     this.showRunRanks(submitted);
     if (promotion) this.audio.purchase();
     else if (cleared) this.audio.mission();
@@ -1395,7 +1396,6 @@ export class Game {
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
-    this.finished = false;
     this.pausesLeft = PAUSES_PER_RUN;
     this.phaseId = 0;
     this.sawOncoming = false;
@@ -1413,6 +1413,8 @@ export class Game {
     if (this.world) this.world.mouthZ = null;
     this.sectionId = null;
     this.section = null;
+    this.storm?.reset();
+    if (this.lightning) this.lightning.root.visible = false;
     // Optional call: the constructor resets the run state before the Screens
     // layer exists, and a throw there would stop the game booting at all.
     this.screens?.hideEvent();
@@ -1911,18 +1913,41 @@ export class Game {
 
     this.resolveInteractions(dt);
     this.updateEntities(dt);
+    this.updateStorm(dt);
+  }
+
+  /**
+   * The night storm.
+   *
+   * Run after the interactions rather than with them: a bolt is not something
+   * the runner collides with, it is somewhere the runner must not be standing,
+   * and the check is the lane rather than a box. Nothing about being in the air
+   * helps — it comes from above — but the hoverboard absorbs it the way it
+   * absorbs everything, because a player who spent it is owed that.
+   */
+  updateStorm(dt) {
+    const night = this.state === "playing" && this.lookNow().id === "night";
+    const event = this.storm.update(dt, { night });
+
+    if (event === "warn") this.audio.rumble();
+    if (event === "strike") {
+      this.audio.thunder();
+      this.shake = Math.max(this.shake, 0.55);
+      vibrate(24);
+    }
+
+    updateLightning(this.lightning, this.storm, this.player.z, this.runTime);
+
+    // Checked every frame it is lethal, not only on the step it lands: the lane
+    // is lit and moving into it is a choice.
+    const danger = this.storm.danger;
+    if (danger != null && this.state === "playing" && this.player.lane === danger) {
+      if (!this.absorbCrash()) this.die();
+    }
   }
 
   advanceRun(dt) {
     this.runTime += dt;
-
-    // The finish line. Checked before anything else this frame reads the clock,
-    // so the last step of a completed run is the one that ends it rather than
-    // one that spawns a layout nobody will meet.
-    if (this.runTime >= RUN_LIMIT_SECONDS) {
-      this.finishRun();
-      return;
-    }
 
     const phase = phaseAt(this.runTime);
     // The wheel's one nasty face rides on top of the curve rather than
@@ -2358,30 +2383,6 @@ export class Game {
     this.store.recordBest(this.run.score);
   }
 
-  /**
-   * The run reached the finish line.
-   *
-   * Deliberately not `die`. Nothing crashed, so there is no shake, no burst and
-   * no crash sound — the runner simply stops, and the card that follows says
-   * 완주. Everything else is the same path a death takes, because everything
-   * else *is* the same: the score is banked, the run is submitted, the card is
-   * shown. Only the reason differs, and only the player needs to know it.
-   */
-  finishRun() {
-    if (this.state !== "playing") return;
-    this.state = "dead";
-    this.player.alive = false;
-    this.finished = true;
-    this.deadAt = performance.now();
-    this.run.clearPowerups();
-    this.stowBoard();
-    this.audio.purchase();
-    this.bgm.stop({ fadeOut: 0.9 });
-    this.screens.hideHint();
-    this.store.recordBest(this.run.score);
-    this.screens.showToast(`완주! ${runLengthLabel(RUN_LIMIT_SECONDS)}을 달렸습니다`);
-    vibrate([20, 40, 20, 40, 60]);
-  }
 
   // --- run completion -----------------------------------------------------
 

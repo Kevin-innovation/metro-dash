@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.31";
+export const VERSION = "4.40";
 
 /**
  * Which season the board is playing.
@@ -68,6 +68,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.40",
+    date: "2026-09-12",
+    kind: "major",
+    title: "3분 제한이 사라지고, 밤에 번개가 칩니다",
+    notes: [
+      "판이 3분에 끝나지 않습니다. 달릴 수 있는 만큼 달립니다 — 판을 끝내는 건 시계가 아니라 트랙이어야 하니까요.",
+      "야간 구간에 번개가 칩니다. 칠 레인이 바닥에 주황색으로 먼저 켜지고, 1.2초 뒤에 떨어집니다. 그동안 옆 레인으로 비키면 됩니다.",
+      "한 번에 한 레인만 칩니다. 남은 두 레인은 항상 안전해요 — 못 피하는 번개는 없습니다.",
+      "맞으면 죽고, 호버보드를 쓰고 있었다면 호버보드가 대신 부서집니다.",
+    ],
+  },
   {
     version: "4.31",
     date: "2026-09-12",

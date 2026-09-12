@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RUN_LIMIT_SECONDS } from "../src/config.js";
+import { TYPICAL_RUN_SECONDS } from "../src/config.js";
 import { survivalGain } from "../src/scoring.js";
 import { JETPACK_ALTITUDE } from "../src/config.js";
 import { MISSION_DEFS, MISSION_TIERS, missionPay, tierStep } from "../src/missions.js";
@@ -53,7 +53,7 @@ describe("a combo keeps paying past thirty", () => {
     // is. A run is paid per second now — see SURVIVAL_RATE — so a ceiling built
     // out of metres was bounding the wrong thing, and a player who spent the
     // last of a run going slowly would have looked impossible.
-    const seconds = RUN_LIMIT_SECONDS;
+    const seconds = TYPICAL_RUN_SECONDS;
     const distance = Math.floor(maxDistanceIn(seconds) * 0.85);
     const coins = Math.floor(distance / 3);
     // Every multiplier at once, on the two halves that actually take one.

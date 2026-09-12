@@ -1231,16 +1231,16 @@ export class Screens {
 
   // --- game over -----------------------------------------------------------
 
-  showGameOver(run, save, result, promotion = null, { finished = false } = {}) {
+  showGameOver(run, save, result, promotion = null) {
     const rounded = Math.floor(run.score);
 
-    // A run that reached the finish line says so, because almost nobody will.
-    // The heading is the one place on this card that is about the run rather
-    // than about the numbers it produced.
+    // There was a second heading here, 「완주!」, for a run that reached the
+    // three minute finish line. The finish line is gone — a run ends by being
+    // ended now — so every card that gets here got here the same way.
     const heading = $("gameover-title");
     if (heading) {
-      heading.textContent = finished ? "완주!" : "충돌!";
-      heading.classList.toggle("finished", finished);
+      heading.textContent = "충돌!";
+      heading.classList.remove("finished");
     }
 
     $("final-score").textContent = rounded.toLocaleString();

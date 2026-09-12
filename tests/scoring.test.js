@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { runLengthLabel, runTimeLabel } from "../src/ui.js";
-import { RUN_LIMIT_SECONDS } from "../src/config.js";
+import { runTimeLabel } from "../src/ui.js";
+import { TYPICAL_RUN_SECONDS } from "../src/config.js";
 import {
   COIN_BASE,
   COIN_COMBO_CAP,
@@ -83,7 +83,7 @@ describe("버틴 시간 표시", () => {
   it("1분부터는 분과 초다", () => {
     expect(runTimeLabel(60)).toBe("1분 00초");
     expect(runTimeLabel(134)).toBe("2분 14초");
-    expect(runTimeLabel(RUN_LIMIT_SECONDS)).toBe("3분 00초");
+    expect(runTimeLabel(TYPICAL_RUN_SECONDS)).toBe("3분 00초");
   });
 
   it("이상한 값에도 화면이 깨지지 않는다", () => {
@@ -93,16 +93,3 @@ describe("버틴 시간 표시", () => {
   });
 });
 
-describe("결승선을 말하는 문구", () => {
-  it("상수에서 나온다", () => {
-    // 결승선이 5분에서 3분으로 왔을 때 토스트만 5분이라고 계속 말했다.
-    // 플레이어가 「맥스 5분」이라고 알고 있던 출처가 그 한 줄이다.
-    expect(runLengthLabel(RUN_LIMIT_SECONDS)).toBe("3분");
-  });
-
-  it("어떤 길이로 바뀌어도 말이 된다", () => {
-    expect(runLengthLabel(300)).toBe("5분");
-    expect(runLengthLabel(45)).toBe("45초");
-    expect(runLengthLabel(150)).toBe("2분 30초");
-  });
-});

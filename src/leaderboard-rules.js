@@ -1,4 +1,4 @@
-import { MAX_SPEED, RUN_LIMIT_SECONDS } from "./config.js";
+import { MAX_SPEED } from "./config.js";
 import { MAX_CHARACTER_SCORE_BONUS } from "./characters.js";
 import { MAX_EVENT_MULTIPLIER } from "./events.js";
 import { speedAt } from "./pace.js";
@@ -143,13 +143,17 @@ export const REJECT_RUN = {
 /**
  * Longest run accepted.
  *
- * Three hours, back when a run could not end. It ends now — at
- * RUN_LIMIT_SECONDS the game stops the runner itself — so anything meaningfully
- * past the finish line is a client that is not the one we ship. Generous slack
- * on top, because a phone that was asleep can still hand back a clock a few
- * seconds out and an honest run must never be the thing this catches.
+ * An hour. It was three minutes and a bit of slack for as long as there was a
+ * finish line to hang it on; with that gone, a run ends when the player is
+ * ended, and there is no honest length to argue with — somebody will sit down
+ * and go for twenty minutes, and that run has to land on the board.
+ *
+ * So this is back to being what it was written as: a bound on the absurd, not a
+ * rule about play. The real check is the one below it — distance and score are
+ * measured against what the speed curve could actually have produced in the
+ * time claimed, and that gets tighter as a run gets longer, not looser.
  */
-export const MAX_RUN_SECONDS = RUN_LIMIT_SECONDS + 30;
+export const MAX_RUN_SECONDS = 60 * 60;
 
 /**
  * Reject runs that could not have happened.
