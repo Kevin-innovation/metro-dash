@@ -44,6 +44,31 @@ export const LEAD_CONVERGENCE_METRES = 0.01;
  */
 export const PLACEMENT_LEAD_SECONDS = 2.35;
 
+/**
+ * The breath: how often the track opens up, and by how much.
+ *
+ * Difficulty was being made entirely out of density, and density is the one
+ * thing that removes decisions. Measured over six runs, the gap between rows
+ * went like this:
+ *
+ *   0-30s    median 0.87s   longest 4.00s   rests over 3s: 5
+ *   60-90s   median 0.65s   longest 2.70s   rests over 3s: 0
+ *   150-180s median 0.57s   longest 1.57s   rests over 3s: 0
+ *
+ * A tight median is tension. A tight *maximum* is something else: by the last
+ * half of a run the longest gap anywhere was a second and a half, so there was
+ * never a moment with spare attention in it. Every system that asks a player to
+ * choose something — go for the diamond, hold the roof line, take the tight
+ * line past a crate — collapses into "dodge", because choosing costs attention
+ * and there was none going spare.
+ *
+ * So the median is left alone and the maximum is put back. One wide gap every
+ * fourteen layouts is under a tenth of the track; it does not make the run
+ * easier to survive, it makes it possible to do something other than survive.
+ */
+export const BREATH_EVERY = 14;
+export const BREATH_SECONDS = 2.8;
+
 /** Opening layouts, one per move, so the first obstacles teach the controls. */
 const TUTORIAL = ["coins", "train", "barrier", "sign", "bus"];
 
@@ -264,6 +289,9 @@ export class Spawner {
     this.rng = makeRng(seed);
     this.powerupDeck = [];
     this.hazardIn = HAZARD_EVERY;
+    // Offset from the diamond and the power-up cadences, so the three do not
+    // pile onto the same layout and leave the rest of the run untouched.
+    this.breathIn = Math.ceil(BREATH_EVERY / 2);
     this.diamondIn = DIAMOND_EVERY;
     this.patternCount = 0;
     /**
@@ -330,7 +358,15 @@ export class Spawner {
     const clearSeconds =
       CLEARANCE_SECONDS_EASY + (CLEARANCE_SECONDS_HARD - CLEARANCE_SECONDS_EASY) * pressure;
     const clearance = Math.max(PATTERN_CLEARANCE, speed * clearSeconds);
-    this.nextSpawn = playerZ + Math.max(reactionGap, meta.span + clearance);
+
+    // Every so often, room. See BREATH_EVERY — the run has to have a maximum
+    // gap and not only a median, or there is never a second with any attention
+    // to spare and nothing the player does is a choice.
+    const breathing = --this.breathIn <= 0;
+    if (breathing) this.breathIn = BREATH_EVERY;
+    const breath = breathing ? speed * BREATH_SECONDS : 0;
+
+    this.nextSpawn = playerZ + Math.max(reactionGap, meta.span + clearance, breath);
     return meta;
   }
 

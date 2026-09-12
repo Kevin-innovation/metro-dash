@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MAX_SPEED, START_SPEED } from "../src/config.js";
-import { LEAD_CONVERGENCE_METRES, PLACEMENT_LEAD_SECONDS } from "../src/spawner.js";
+import {
+  BREATH_EVERY,
+  BREATH_SECONDS,
+  LEAD_CONVERGENCE_METRES,
+  PLACEMENT_LEAD_SECONDS,
+} from "../src/spawner.js";
 import { pressureAt, reactionAt, speedAt } from "../src/pace.js";
 import { BOOSTED_AIRTIME, BASE_LEAD_SECONDS, DISMOUNT_LEAD_SECONDS } from "../src/patterns.js";
 import { SPEC } from "../src/specs.js";
@@ -28,8 +33,10 @@ function fakePool() {
  * Run the real scheduler down a stretch of track and collect every hazard row
  * it placed, in the order the runner would meet them.
  */
-function runTrack({ runTime, metres = 6000 }) {
+function runTrack({ runTime, metres = 6000, seed = 7 }) {
   const spawner = new Spawner(fakePool());
+  // Seeded, or every assertion below is a coin toss that usually lands right.
+  spawner.reset(seed);
   const speed = speedAt(runTime);
   const rows = [];
 
@@ -110,23 +117,73 @@ describe("spawner scheduling", () => {
     }
   });
 
+  /** Gaps between rows, in seconds, smallest first. */
+  const gapsAt = (runTime, seed = 7) => {
+    const { rows, speed } = runTrack({ runTime, metres: 12000, seed });
+    const gaps = [];
+    for (let i = 1; i < rows.length; i++) {
+      const seconds = (rows[i].z - rows[i - 1].z) / speed;
+      if (seconds > 0.01) gaps.push(seconds);
+    }
+    return gaps.sort((a, b) => a - b);
+  };
+
+  /**
+   * Average gap, with the deliberate rests held out.
+   *
+   * A plain average used to be the measure of pressure, and it was a good one
+   * while every gap was much of a muchness. The track now opens up on purpose
+   * once in BREATH_EVERY layouts, and those few wide gaps pull an average up
+   * without a single row in between having moved — so the average stopped
+   * meaning "the player is under pressure" and started meaning "the player is
+   * under pressure, or is not, sometimes".
+   *
+   * The share to drop comes from BREATH_EVERY rather than a number typed here,
+   * with a little room over it, so tuning the rhythm cannot quietly stop this
+   * measuring difficulty. Layouts average barely over one row, so the share of
+   * *gaps* that are rests is close enough to the share of layouts.
+   */
+  const BREATH_SHARE = 1 / BREATH_EVERY + 0.01;
+  const pressureGap = (sorted) => {
+    const kept = sorted.slice(0, Math.floor(sorted.length * (1 - BREATH_SHARE)));
+    return kept.reduce((a, b) => a + b, 0) / kept.length;
+  };
+
   it("gets harder as the run goes on", () => {
     // The whole point of the pressure model: without it, gaps grow with speed
     // and the player gets the same thinking time from start to finish.
-    const spacing = RUN_TIMES.map((runTime) => {
-      const { rows, speed } = runTrack({ runTime });
-      const gaps = [];
-      for (let i = 1; i < rows.length; i++) {
-        const seconds = (rows[i].z - rows[i - 1].z) / speed;
-        if (seconds > 0.01) gaps.push(seconds);
-      }
-      return gaps.reduce((a, b) => a + b, 0) / gaps.length;
-    });
+    const spacing = RUN_TIMES.map((runTime) => pressureGap(gapsAt(runTime)));
 
     expect(spacing[0]).toBeGreaterThan(1);
     expect(spacing[spacing.length - 1]).toBeLessThan(0.7);
     // Broadly monotonic — sampling noise aside, late runs must be tighter.
     expect(spacing[spacing.length - 1]).toBeLessThan(spacing[0] * 0.6);
+  });
+
+  it("still lets the player breathe once a run is wound up", () => {
+    // The other half of that, and the reason difficulty is now measured with
+    // the widest gaps held out: a run made only of pressure has no decisions
+    // left in it.
+    //
+    // Density was doing all of the difficulty work, and density is the one dial
+    // that removes choices instead of creating them. Measured across six whole
+    // runs, the longest gap anywhere in the last minute was 1.57 seconds — so
+    // there was never a moment with attention going spare, and everything that
+    // asks the player to *choose* something (the diamond off the line, holding
+    // a roof, the tight line past a crate) collapsed into "dodge".
+    //
+    // So room is a guarantee now rather than a by-product: however wound up the
+    // run gets, a wide gap still comes back round.
+    for (const runTime of [160, 320, 600]) {
+      for (const seed of [1, 7, 29]) {
+        const gaps = gapsAt(runTime, seed);
+        const where = `t=${runTime} seed=${seed}`;
+        expect(pressureGap(gaps), `${where} still tight`).toBeLessThan(0.7);
+        expect(gaps[gaps.length - 1], `${where} still breathes`).toBeGreaterThan(
+          BREATH_SECONDS,
+        );
+      }
+    }
   });
 
   it("still fills the track after the first ramp", () => {
