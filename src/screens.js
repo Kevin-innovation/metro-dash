@@ -10,7 +10,7 @@ import { SPEED_STEP_SECONDS, nextStepIn, speedStepAt } from "./pace.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
-import { VERSION, seasonAt } from "./release.js";
+import { VERSION, previousSeason, seasonAt } from "./release.js";
 
 /** How long a 「지붕 ×1.5 +310」 stays up. Long enough to read all three. */
 const TRICK_FLASH_MS = 950;
@@ -159,6 +159,7 @@ export class Screens {
 
     for (const [id, range] of [
       ["tab-board-week", "week"],
+      ["tab-board-season", "season"],
       ["tab-board-level", "level"],
       ["tab-board-hall", "hall"],
     ]) {
@@ -419,6 +420,7 @@ export class Screens {
   setBoardTab(range) {
     for (const [id, value] of [
       ["tab-board-week", "week"],
+      ["tab-board-season", "season"],
       ["tab-board-level", "level"],
       ["tab-board-hall", "hall"],
     ]) {
@@ -427,18 +429,28 @@ export class Screens {
 
     // The ladder is about one person's whole history, so it has no school half
     // to show and takes the width instead of leaving it blank.
-    const solo = range === "level";
+    // A closed season has no school half either: the figure a school is ranked
+    // on is the sum of its members' *current* bests, and those belong to this
+    // season. Rebuilding a school table out of a finished season's runs is a
+    // different question from the one this tab is asking.
+    const solo = range === "level" || range === "season";
     $("leaderboard-screen")?.classList.toggle("solo", solo);
     const schoolCol = $("school-list")?.closest(".board-col");
     if (schoolCol) schoolCol.classList.toggle("hidden", solo);
     const heading = $("player-title");
-    if (heading) heading.textContent = solo ? "레벨" : "개인";
+    if (heading) {
+      heading.textContent = range === "level" ? "레벨" : range === "season" ? "지난 시즌" : "개인";
+    }
 
     // Both columns follow the tabs now, so both captions are written here.
     const school = $("school-note");
     if (school) {
       school.textContent =
-        range === "hall" ? "주간 1~3위" : `토요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`;
+        range === "hall"
+          ? "주간 1~3위"
+          : range === "season"
+            ? "끝난 시즌의 기록"
+            : `토요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`;
     }
 
     const note = $("board-reset");
@@ -448,7 +460,9 @@ export class Screens {
           ? "지난 주의 기록"
           : range === "level"
             ? "누적 경험치 순위 · 미션과 점수로 오릅니다"
-            : `토요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`;
+            : range === "season"
+              ? `시즌 ${previousSeason() ?? "-"} · 점수 규칙이 지금과 다릅니다`
+              : `토요일 0시 초기화 · ${weekRemainingLabel(Date.now())}`;
     }
   }
 

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.20";
+export const VERSION = "4.21";
 
 /**
  * Which season the board is playing.
@@ -28,8 +28,32 @@ export const VERSION = "4.20";
  */
 const SEASONS = [{ season: 4, from: Date.UTC(2026, 8, 11, 15, 0, 0) }];
 
+/** The season everything before the table belongs to. */
+const BASE_SEASON = 3;
+
+/**
+ * When a season ran, as [from, to).
+ *
+ * The board for a finished season is built by asking which runs happened inside
+ * it, so the browser and the backend have to agree on where the line falls —
+ * the same reason weekKey is a shared pure function. Season 3 has no recorded
+ * start: it is everything before the first entry in the table.
+ */
+export function seasonRange(season) {
+  const index = SEASONS.findIndex((entry) => entry.season === season);
+  const from = index === -1 ? 0 : SEASONS[index].from;
+  const next = index === -1 ? SEASONS[0] : SEASONS[index + 1];
+  return { from, to: next ? next.from : Infinity };
+}
+
+/** The season before `ms`, or null when there is none to look back at. */
+export function previousSeason(ms = Date.now()) {
+  const now = seasonAt(ms);
+  return now > BASE_SEASON ? now - 1 : null;
+}
+
 export function seasonAt(ms = Date.now()) {
-  let current = 3;
+  let current = BASE_SEASON;
   for (const entry of SEASONS) if (ms >= entry.from) current = entry.season;
   return current;
 }
@@ -44,6 +68,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.21",
+    date: "2026-09-12",
+    kind: "minor",
+    title: "지난 시즌 순위표",
+    notes: [
+      "리더보드에 「지난 시즌」 탭이 생겼습니다. 끝난 시즌의 순위를 그대로 볼 수 있어요.",
+      "판 기록에서 직접 계산합니다. 계정에 저장된 최고 점수는 이번 시즌 것이고 새 시즌에서 한 판 달리면 덮이지만, 달린 판 자체는 언제 달렸는지가 찍힌 채로 남아 있거든요. 시즌이 바뀌었다고 기록이 없어진 게 아니라, 이번 시즌이 겨루는 상대가 아니게 된 것뿐입니다.",
+      "학교 순위는 지난 시즌 탭에 없습니다. 학교 점수는 지금 소속된 학생들의 현재 기록 합계라, 끝난 시즌의 학교 표는 다른 질문이에요.",
+    ],
+  },
   {
     version: "4.20",
     date: "2026-09-12",

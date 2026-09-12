@@ -1645,3 +1645,68 @@ describe("브라우저가 총액을 선언하는 경로", () => {
     expect(after.xp).toBe(60_000);
   });
 });
+
+// --- the board for a season that has finished --------------------------------
+
+describe("지난 시즌 순위표", () => {
+  /** A run stamped at a moment, straight into the scores table. */
+  const runAt = (t, handle, playerId, score, at) =>
+    t.run(async (ctx) =>
+      ctx.db.insert("scores", {
+        playerId,
+        handle,
+        school: "서울 테스트초",
+        score,
+        distance: 1000,
+        coins: 10,
+        comboMax: 5,
+        seconds: 60,
+        character: "runner",
+        createdAt: at,
+      }),
+    );
+
+  const S4 = Date.UTC(2026, 8, 11, 15, 0, 0); // 시즌 4 시작
+
+  it("끝난 시즌의 기록을 판에서 찾아온다", async () => {
+    // 이게 이 표가 존재하는 이유다. 플레이어의 best 컬럼은 이번 시즌 기록이고,
+    // 새 시즌에서 한 판 달리는 순간 덮인다 — 지난 시즌을 보려는 시점엔 그
+    // 컬럼이 더 이상 알지 못한다. 판은 안다. 언제 달렸는지가 찍혀 있다.
+    const t = backend();
+    const a = await signUp(t, "지난시즌", "1234", "dev-a");
+    const b = await signUp(t, "이번시즌", "1234", "dev-b");
+    // 한글 키는 convex-test 가 필드명으로 안 받는다 — 쌍으로 들고 다닌다.
+    const ids = await t.run(async (ctx) => {
+      const rows = await ctx.db.query("players").collect();
+      return rows.map((r) => [r.handle, r._id]);
+    });
+    const idOf = (handle) => ids.find(([h]) => h === handle)[1];
+
+    await runAt(t, "지난시즌", idOf("지난시즌"), 864_080, S4 - 60_000); // 시즌 3
+    await runAt(t, "지난시즌", idOf("지난시즌"), 300_000, S4 - 30_000); // 같은 사람, 더 낮음
+    await runAt(t, "이번시즌", idOf("이번시즌"), 999_999, S4 + 60_000); // 시즌 4
+
+    const board = await t.query(api.scores.seasonBoard, { season: 3 });
+    expect(board.season).toBe(3);
+    expect(board.rows).toHaveLength(1);
+    expect(board.rows[0].handle).toBe("지난시즌");
+    // 한 사람당 그 시즌의 최고 한 판만.
+    expect(board.rows[0].best).toBe(864_080);
+    expect(a.token && b.token).toBeTruthy();
+  });
+
+  it("시즌 경계를 넘어간 판은 안 센다", async () => {
+    const t = backend();
+    await signUp(t, "경계", "1234", "dev-c");
+    const id = await t.run(async (ctx) => (await ctx.db.query("players").first())._id);
+    await runAt(t, "경계", id, 500_000, S4); // 정확히 경계 = 시즌 4
+    const board = await t.query(api.scores.seasonBoard, { season: 3 });
+    expect(board.rows).toHaveLength(0);
+  });
+
+  it("아무것도 없으면 빈 표를 준다", async () => {
+    const t = backend();
+    const board = await t.query(api.scores.seasonBoard, { season: 3 });
+    expect(board.rows).toEqual([]);
+  });
+});

@@ -627,6 +627,28 @@ export class Game {
       return;
     }
 
+    // A finished season does not move either. One subscription, one column,
+    // no standing — a player's place in a season that is over is not a thing
+    // they can change by running now.
+    if (this.boardRange === "season") {
+      const stop = await this.cloud.watch(
+        "scores:seasonBoard",
+        { limit: (this.boardPages.players + 1) * BOARD_PAGE },
+        (result) => {
+          if (generation !== this.boardGeneration) return;
+          this.screens.renderLeaderboard(result?.rows ?? [], null, this.cloud.handle);
+          this.screens.setBoardPager(
+            "players",
+            this.pagerState("players", (result?.rows ?? []).length),
+          );
+          this.screens.setBoardPager("schools", { page: 0, size: BOARD_PAGE, hasMore: false });
+        },
+      );
+      if (generation !== this.boardGeneration) stop();
+      else this.boardSubscriptions.push(stop);
+      return;
+    }
+
     // A closed week is not a ranking that moves, so the hall is one
     // subscription rather than four and has no pager or standing behind it.
     if (this.boardRange === "hall") {

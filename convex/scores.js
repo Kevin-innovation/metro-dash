@@ -8,7 +8,7 @@ import { weekKey } from "../src/week.js";
 import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
 import { bestOf, coinsOf, levelOf, xpOf } from "./players.js";
-import { seasonAt } from "../src/release.js";
+import { previousSeason, seasonAt, seasonRange } from "../src/release.js";
 import { schoolLabel } from "../src/school.js";
 
 /**
@@ -235,6 +235,80 @@ function scoreOf(player, weekly) {
   if (!weekly) return bestOf(player);
   return player.weekKey === weekKey(Date.now()) ? (player.weekBest ?? 0) : 0;
 }
+
+/**
+ * The board for a season that has finished.
+ *
+ * Built from the `scores` table rather than from any column on the player,
+ * exactly the way the hall of fame builds a closed week — and for the same
+ * reason. A player's `best` column holds *this* season's record and is
+ * overwritten the first time they run in a new one, so by the time anybody
+ * wants to look back at the old season the column no longer knows it. The runs
+ * do. They are still there, stamped with when they happened.
+ *
+ * That is also the answer to where a record goes when a season turns: nowhere.
+ * It stops being the number this season is measured against and it stays
+ * exactly where it was written.
+ *
+ * Scanned rather than indexed. A season is a few weeks of runs and this is read
+ * when somebody opens a tab, not on every frame; if the table outgrows that,
+ * the fix is to close each season into a row the way weeks are closed, and the
+ * shape of that row is what this returns.
+ */
+export const seasonBoard = query({
+  args: { season: v.optional(v.number()), limit: v.optional(v.number()) },
+  handler: async (ctx, { season, limit }) => {
+    const target = season ?? previousSeason();
+    if (target === null) return { season: null, rows: [] };
+
+    const { from, to } = seasonRange(target);
+    const take = Math.min(LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit ?? 20)));
+
+    /** Best single run per player inside the season. */
+    const best = new Map();
+    for await (const run of ctx.db.query("scores")) {
+      if (run.createdAt < from || run.createdAt >= to) continue;
+      const id = String(run.playerId);
+      const held = best.get(id);
+      if (!held || run.score > held.score) {
+        best.set(id, {
+          playerId: run.playerId,
+          handle: run.handle,
+          score: run.score,
+          school: run.school ?? "",
+        });
+      }
+    }
+
+    const ranked = [...best.values()]
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, take + FILTER_MARGIN);
+
+    // The level beside a name is read from the account, which is the one thing
+    // about a player that is not in the run. Only for the rows that will be
+    // shown — a season of runs is a lot of accounts to open for a page of ten.
+    const rows = [];
+    for (const entry of ranked) {
+      if (rows.length >= take) break;
+      const player = await ctx.db.get(entry.playerId);
+      if (!player || player.role === "admin") continue;
+      // Same row shape the weekly board hands back, so one renderer draws both.
+      rows.push({
+        rank: rows.length + 1,
+        handle: entry.handle,
+        best: entry.score,
+        character: player.profile?.character ?? "runner",
+        // From the run rather than from the account: it is where they went to
+        // school when they set it, which is what a closed season should say.
+        school: entry.school,
+        level: levelOf(player),
+      });
+    }
+
+    return { season: target, rows };
+  },
+});
 
 /** Where the signed-in player sits, even when they are off the visible board. */
 export const standing = query({
