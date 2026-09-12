@@ -1,12 +1,6 @@
 import * as THREE from "three";
-import {
-  BUS_ROOF,
-  LANES,
-  SIGN_BOARD_BOTTOM,
-  SIGN_BOARD_TOP,
-  SIGN_TOP,
-  TRAIN_COLORS,
-} from "./config.js";
+import { BUS_ROOF, SIGN_BOARD_BOTTOM, SIGN_BOARD_TOP, SIGN_TOP, TRAIN_COLORS } from "./config.js";
+import { laneX } from "./lanes.js";
 import { SPEC } from "./specs.js";
 import { makeContainerSkin } from "./textures.js";
 
@@ -603,7 +597,7 @@ export class EntityPool {
     // here was undoing that on every reuse, which left the first bus of a run
     // correct and every one after it a wall you could not see.
     mesh.scale.set(1, 1, restingScaleZ(type));
-    const x = LANES[lane + 1];
+    const x = laneX(lane);
     // Pickups float at the requested height; obstacles always sit on the deck.
     const lift = spec.lethal ? 0 : y;
     mesh.position.set(x, lift, z);

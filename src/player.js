@@ -7,13 +7,14 @@ import {
   JETPACK_CLIMB,
   JUMP_V,
   LANE_LERP,
-  LANES,
   CEILING_CLEARANCE,
   MOUNT_TIME,
   PLAYER_HEIGHT,
   SLIDE_HEIGHT,
   SLIDE_TIME,
 } from "./config.js";
+import { ALL_LANES } from "./patterns.js";
+import { laneX } from "./lanes.js";
 
 function box(w, h, d, color, extra = {}) {
   const mesh = new THREE.Mesh(
@@ -259,13 +260,17 @@ export function applyAction(p, action, audio, opts = {}) {
   if (p.flying && action !== "left" && action !== "right") return;
 
   const jumpBoost = opts.jumpMultiplier ?? 1;
+  // How wide the road is at this moment. The edges used to be written in here
+  // as 1 and -1, which was true for as long as a road was one shape.
+  const lanes = opts.lanes ?? ALL_LANES;
+  const edge = { low: Math.min(...lanes), high: Math.max(...lanes) };
 
-  if (action === "left" && p.lane < 1) {
+  if (action === "left" && p.lane < edge.high) {
     p.laneFrom = p.lane;
     p.laneChangeT = 0;
     p.lane += 1;
     audio?.switchLane();
-  } else if (action === "right" && p.lane > -1) {
+  } else if (action === "right" && p.lane > edge.low) {
     p.laneFrom = p.lane;
     p.laneChangeT = 0;
     p.lane -= 1;
@@ -386,7 +391,7 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
   if (!p.alive) p.deathT += dt;
 
   p.laneChangeT += dt;
-  const targetX = LANES[p.lane + 1];
+  const targetX = laneX(p.lane);
   p.x += (targetX - p.x) * approach(LANE_LERP * (p.laneScale ?? 1), dt);
   p.lean += ((p.x - targetX) * 0.35 - p.lean) * approach(12, dt);
 

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.40";
+export const VERSION = "4.50";
 
 /**
  * Which season the board is playing.
@@ -68,6 +68,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.50",
+    date: "2026-09-12",
+    kind: "major",
+    title: "50만점부터 길이 넓어지고 좁아집니다",
+    notes: [
+      "50만점을 넘기면 도로가 4차선이 됩니다. 그다음은 3차선, 4차선, 5차선… 12만점마다 한 칸씩 바뀝니다.",
+      "넓어지면 숨통이 트이고 좁아지면 조여옵니다. 지금까지 판이 어려워지는 방법은 빨라지는 것과 촘촘해지는 것뿐이었어요 — 「어디로 갈까」는 처음부터 끝까지 왼쪽·가운데·오른쪽이었습니다.",
+      "벽은 넓어져도 벽입니다. 차선을 다 막아야 벽이니까, 5차선에서는 다섯 칸을 다 막습니다. 넓어졌다고 그냥 옆으로 지나갈 수는 없어요.",
+      "서 있던 차선이 없어지면 가장 가까운 차선으로 옮겨 드립니다. 길이 변한 것으로 죽지는 않습니다.",
+    ],
+  },
   {
     version: "4.40",
     date: "2026-09-12",

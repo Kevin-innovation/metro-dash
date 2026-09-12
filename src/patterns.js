@@ -5,6 +5,15 @@ const JUMP_AIRTIME = (2 * JUMP_V) / -GRAVITY;
 import { shuffled } from "./rng.js";
 import { SPEC } from "./specs.js";
 
+/**
+ * The road a run starts on, and the one every pattern in the table was drawn
+ * against.
+ *
+ * Not 「the lanes」 any more: past LANES_FROM_SCORE the road widens and narrows
+ * (see lanes.js), and a layout is built against whatever it is at the time. A
+ * build gets that set as `all`; this stays as the default and as the shape the
+ * gaps and clearances were tuned on.
+ */
 export const ALL_LANES = [-1, 0, 1];
 
 /**
@@ -206,9 +215,9 @@ export const PATTERNS = [
     minPhase: 2,
     weight: 2,
     late: 3,
-    build: ({ z }) => [
-      ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z })),
-      ...ALL_LANES.map((lane) => ({ type: "coin", lane, z, y: 1.6 })),
+    build: ({ z, all }) => [
+      ...all.map((lane) => ({ type: "barrier", lane, z })),
+      ...all.map((lane) => ({ type: "coin", lane, z, y: 1.6 })),
     ],
   },
   {
@@ -218,9 +227,9 @@ export const PATTERNS = [
     minPhase: 2,
     weight: 2,
     late: 2,
-    build: ({ z }) => [
-      ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
-      ...ALL_LANES.map((lane) => ({ type: "coin", lane, z, y: 0.42 })),
+    build: ({ z, all }) => [
+      ...all.map((lane) => ({ type: "sign", lane, z })),
+      ...all.map((lane) => ({ type: "coin", lane, z, y: 0.42 })),
     ],
   },
   {
@@ -268,12 +277,12 @@ export const PATTERNS = [
     minPhase: 3,
     weight: 2,
     late: 3,
-    build: ({ z, gap, rng, either }) => {
+    build: ({ z, gap, rng, either, all }) => {
       // Each rung its own gap and its own vehicle. It used to be train, bus,
       // train at one spacing, in that order, every single time.
       const first = gap(0.62, 14, 0.44);
       const second = gap(0.62, 14, 0.44);
-      const order = shuffled(rng, ALL_LANES);
+      const order = shuffled(rng, all);
       return [
         { type: either("train", "bus"), lane: order[0], z },
         { type: either("bus", "train"), lane: order[1], z: z + first },
@@ -292,11 +301,11 @@ export const PATTERNS = [
     // stretch that to ~0.96s — so this gap is sized for the boosted jump and is
     // deliberately left out of the pressure compression. Compressing it would
     // make the pattern unclearable while the power-up happens to be running.
-    build: ({ z, gap }) => {
+    build: ({ z, gap, all }) => {
       const step = gap(1.06, 20);
       return [
-        ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z })),
-        ...ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + step })),
+        ...all.map((lane) => ({ type: "barrier", lane, z })),
+        ...all.map((lane) => ({ type: "sign", lane, z: z + step })),
       ];
     },
   },
@@ -307,11 +316,11 @@ export const PATTERNS = [
     minPhase: 3,
     weight: 2,
     late: 2,
-    build: ({ z, gap }) => {
+    build: ({ z, gap, all }) => {
       const step = gap(0.75, 14, 0.52);
       return [
-        ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
-        ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + step })),
+        ...all.map((lane) => ({ type: "sign", lane, z })),
+        ...all.map((lane) => ({ type: "barrier", lane, z: z + step })),
       ];
     },
   },
@@ -342,12 +351,12 @@ export const PATTERNS = [
     minPhase: 4,
     weight: 2,
     late: 4,
-    build: ({ z, lanes, gap }) => {
+    build: ({ z, lanes, gap, all }) => {
       const first = gap(0.8, 16, 0.6);
       const second = first + gap(0.6, 12, 0.45);
       return [
         { type: "train", lane: lanes[0], z },
-        ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + first })),
+        ...all.map((lane) => ({ type: "barrier", lane, z: z + first })),
         { type: "bus", lane: lanes[1], z: z + second },
       ];
     },
@@ -381,10 +390,10 @@ export const PATTERNS = [
     // react — otherwise clearing the third gate means hitting the key inside a
     // window of a few hundredths of a second. The floor is set from the slide,
     // not from what looked hard on paper.
-    build: ({ z, gap }) => {
+    build: ({ z, gap, all }) => {
       const step = gap(1.2, 26, 1.0);
       return [0, 1, 2].flatMap((i) =>
-        ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + step * i })),
+        all.map((lane) => ({ type: "sign", lane, z: z + step * i })),
       );
     },
   },
@@ -396,10 +405,10 @@ export const PATTERNS = [
     minPhase: 6,
     weight: 2,
     late: 4,
-    build: ({ z, gap }) => [
-      ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
+    build: ({ z, gap, all }) => [
+      ...all.map((lane) => ({ type: "bus", lane, z })),
       ...coinLine(0, z - 2, 4, 1.35, 2.55),
-      ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + gap(1.15, 24) })),
+      ...all.map((lane) => ({ type: "barrier", lane, z: z + gap(1.15, 24) })),
     ],
   },
   {
@@ -424,8 +433,8 @@ export const PATTERNS = [
     minPhase: 4,
     weight: 1,
     late: 3,
-    build: ({ z }) => [
-      ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
+    build: ({ z, all }) => [
+      ...all.map((lane) => ({ type: "bus", lane, z })),
       ...coinLine(0, z - 2, 5, 1.35, 2.55),
     ],
   },
@@ -453,10 +462,10 @@ const LATE_PATTERNS = [
     minPhase: 7,
     weight: 3,
     late: 5,
-    build: ({ z, lanes, gap }) => [
-      ...ALL_LANES.map((lane) => ({ type: "bus", lane, z })),
+    build: ({ z, lanes, gap, all }) => [
+      ...all.map((lane) => ({ type: "bus", lane, z })),
       ...coinLine(lanes[0], z - 2, 4, 1.35, 2.55),
-      ...ALL_LANES.map((lane) => ({ type: "sign", lane, z: z + gap(1.2, 26) })),
+      ...all.map((lane) => ({ type: "sign", lane, z: z + gap(1.2, 26) })),
     ],
   },
   {
@@ -466,12 +475,12 @@ const LATE_PATTERNS = [
     minPhase: 8,
     weight: 3,
     late: 5,
-    build: ({ z, lanes, gap }) => {
+    build: ({ z, lanes, gap, all }) => {
       const second = gap(0.95, 22, 0.7);
       const third = second + gap(0.85, 20, 0.62);
       return [
-        ...ALL_LANES.map((lane) => ({ type: "sign", lane, z })),
-        ...ALL_LANES.map((lane) => ({ type: "barrier", lane, z: z + second })),
+        ...all.map((lane) => ({ type: "sign", lane, z })),
+        ...all.map((lane) => ({ type: "barrier", lane, z: z + second })),
         { type: "train", lane: lanes[0], z: z + third },
         { type: "bus", lane: lanes[1], z: z + third },
         ...coinLine(lanes[2], z + third - 1, 4),
@@ -651,10 +660,16 @@ function jumpArc(lane, z, count = 5, spread = 0.85) {
 
 /**
  * Group lethal placements that sit at effectively the same Z into "rows", then
- * describe what each row demands. A row blocking all three lanes is a wall the
+ * describe what each row demands. A row blocking every lane is a wall the
  * player must jump or slide, never dodge.
+ *
+ * `laneCount` is how wide the road is where this pattern lands, and it has to
+ * be passed rather than assumed: a row of three vehicles is a wall on a
+ * three-lane road and a thing to walk round on a five-lane one, and calling it
+ * a wall on the wide road would tell the runner to jump a gap they could have
+ * stepped past — and tell the fairness audit to check the wrong question.
  */
-export function describeRows(placements) {
+export function describeRows(placements, laneCount = ALL_LANES.length) {
   const rows = [];
   for (const placement of placements) {
     const spec = SPEC[placement.type];
@@ -674,7 +689,7 @@ export function describeRows(placements) {
     .map((row) => ({
       z: row.z,
       lanes: [...row.lanes].sort(),
-      isWall: row.lanes.size >= ALL_LANES.length,
+      isWall: row.lanes.size >= laneCount,
       // A wall of rideable vehicles is cleared by landing on a roof — but only
       // when riding is the *only* thing on offer. A gate wall with a train
       // standing in one of its lanes was being called a mount: you would land
@@ -682,7 +697,7 @@ export function describeRows(placements) {
       // wins, and the vehicle's lane is simply one nobody can use.
       requires:
         [...row.clears][0] ??
-        (row.rideable && row.lanes.size >= ALL_LANES.length ? "mount" : null),
+        (row.rideable && row.lanes.size >= laneCount ? "mount" : null),
       rideable: row.rideable,
     }))
     .sort((a, b) => a.z - b.z);
@@ -694,8 +709,8 @@ export function describeRows(placements) {
  * @param {number} z pattern start
  * @param {Array} placements
  */
-export function describePattern(z, placements) {
-  const rows = describeRows(placements);
+export function describePattern(z, placements, laneCount = ALL_LANES.length) {
+  const rows = describeRows(placements, laneCount);
   let end = z;
   let exitVehicleZ = null;
 
@@ -814,11 +829,12 @@ export const SLIDE_DEAD_BAND = [SLIDE_TIME - 0.06, SLIDE_TIME + REACTION_SECONDS
 /**
  * Lanes the runner can be in on the far side of a row.
  *
- * A wall leaves all three: it is answered by jumping, sliding or riding it
- * rather than by picking a lane, so it does not decide where the runner ends up.
+ * A wall leaves every one of them: it is answered by jumping, sliding or riding
+ * it rather than by picking a lane, so it does not decide where the runner ends
+ * up.
  */
-function passableLanes(row) {
-  return row.isWall ? ALL_LANES : ALL_LANES.filter((lane) => !row.lanes.includes(lane));
+function passableLanes(row, lanes = ALL_LANES) {
+  return row.isWall ? lanes : lanes.filter((lane) => !row.lanes.includes(lane));
 }
 
 /**

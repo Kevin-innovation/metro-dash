@@ -6,6 +6,7 @@ import {
   PATTERN_CLEARANCE,
 } from "./config.js";
 import {
+  ALL_LANES,
   POWERUP_PATTERNS,
   SLIDE_DEAD_BAND,
   candidatesFor,
@@ -234,16 +235,24 @@ const MIN_PATTERN_SEPARATION = 12;
  * copy is a thing that drifts: the moment the spawner grew `rng`, `count` and
  * `either`, every test that had copied the old shape started calling undefined.
  *
- * @param {{ z: number, speed: number, pressure: number, rng: () => number }} of
+ * `lanes` is how wide the road is where this layout will land. It defaults to
+ * the three the table was drawn against, so every caller that does not care —
+ * the tests, the title screen — reads exactly as it did.
+ *
+ * @param {{ z: number, speed: number, pressure: number, rng: () => number,
+ *   lanes?: number[] }} of
  */
-export function patternContext({ z, speed, pressure = 0, rng }) {
+export function patternContext({ z, speed, pressure = 0, rng, lanes = ALL_LANES }) {
   /** This pattern's own gap wobbles, keyed by what was asked for. */
   const wobbles = {};
   const context = {
     z,
     rng,
-    lane: pickFrom(rng, [-1, 0, 1]),
-    lanes: shuffled(rng, [-1, 0, 1]),
+    lane: pickFrom(rng, lanes),
+    /** Shuffled, for a layout that wants two or three lanes and no more. */
+    lanes: shuffled(rng, lanes),
+    /** Every lane there is, in order — what a wall has to cover to be one. */
+    all: lanes,
     /**
      * Spacing, with a wobble.
      *
@@ -394,8 +403,9 @@ export class Spawner {
     const speed = options.speed ?? 20;
     const met = (list) => list.map((placement) => Spawner.meetingPoint(placement, { ...options, speed }));
 
+    const laneCount = (options.lanes ?? ALL_LANES).length;
     let placements = this.choose(z, options);
-    let described = describePattern(z, met(placements));
+    let described = describePattern(z, met(placements), laneCount);
 
     // How much room this layout needs from the one before it depends on what it
     // opens with, which is only knowable once it has been built. So build it,
@@ -413,7 +423,7 @@ export class Spawner {
       if (extra <= LEAD_CONVERGENCE_METRES) break;
       shift += extra;
       placements = placements.map((placement) => ({ ...placement, z: placement.z + extra }));
-      described = describePattern(z + shift, met(placements));
+      described = describePattern(z + shift, met(placements), laneCount);
     }
 
     for (const placement of placements) {
@@ -471,8 +481,9 @@ export class Spawner {
     slideBias = 0,
     eventPatterns = null,
     score = 0,
+    lanes = ALL_LANES,
   }) {
-    const context = patternContext({ z, speed, pressure, rng: this.rng });
+    const context = patternContext({ z, speed, pressure, rng: this.rng, lanes });
 
     if (tutorial && this.patternCount <= TUTORIAL.length) {
       const wanted = TUTORIAL[this.patternCount - 1];

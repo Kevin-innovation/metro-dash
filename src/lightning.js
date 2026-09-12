@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { LANES } from "./config.js";
 import { ALL_LANES } from "./patterns.js";
+import { laneX } from "./lanes.js";
 
 /**
  * The night storm.
@@ -99,7 +99,7 @@ export class LightningStorm {
    * @returns {"warn"|"strike"|null} what happened this step, for the sound and
    *   the screen to answer
    */
-  update(dt, { night }) {
+  update(dt, { night, lanes = ALL_LANES }) {
     this.flash = Math.max(0, this.flash - dt * 3.4);
 
     if (!night) {
@@ -133,7 +133,10 @@ export class LightningStorm {
     this.nextIn -= dt;
     if (this.nextIn > 0) return null;
 
-    const lane = ALL_LANES[Math.min(ALL_LANES.length - 1, Math.floor(this.rng() * ALL_LANES.length))];
+    // Out of the lanes that exist now. A bolt aimed at a lane the road no
+    // longer has is one nobody has to answer; aimed at one it has just grown is
+    // a lane the player may not have noticed opening.
+    const lane = lanes[Math.min(lanes.length - 1, Math.floor(this.rng() * lanes.length))];
     this.strike = { lane, warnT: WARN_SECONDS, strikeT: STRIKE_SECONDS };
     return "warn";
   }
@@ -206,7 +209,7 @@ export function updateLightning(rig, storm, z, t) {
   }
 
   rig.root.visible = true;
-  rig.root.position.set(LANES[lane + 1] ?? 0, 0, z + 2);
+  rig.root.position.set(laneX(lane), 0, z + 2);
 
   if (warning) {
     // The pulse brightens the mark; it must never be what makes it visible.

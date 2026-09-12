@@ -28,6 +28,7 @@ import {
 } from "../src/config.js";
 import { oncomingSpeedAt, phaseAt, pressureAt, reactionAt, speedAt } from "../src/pace.js";
 import { SLIDE_DEAD_BAND, describeRows, requiredGapSeconds } from "../src/patterns.js";
+import { LANE_WIDTHS, laneSet } from "../src/lanes.js";
 import { Spawner } from "../src/spawner.js";
 import { RunSchedule } from "../src/schedule.js";
 
@@ -66,7 +67,7 @@ function seededRandom(seed) {
  * reason they are placed so far ahead, and auditing their spawn position would
  * pass layouts the player never survives.
  */
-function simulate(seconds, seed) {
+function simulate(seconds, seed, lanes) {
   const random = Math.random;
   Math.random = seededRandom(seed);
   try {
@@ -109,6 +110,7 @@ function simulate(seconds, seed) {
         reaction: reactionAt(time),
         pressure: pressureAt(time),
         slideBias: schedule.lookAt(time).slideBias,
+        lanes,
         oncomingSpeed: oncomingSpeedAt(phaseId),
         eventPatterns: schedule.eventAt(time)?.event.patterns ?? null,
         tutorial: true,
@@ -156,7 +158,7 @@ function makeClock(seconds) {
   };
 }
 
-const ALL_LANES = [-1, 0, 1];
+
 /** A lane change settles in about this long; it can be started in mid-air. */
 const LANE_CHANGE = 0.19;
 
@@ -166,7 +168,7 @@ const LANE_CHANGE = 0.19;
  * A wall leaves all three: it is passed by jumping, sliding or riding it, not
  * by picking a lane, so it puts no constraint on where the runner ends up.
  */
-const freeLanes = (row) => (row.isWall ? ALL_LANES : ALL_LANES.filter((lane) => !row.lanes.includes(lane)));
+const freeLanes = (row, lanes) => (row.isWall ? lanes : lanes.filter((lane) => !row.lanes.includes(lane)));
 
 /**
  * Slack before a shortfall is called a fault.
@@ -207,15 +209,15 @@ function demand(previous, next) {
   return { seconds, why };
 }
 
-function audit({ runs, seconds }) {
+function audit({ runs, seconds, lanes }) {
   const clock = makeClock(seconds + 30);
   const found = [];
   let pairs = 0;
 
   for (let seed = 1; seed <= runs; seed++) {
-    const placements = simulate(seconds, seed * 7919);
+    const placements = simulate(seconds, seed * 7919, lanes);
     const moved = placements.map((item) => ({ ...item, z: item.metZ }));
-    const rows = describeRows(moved);
+    const rows = describeRows(moved, lanes.length);
     // Which rows contain something coming the other way, and which were built
     // out of more than one pattern. Both are ways a row appears that no single
     // layout ever declared.
@@ -271,31 +273,45 @@ function audit({ runs, seconds }) {
 
 const runs = Number(process.argv[2] ?? 40);
 const seconds = Number(process.argv[3] ?? 420);
-const { found, pairs } = audit({ runs, seconds });
 
-console.log(`${runs}판 × ${seconds}초 · 장애물 쌍 ${pairs.toLocaleString()}개 검사`);
 console.log(`체공 ${AIRTIME.toFixed(2)}초 (스니커즈 ${BOOSTED_AIRTIME.toFixed(2)}초) · 슬라이드 ${SLIDE_TIME}초 · 반응 ${REACTION}초\n`);
 
-if (!found.length) {
-  console.log("피할 수 없는 배치 없음");
-  process.exit(0);
+// Every width the road can reach, not only the one it starts on. A layout that
+// is clearable on three lanes says nothing about the same layout dealt on five:
+// the patterns are built against whatever the road is, so each width is its own
+// table of placements and has to be audited as one.
+const widths = [...new Set([3, ...LANE_WIDTHS])].sort();
+let failed = false;
+
+for (const width of widths) {
+  const lanes = laneSet(width);
+  const { found, pairs } = audit({ runs, seconds, lanes });
+  console.log(`${width}차선 · ${runs}판 × ${seconds}초 · 장애물 쌍 ${pairs.toLocaleString()}개 검사`);
+
+  if (!found.length) {
+    console.log("  피할 수 없는 배치 없음\n");
+    continue;
+  }
+  failed = true;
+
+  // Grouped: one line per kind of failure, with the worst example and how often.
+  const groups = new Map();
+  for (const hit of found) {
+    const key = `${hit.from} → ${hit.to} · ${hit.why} [${hit.tag ?? "-"}]`;
+    const entry = groups.get(key) ?? { key, count: 0, worst: hit };
+    entry.count += 1;
+    if (hit.need - hit.gap > entry.worst.need - entry.worst.gap) entry.worst = hit;
+    groups.set(key, entry);
+  }
+
+  console.log(`  피할 수 없는 배치 ${found.length}건 (${groups.size}종)`);
+  for (const { key, count, worst } of [...groups.values()].sort((a, b) => b.count - a.count)) {
+    console.log(`    ${count}회  ${key}`);
+    console.log(
+      `          최악: ${worst.at.toFixed(0)}초 지점, 간격 ${worst.gap.toFixed(2)}초 / 필요 ${worst.need.toFixed(2)}초 (seed ${worst.seed})`,
+    );
+  }
+  console.log("");
 }
 
-// Grouped: one line per kind of failure, with the worst example and how often.
-const groups = new Map();
-for (const hit of found) {
-  const key = `${hit.from} → ${hit.to} · ${hit.why} [${hit.tag ?? "-"}]`;
-  const entry = groups.get(key) ?? { key, count: 0, worst: hit };
-  entry.count += 1;
-  if (hit.need - hit.gap > entry.worst.need - entry.worst.gap) entry.worst = hit;
-  groups.set(key, entry);
-}
-
-console.log(`피할 수 없는 배치 ${found.length}건 (${groups.size}종)\n`);
-for (const { key, count, worst } of [...groups.values()].sort((a, b) => b.count - a.count)) {
-  console.log(`  ${count}회  ${key}`);
-  console.log(
-    `        최악: ${worst.at.toFixed(0)}초 지점, 간격 ${worst.gap.toFixed(2)}초 / 필요 ${worst.need.toFixed(2)}초 (seed ${worst.seed})`,
-  );
-}
-process.exit(1);
+process.exit(failed ? 1 : 0);

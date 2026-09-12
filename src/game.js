@@ -20,6 +20,7 @@ import {
 } from "./config.js";
 import { CROW, applyCrowGloom, crowVeil, makeCrow, updateCrow } from "./crow.js";
 import { LightningStorm, makeLightning, updateLightning } from "./lightning.js";
+import { closestLane, lanesAt } from "./lanes.js";
 import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
@@ -56,7 +57,14 @@ import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from ".
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
-import { applyLookAtSpeed, applyWorldQuality, createWorld, placeMouth, syncWorld } from "./world.js";
+import {
+  applyLookAtSpeed,
+  applyWorldQuality,
+  createWorld,
+  placeMouth,
+  shapeRoad,
+  syncWorld,
+} from "./world.js";
 
 
 /** Gap kept between the camera and a roof overhead. */
@@ -1413,6 +1421,9 @@ export class Game {
     if (this.world) this.world.mouthZ = null;
     this.sectionId = null;
     this.section = null;
+    /** The road a run opens on, before the score has widened anything. */
+    this.lanes = lanesAt(0);
+    if (this.world) shapeRoad(this.world, this.lanes, 0);
     this.storm?.reset();
     if (this.lightning) this.lightning.root.visible = false;
     // Optional call: the constructor resets the run state before the Screens
@@ -1927,7 +1938,7 @@ export class Game {
    */
   updateStorm(dt) {
     const night = this.state === "playing" && this.lookNow().id === "night";
-    const event = this.storm.update(dt, { night });
+    const event = this.storm.update(dt, { night, lanes: this.lanes });
 
     if (event === "warn") this.audio.rumble();
     if (event === "strike") {
@@ -1948,6 +1959,7 @@ export class Game {
 
   advanceRun(dt) {
     this.runTime += dt;
+    this.advanceRoad(dt);
 
     const phase = phaseAt(this.runTime);
     // The wheel's one nasty face rides on top of the curve rather than
@@ -2017,6 +2029,39 @@ export class Game {
 
     this.hintT -= dt;
     if (this.hintT <= 0) this.screens.hideHint();
+  }
+
+  /**
+   * Widen or narrow the road, and carry the runner with it.
+   *
+   * The width is a function of the score rather than of the clock, like the
+   * crow and the difficulty ladder: time is what a player survived, score is
+   * how well, and the road that changes shape is a reward for getting there
+   * rather than a thing that happens to everybody at ninety seconds.
+   *
+   * A lane can go away with somebody standing on it. That is the one case worth
+   * spelling out, because it is the one where the game could kill a player for
+   * nothing they did: the road is what changed, and no input would have avoided
+   * it. So they are moved to the nearest lane that still exists and the geometry
+   * eases out from under them rather than cutting.
+   */
+  advanceRoad(dt) {
+    const want = lanesAt(this.run.score);
+    if (want.length !== this.lanes.length) {
+      const wider = want.length > this.lanes.length;
+      this.lanes = want;
+      const moved = closestLane(this.player.lane, want);
+      if (moved !== this.player.lane) {
+        this.player.laneFrom = this.player.lane;
+        this.player.laneChangeT = 0;
+        this.player.lane = moved;
+      }
+      this.screens.showToast(
+        wider ? `길이 넓어집니다 · ${want.length}차선` : `길이 좁아집니다 · ${want.length}차선`,
+      );
+      this.audio.speedup();
+    }
+    shapeRoad(this.world, this.lanes, dt);
   }
 
   /**
@@ -2101,6 +2146,7 @@ export class Game {
       } else if (this.state === "playing") {
         applyAction(this.player, act, this.audio, {
           jumpMultiplier: jumpMultiplier(this.run.powerups),
+          lanes: this.lanes,
         });
       }
     }
@@ -2166,6 +2212,9 @@ export class Game {
     const playing = this.state === "playing";
     this.spawner.update(this.player.z, {
       speed: this.speed,
+      // How wide the road is where this layout will land. A wall has to cover
+      // whatever that is to be a wall.
+      lanes: this.lanes,
       // The clock, so the spawner can build each layout for the speed it will
       // actually be met at rather than the one it is placed at. Null on the
       // title screen, which has no run. See PLACEMENT_LEAD_SECONDS.

@@ -1,13 +1,6 @@
 import * as THREE from "three";
-import {
-  BUILDING_COLORS,
-  FOG_COLOR,
-  LANES,
-  MAX_SPEED,
-  SEGMENT_COUNT,
-  SEGMENT_LEN,
-  START_SPEED,
-} from "./config.js";
+import { BUILDING_COLORS, FOG_COLOR, MAX_SPEED, SEGMENT_COUNT, SEGMENT_LEN, START_SPEED } from "./config.js";
+import { LANE_WIDTHS, laneSet, laneX } from "./lanes.js";
 import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
 import { OPEN_CEILING } from "./zones.js";
 
@@ -65,6 +58,66 @@ function recycle(item, cycle, playerZ) {
   while (item.z < floor) item.z += cycle;
   while (item.z > floor + cycle) item.z -= cycle;
   return item.z;
+}
+
+/**
+ * The widest the road can get, which is what the track is actually built for.
+ *
+ * Taken from the ladder rather than written as a number, so widening the ladder
+ * cannot leave a lane with no rails under it.
+ */
+const WIDEST_ROAD = laneSet(Math.max(3, ...LANE_WIDTHS));
+
+/** Metres of ballast either side of the outermost lane. */
+const ROAD_MARGIN = 2;
+/** Where the geometry was cut: three lanes, 8.4m of floor. */
+const BASE_HALF_WIDTH = 4.2;
+
+/**
+ * Reshape the road for a set of lanes.
+ *
+ * Everything is driven off the eased half-width rather than off the lane list
+ * directly, which is what lets a change be a change rather than a cut: the
+ * floor, the kerbs and the walls slide outwards, and a lane becomes visible at
+ * the moment the wall clears it. Toggling the rails on the score instead would
+ * pop a whole lane of track into existence beside the runner while the wall was
+ * still travelling out to meet it.
+ *
+ * @param {object} world
+ * @param {number[]} lanes
+ * @param {number} dt seconds, or 0 to snap (a new run, not a change)
+ */
+export function shapeRoad(world, lanes, dt = 0) {
+  if (!world?.segments?.length || !lanes?.length) return;
+  const lo = laneX(Math.min(...lanes));
+  const hi = laneX(Math.max(...lanes));
+  const wantCentre = (lo + hi) / 2;
+  const wantHalf = (hi - lo) / 2 + ROAD_MARGIN;
+
+  if (dt <= 0 || world.roadHalf == null) {
+    world.roadCentre = wantCentre;
+    world.roadHalf = wantHalf;
+  } else {
+    // Slow enough to read as the road opening, quick enough to be finished
+    // before the layouts built for the new width arrive.
+    const k = 1 - Math.exp(-2.4 * dt);
+    world.roadCentre += (wantCentre - world.roadCentre) * k;
+    world.roadHalf += (wantHalf - world.roadHalf) * k;
+  }
+
+  const centre = world.roadCentre;
+  const half = world.roadHalf;
+  for (const segment of world.segments) {
+    segment.floor.position.x = centre;
+    segment.floor.scale.x = half / BASE_HALF_WIDTH;
+    for (const { mesh, side } of segment.kerbs) mesh.position.x = centre + side * (half + 0.3);
+    for (const { mesh, side } of segment.walls) mesh.position.x = centre + side * (half + 1.3);
+    for (const [lane, part] of segment.laneParts) {
+      // Inside the kerb, with a lane's worth of ballast to spare, so a lane is
+      // never half under the wall.
+      part.visible = Math.abs(laneX(lane) - centre) <= half - 1;
+    }
+  }
 }
 
 export function createWorld(scene, quality) {
@@ -208,38 +261,52 @@ export function createWorld(scene, quality) {
     floor.receiveShadow = quality.shadows;
     g.add(floor);
 
-    LANES.forEach((x) => {
+    // Track is laid for every lane the road can ever have, not for the three it
+    // starts with, and the ones that are not in play are simply hidden. A lane
+    // is a dozen meshes; building them when the road widened would mean
+    // allocating geometry in the middle of a run, at the exact moment the frame
+    // budget is already being spent on the change itself.
+    const laneParts = new Map();
+    WIDEST_ROAD.forEach((lane) => {
+      const x = laneX(lane);
+      const part = new THREE.Group();
       const line = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, SEGMENT_LEN), lineMat);
       line.position.set(x, 0.02, 0);
-      g.add(line);
+      part.add(line);
       [-0.38, 0.38].forEach((ox) => {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, SEGMENT_LEN), railMat);
         rail.position.set(x + ox, 0.05, 0);
-        g.add(rail);
+        part.add(rail);
       });
       const ties = 10;
       for (let t = 0; t < ties; t++) {
         const tie = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.28), woodMat);
         tie.position.set(x, 0.01, -SEGMENT_LEN / 2 + 1.4 + t * (SEGMENT_LEN / ties));
         tie.receiveShadow = quality.shadows;
-        g.add(tie);
+        part.add(tie);
       }
+      g.add(part);
+      laneParts.set(lane, part);
     });
 
+    const kerbs = [];
+    const walls = [];
     [-1, 1].forEach((side) => {
       const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, SEGMENT_LEN), kerbMat);
       kerb.position.set(side * 4.5, 0.05, 0);
       kerb.receiveShadow = quality.shadows;
       g.add(kerb);
+      kerbs.push({ mesh: kerb, side });
 
       const wall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 2.4, SEGMENT_LEN), wallMat);
       wall.position.set(side * 5.5, 1.2, 0);
       wall.receiveShadow = quality.shadows;
       g.add(wall);
+      walls.push({ mesh: wall, side });
     });
 
     scene.add(g);
-    segments.push({ group: g, index: i });
+    segments.push({ group: g, index: i, floor, laneParts, kerbs, walls });
   }
 
   // Skyline: paired towers per slot, with height and depth variety so the
