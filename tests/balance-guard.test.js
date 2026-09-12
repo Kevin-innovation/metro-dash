@@ -8,7 +8,15 @@ import { SLOT_TOP_MULTIPLIER } from "../src/slots.js";
 import { HAZARD_FROM_SCORE } from "../src/spawner.js";
 import { Run } from "../src/run.js";
 import { SaveStore } from "../src/save.js";
-import { TARGET_SCORE_PER_MINUTE, survivalGain } from "../src/scoring.js";
+import {
+  JUMP_BONUS,
+  MAX_COMBO_MULTIPLIER,
+  MOUNT_BONUS,
+  NEAR_MISS_BONUS,
+  SLIDE_BONUS,
+  TARGET_SCORE_PER_MINUTE,
+  survivalGain,
+} from "../src/scoring.js";
 
 const store = () => new SaveStore({ getItem: () => null, setItem: () => {} });
 
@@ -109,5 +117,35 @@ describe("한 판짜리 미션은 한 판 안에 끝낼 수 있어야 한다", (
         expect(def.targets[i], `${def.id} ${i}`).toBeGreaterThanOrEqual(def.targets[i - 1]);
       }
     }
+  });
+});
+
+describe("아슬아슬이 곡선을 흔들지 않는다", () => {
+  it("해낸 것보다 싸다", () => {
+    // 피한 것은 어차피 지나가는 중에 일어난 일이고, 동작은 하러 간 것이다.
+    // 이게 뒤집히면 제일 싼 점수가 아무것도 안 하고 옆으로 붙어 가는 것이 된다.
+    for (const verb of [JUMP_BONUS, SLIDE_BONUS, MOUNT_BONUS]) {
+      expect(NEAR_MISS_BONUS).toBeLessThan(verb);
+    }
+  });
+
+  it("도배해도 동작으로 버는 것보다 적다", () => {
+    // 배수와 비교하면 안 된다 — 룰렛이 ×10 일 때는 슬라이드도 마운트도 똑같이
+    // 열 배라, 아슬아슬만 특별히 위험한 게 아니다. 비교 대상은 같이 곱해지는
+    // 것들이어야 한다.
+    //
+    // 빈도는 실측이다. 레인 가장자리에 붙어 25초를 달리게 해서 초당 0.56회.
+    // 레인 한가운데로 가면 0회 — 안전하게 달리는 사람에게는 아예 안 붙는다.
+    const grazePerSecond = 0.7; // 실측 0.56 에 여유
+    const clearPerSecond = 1.5; // 후반 배치 밀도
+    expect(NEAR_MISS_BONUS * grazePerSecond).toBeLessThan(SLIDE_BONUS * clearPerSecond);
+  });
+
+  it("콤보를 올리지 않는다", () => {
+    // 옆 레인에는 내려가는 내내 뭔가 서 있다. 이게 콤보를 올리면 아무것도
+    // 안 하고도 배수가 유지되고, 배수가 말하는 뜻이 달라진다.
+    const run = new Run(store());
+    for (let i = 0; i < 30; i++) run.addNearMiss();
+    expect(run.combo).toBe(0);
   });
 });

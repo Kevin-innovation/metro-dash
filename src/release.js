@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.22";
+export const VERSION = "4.30";
 
 /**
  * Which season the board is playing.
@@ -68,6 +68,19 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.30",
+    date: "2026-09-12",
+    kind: "major",
+    title: "아슬아슬이 돌아왔습니다",
+    notes: [
+      "장애물을 스치듯 지나가면 「아슬아슬!」이 뜨고 점수가 붙습니다. 지금까지는 멀리 돌아서 피나 가장자리를 긁고 지나가나 똑같이 0점이었어요 — 같은 장애물을 같은 결과로 넘겼으니 같은 값이라는 건데, 실제로는 완전히 다른 플레이입니다.",
+      "레인 한가운데로 달리면 한 번도 안 뜹니다. 옆에 서 있는 걸 향해 붙어 갔거나, 늦게 피해서 아슬아슬하게 빠져나갔을 때만 붙어요.",
+      "값은 게임에서 제일 쌉니다. 점프나 슬라이드보다 싸고, 가장자리에 붙어서 판 내내 긁어모아도 2% 정도예요 — 선이 거기로 날 때 챙기는 것이지 그거 하려고 판을 짜는 게 아닙니다.",
+      "콤보는 안 올라갑니다. 옆 레인에는 내려가는 내내 뭔가 서 있어서, 이게 콤보를 올리면 아무것도 안 하고도 배수가 유지됩니다.",
+      "게임오버 카드에 아슬아슬 횟수가 다시 나옵니다.",
+    ],
+  },
   {
     version: "4.22",
     date: "2026-09-12",

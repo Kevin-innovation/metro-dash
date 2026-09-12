@@ -1,10 +1,11 @@
-import { LANE_TOLERANCE, lerp, sweptHit } from "./collision.js";
+import { LANE_TOLERANCE, lerp, nearMiss, sweptHit } from "./collision.js";
 import {
   COLLIDE_PAD_Y,
   MAGNET_RANGE,
   PICKUP_DEPTH,
 } from "./config.js";
 import { POWERUPS } from "./powerups.js";
+import { LATE_DODGE_SECONDS, NEAR_MISS_RANGE } from "./scoring.js";
 
 /** Half-range in which a magnet-dragged pickup is simply absorbed. */
 const MAGNET_GRAB = 1.35;
@@ -214,7 +215,37 @@ export class Interactions {
       if (player.prevZ - item.prevZ >= 0 || player.z - item.z < 0) continue;
       // Measured against the same half-width the crash test uses, so the lane
       // that counts as "through it" is exactly the lane that could have hit it.
-      if (Math.abs(player.x - item.mesh.position.x) >= LANE_TOLERANCE) continue;
+      //
+      // Outside it, the obstacle was not cleared — but it may still have been
+      // squeezed past, and that is the one thing about getting by an obstacle
+      // the run never had an opinion on. See NEAR_MISS_BONUS.
+      if (Math.abs(player.x - item.mesh.position.x) >= LANE_TOLERANCE) {
+        const grazed = nearMiss(
+          player,
+          {
+            x: item.mesh.position.x,
+            minY: item.minY,
+            maxY: item.maxY,
+          },
+          {
+            laneRange: NEAR_MISS_RANGE,
+            heightRange: NEAR_MISS_RANGE,
+            padY: COLLIDE_PAD_Y,
+            // A swerve that settled a second ago is a lane change, not an
+            // escape. Only a late one counts past the measured band.
+            lateDodge: player.laneChangeT <= LATE_DODGE_SECONDS,
+          },
+        );
+        if (grazed === "lane") {
+          item.scored = true;
+          tally.tricks.push({
+            kind: "graze",
+            multiplier: this.run.multiplier(),
+            gain: this.run.addNearMiss(),
+          });
+        }
+        continue;
+      }
       item.scored = true;
       if (item.type === "sign") tally.gates += 1;
       else if (item.type === "barrier") tally.barriers += 1;

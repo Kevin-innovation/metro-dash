@@ -159,7 +159,46 @@ export const MOUNT_BONUS = perSecond(0.06);
 /** Bonus for hopping straight from one roof to the next. */
 export const HOP_BONUS = perSecond(0.05);
 /** Bonus for squeezing past an obstacle instead of taking the safe line. */
-export const NEAR_MISS_BONUS = perSecond(0.08);
+/**
+ * What squeezing past an obstacle is worth.
+ *
+ * The one thing the run had no opinion about. Dodging into the far lane a
+ * second early and shaving the edge of a crate at the last moment ended the
+ * same way, so they paid the same — nothing — and the only question every
+ * obstacle asked was whether you got past it, never how.
+ *
+ * The cheapest thing on the board, and deliberately. A near miss is something
+ * that happens *while* you were getting past an obstacle anyway; the verbs are
+ * things you went and did.
+ *
+ * It also has to stay cheap because the safe version of farming it is dull:
+ * ride the edge of your lane all the way down and collect. Measured, that pays
+ * about two per cent of a run — worth taking when the line puts you there,
+ * never worth playing the whole game for. Down the middle of a lane it fires
+ * exactly zero times, which is the reading that matters: this is a garnish on a
+ * save, not an economy.
+ */
+export const NEAR_MISS_BONUS = perSecond(0.025);
+
+/**
+ * How far past the collision box still counts as a squeeze.
+ *
+ * LANE_TOLERANCE is where an obstacle starts hitting you; this is how much
+ * further out the miss still reads as one. Half a metre — a runner holding the
+ * middle of their lane is 2.2 metres away and will never trigger it, so this
+ * only pays somebody who steered towards the thing.
+ */
+export const NEAR_MISS_RANGE = 1.7;
+
+/**
+ * And the window in which a swerve counts as late.
+ *
+ * A lane change settles in about a fifth of a second, so a runner who moved
+ * early is fully in the next lane by the time the obstacle goes by and no
+ * lateral measurement can tell them apart from somebody who was never in
+ * danger. The clock can: this is how recently the lane changed.
+ */
+export const LATE_DODGE_SECONDS = 0.26;
 /** Points per metre while riding a vehicle roof, on top of the distance score. */
 export const ROOF_RIDE_RATE = 20.6;
 

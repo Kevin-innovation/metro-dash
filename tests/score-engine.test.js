@@ -7,6 +7,7 @@ import {
   JUMP_BONUS,
   MOUNT_BONUS,
   HOP_BONUS,
+  NEAR_MISS_BONUS,
   SLIDE_BONUS,
   comboWindowAt,
   readableGain,
@@ -63,9 +64,22 @@ describe("clears feed the combo", () => {
     expect(run.scoreBonus).toBe(SLIDE_BONUS + JUMP_BONUS);
   });
 
-  it("is still not the near-miss bonus, which is gone", () => {
+  it("아슬아슬은 따로 값을 받되 콤보는 안 올린다", () => {
+    // 콤보는 런이 해낸 동작의 기록이다 — 슬라이드, 점프, 마운트. 피하기는
+    // 그중 하나가 아니고, 게다가 상시다: 옆 레인에는 내려가는 내내 뭔가 서
+    // 있으니 이걸 콤보에 넣으면 아무것도 안 하고도 체인이 유지된다.
     const run = new Run(store());
-    expect(run.addNearMiss).toBeUndefined();
+    const gain = run.addNearMiss();
+    expect(gain).toBeGreaterThan(0);
+    expect(run.scoreBonus).toBe(gain);
+    expect(run.combo).toBe(0);
+    expect(run.metrics.nearMisses).toBe(1);
+  });
+
+  it("아슬아슬은 슬라이드보다 싸다", () => {
+    // 피한 것은 어차피 지나가는 중에 일어난 일이고, 동작은 하러 간 것이다.
+    expect(NEAR_MISS_BONUS).toBeLessThan(JUMP_BONUS);
+    expect(NEAR_MISS_BONUS).toBeLessThan(SLIDE_BONUS);
   });
 
   it("a gate is worth more than a crate, and a mount more than either", () => {

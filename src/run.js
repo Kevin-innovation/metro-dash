@@ -16,6 +16,7 @@ import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
 import {
   COIN_BASE,
+  NEAR_MISS_BONUS,
   clearBonus,
   comboWindowAt,
   mountBonus,
@@ -275,6 +276,25 @@ export class Run {
    *
    * @returns {number} points awarded, for the readout beside the label
    */
+  /**
+   * Credit a squeeze past something the runner did not go through.
+   *
+   * Points, and deliberately not a combo tick. The combo is the run's record of
+   * verbs — slides, jumps, mounts, things a player went and did — and a dodge
+   * is not one of those. It is also constant: obstacles stand in the lanes
+   * beside you the whole way down, so feeding this into the combo would keep a
+   * chain alive without the player ever doing anything with it, and the
+   * multiplier would stop meaning what it says.
+   *
+   * @returns {number} points awarded, for the readout beside the label
+   */
+  addNearMiss() {
+    const gain = readableGain(NEAR_MISS_BONUS * this.multiplier());
+    this.scoreBonus += gain;
+    this.metrics.nearMisses += 1;
+    return gain;
+  }
+
   addClear(kind) {
     const gain = readableGain(clearBonus(kind) * this.multiplier());
     this.scoreBonus += gain;

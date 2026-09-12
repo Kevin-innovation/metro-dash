@@ -483,6 +483,7 @@ const TALLY_ROWS = [
     label: POWERUPS[id].name,
     always: true,
   })),
+  { key: "nearMisses", icon: "💨", label: "아슬아슬", always: true },
   { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true },
   { key: "gates", icon: "🚧", label: "게이트", always: true },
   { key: "boards", icon: "🛹", label: "호버보드", always: false },

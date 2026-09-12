@@ -1207,7 +1207,7 @@ export class Screens {
     // Korean, because the number beside them is the point and a player should
     // not have to work out what the word above it was. 「ROOF! +244」 was two
     // puzzles stacked: which move is this, and what is 244.
-    const labels = { slide: "슬라이드!", jump: "점프!", roof: "지붕!" };
+    const labels = { slide: "슬라이드!", jump: "점프!", roof: "지붕!", graze: "아슬아슬!" };
     const points = Math.round(gain);
     // The multiplier beside the number, because without it the number is not
     // readable. 「지붕 +305」 is 200 for the roof, a quarter more for the combo
