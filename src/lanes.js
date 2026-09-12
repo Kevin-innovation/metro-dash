@@ -39,14 +39,23 @@ export function laneX(lane) {
 /**
  * The score at which the road stops being three lanes wide for good.
  *
- * Half a million: the point the difficulty ladder was already built around, and
- * late enough that a player meeting it has the lane change itself down cold.
- * Nobody should be learning what a road is while it is changing shape.
+ * Three hundred thousand. It was half a million — the number the difficulty
+ * ladder is built around — and that was late enough that most runs never saw
+ * the road move at all, which made the most distinctive thing in the game a
+ * thing almost nobody met. 30만 is still well past the point where a player has
+ * the lane change itself down cold; nobody is learning what a road is while it
+ * is changing shape.
  */
-export const LANES_FROM_SCORE = 500_000;
+export const LANES_FROM_SCORE = 300_000;
 
-/** Points between one width and the next, once it has started. */
-export const LANES_EVERY = 120_000;
+/**
+ * Points between one width and the next, once it has started.
+ *
+ * Fifty thousand, so the road is somewhere different every fifteen seconds or
+ * so rather than twice in a good run. At the old 12만 the shape was closer to a
+ * setting than to a rhythm, and a rhythm is the entire point of it.
+ */
+export const LANES_EVERY = 50_000;
 
 /**
  * The widths, in the order they come round.

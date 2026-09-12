@@ -19,8 +19,14 @@ import {
   TITLE_SPEED,
 } from "./config.js";
 import { CROW, applyCrowGloom, crowVeil, makeCrow, updateCrow } from "./crow.js";
-import { LightningStorm, makeLightning, updateLightning } from "./lightning.js";
+import {
+  LightningStorm,
+  STORM_FROM_SCORE,
+  makeLightning,
+  updateLightning,
+} from "./lightning.js";
 import { closestLane, lanesAt } from "./lanes.js";
+import { debutsBetween } from "./debuts.js";
 import { EntityPool, makeOncoming } from "./entities.js";
 import { Input } from "./input.js";
 import { Interactions } from "./interactions.js";
@@ -1423,6 +1429,8 @@ export class Game {
     this.section = null;
     /** The road a run opens on, before the score has widened anything. */
     this.lanes = lanesAt(0);
+    /** Score at the last debut check, so each line is said once per run. */
+    this.lastDebutScore = 0;
     if (this.world) shapeRoad(this.world, this.lanes, 0);
     this.storm?.reset();
     if (this.lightning) this.lightning.root.visible = false;
@@ -1937,8 +1945,14 @@ export class Game {
    * absorbs everything, because a player who spent it is owed that.
    */
   updateStorm(dt) {
-    const night = this.state === "playing" && this.lookNow().id === "night";
-    const event = this.storm.update(dt, { night, lanes: this.lanes });
+    // Earned, and outdoors. `ceiling` is what the zone table calls a roof over
+    // the track, so this covers the tunnel and the station concourse and
+    // anything added later that has one, without naming any of them.
+    const open =
+      this.state === "playing" &&
+      this.run.score >= STORM_FROM_SCORE &&
+      this.lookNow().ceiling == null;
+    const event = this.storm.update(dt, { open, lanes: this.lanes });
 
     if (event === "warn") this.audio.rumble();
     if (event === "strike") {
@@ -1959,6 +1973,7 @@ export class Game {
 
   advanceRun(dt) {
     this.runTime += dt;
+    this.announceDebuts();
     this.advanceRoad(dt);
 
     const phase = phaseAt(this.runTime);
@@ -2029,6 +2044,26 @@ export class Game {
 
     this.hintT -= dt;
     if (this.hintT <= 0) this.screens.hideHint();
+  }
+
+  /**
+   * Say what is about to start happening, before it starts.
+   *
+   * Three things switch on at a score — the crow egg, the road changing width,
+   * the storm — and each of them used to arrive with no notice at all. Measured
+   * against the span since the last step rather than against the score now,
+   * because the score moves in jumps and a threshold can be stepped over rather
+   * than landed on.
+   */
+  announceDebuts() {
+    const score = this.run.score;
+    const before = this.lastDebutScore ?? 0;
+    this.lastDebutScore = score;
+    if (score <= before) return;
+    for (const debut of debutsBetween(before, score)) {
+      this.screens.showToast(debut.text);
+      this.audio.mission();
+    }
   }
 
   /**

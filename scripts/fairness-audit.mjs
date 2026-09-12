@@ -67,7 +67,7 @@ function seededRandom(seed) {
  * reason they are placed so far ahead, and auditing their spawn position would
  * pass layouts the player never survives.
  */
-function simulate(seconds, seed, lanes) {
+function simulate(seconds, seed, lanes, score) {
   const random = Math.random;
   Math.random = seededRandom(seed);
   try {
@@ -111,6 +111,11 @@ function simulate(seconds, seed, lanes) {
         pressure: pressureAt(time),
         slideBias: schedule.lookAt(time).slideBias,
         lanes,
+        // Past every threshold, so the layouts that only exist above one — the
+        // crow egg above all, which is now one layout in three — are actually
+        // in the deck being audited. Left at the default this swept a track
+        // that never dealt an egg and called it the whole game.
+        score,
         oncomingSpeed: oncomingSpeedAt(phaseId),
         eventPatterns: schedule.eventAt(time)?.event.patterns ?? null,
         tutorial: true,
@@ -209,13 +214,13 @@ function demand(previous, next) {
   return { seconds, why };
 }
 
-function audit({ runs, seconds, lanes }) {
+function audit({ runs, seconds, lanes, score }) {
   const clock = makeClock(seconds + 30);
   const found = [];
   let pairs = 0;
 
   for (let seed = 1; seed <= runs; seed++) {
-    const placements = simulate(seconds, seed * 7919, lanes);
+    const placements = simulate(seconds, seed * 7919, lanes, score);
     const moved = placements.map((item) => ({ ...item, z: item.metZ }));
     const rows = describeRows(moved, lanes.length);
     // Which rows contain something coming the other way, and which were built
@@ -281,11 +286,13 @@ console.log(`체공 ${AIRTIME.toFixed(2)}초 (스니커즈 ${BOOSTED_AIRTIME.toF
 // the patterns are built against whatever the road is, so each width is its own
 // table of placements and has to be audited as one.
 const widths = [...new Set([3, ...LANE_WIDTHS])].sort();
+/** Above the crow, the road and the storm, so every layout is in the deck. */
+const SCORE = 1_000_000;
 let failed = false;
 
 for (const width of widths) {
   const lanes = laneSet(width);
-  const { found, pairs } = audit({ runs, seconds, lanes });
+  const { found, pairs } = audit({ runs, seconds, lanes, score: SCORE });
   console.log(`${width}차선 · ${runs}판 × ${seconds}초 · 장애물 쌍 ${pairs.toLocaleString()}개 검사`);
 
   if (!found.length) {

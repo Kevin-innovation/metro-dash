@@ -126,47 +126,59 @@ const POWERUP_EVERY = 6;
 /**
  * When the crow egg starts appearing at all, and how often once it does.
  *
- * It used to be dealt from the fourteenth layout of every run, one in
- * seventeen, and to speed up past a hundred thousand. Both numbers were wrong,
- * in opposite directions.
- *
- * The frenzy was far worse than it read on paper. One egg every five layouts
- * is one every six seconds against a crow that lasts four and a half, so a
- * five-minute run past the threshold spent 77% of itself unable to see. That is
- * not "the bird takes over from the speed curve", it is the lights going out.
- *
- * And at the other end it was arriving far too early. A player still learning
- * which lane to be in was meeting a trap that takes their sight away — and
- * since the magnet now drags the egg in, the power-up that beginners like best
- * was the one delivering it. "Collect everything" is the first thing this game
- * teaches and the crow is the first thing that punishes it, which is a fine
- * lesson deep into a run and a reason to stop playing in the first ten seconds.
- *
- * So the bird is an endgame animal now. Nothing below the threshold, one in
- * nine above it — about eleven seconds apart, which is a real and constant
- * pressure without being a blindfold. One threshold and one cadence: a run
- * either has crows in it or does not, and a player knows which.
- *
  * Keyed to score rather than to the clock, as it always was. Time is what the
  * player survived; score is how well, and the run that should get hard is the
  * one going well.
  *
- * Five hundred thousand, because that is the number the run is built around:
- * 50만 is where the game is supposed to turn brutal, and the bird is the
- * strongest thing it has to turn brutal with.
+ * This has moved a long way, in both directions, and the history is worth
+ * keeping because both ends were measured rather than argued.
  *
- * It was seven hundred thousand, carried over from a scale that no longer
- * exists and never re-anchored when the scoring moved to seconds. Measured
- * against the curve that shipped, that put the first egg at 147 seconds of a
- * 180-second run for an ordinary player and past the finish line entirely for a
- * new one — the bird had effectively been removed from the game and nothing
- * said so. At 50만 it arrives around 115 seconds, which is the last minute of a
- * good run and the stretch the whole difficulty ladder was compressed to reach.
+ * It sat at one egg every five layouts once — one every six seconds against a
+ * crow that lasts four and a half — and a long run past the threshold spent
+ * 77% of itself unable to see. Not 「the bird takes over from the speed curve」;
+ * the lights going out. It then sat at one in nine from 50만, which is a real
+ * and constant pressure, and late enough that most runs never met it.
+ *
+ * It is now one in three from 15만, which is far more bird than either of
+ * those. That is a deliberate call and not a drift: the egg is not the crow.
+ * It is a coin line with a trap in it and a free lane beside it, so meeting one
+ * every three layouts is meeting a *decision* every three layouts, and a player
+ * who leaves the line alone is never blinded at all. What the cadence actually
+ * sets is how often the game asks 「이 코인 줄, 정말 먹을 거냐」.
+ *
+ * 15만 rather than 50만 for the same reason. At 50만 the question only ever got
+ * asked of players who were already winning; a minute into an ordinary run is
+ * where a coin line is still being taken on trust, and that is when the trust
+ * is worth testing.
  */
-export const HAZARD_FROM_SCORE = 500_000;
-const HAZARD_EVERY = 9;
-/** How far either side of that cadence an egg may fall. */
-const HAZARD_SPREAD = 3;
+export const HAZARD_FROM_SCORE = 150_000;
+const HAZARD_EVERY = 3;
+/**
+ * The same slot's cadence before the bird is in the game.
+ *
+ * Below the threshold this slot deals the coin line without the trap in it, and
+ * that is deliberate: the egg pattern is one of the few genuine rests in the
+ * table, and skipping the slot entirely hands those layouts back to the
+ * ordinary draw and tightens the opening — the opposite of the point, since the
+ * reason the bird is not in the early game is that the early game is where
+ * people are still learning.
+ *
+ * But it cannot share the egg's cadence any more. At one layout in nine a rest
+ * every nine layouts is a rest; at one in three it is a third of the opening
+ * spent on coin lines, and the first 15만 of every run would have been a
+ * different, emptier game than the one after it. So the rest keeps the cadence
+ * it has always had and only the bird runs fast.
+ */
+const REST_EVERY = 9;
+/**
+ * How far either side of that cadence an egg may fall.
+ *
+ * One, not the three it was. The jitter is there so an egg cannot be predicted
+ * by counting layouts, and at a cadence of three a spread of three reaches zero
+ * — which does not mean 「sometimes sooner」, it means the countdown lands due
+ * on the very next layout and the jitter has quietly become no cadence at all.
+ */
+const HAZARD_SPREAD = 1;
 
 /**
  * How often a diamond is dealt, and how long the run waits for the first.
@@ -297,7 +309,7 @@ export class Spawner {
   reset(seed = randomSeed()) {
     this.rng = makeRng(seed);
     this.powerupDeck = [];
-    this.hazardIn = HAZARD_EVERY;
+    this.hazardIn = REST_EVERY;
     // Offset from the diamond and the power-up cadences, so the three do not
     // pile onto the same layout and leave the rest of the run untouched.
     this.breathIn = Math.ceil(BREATH_EVERY / 2);
@@ -545,21 +557,14 @@ export class Spawner {
     // jitter rather than tested against a fixed multiple, so an egg cannot be
     // predicted by counting layouts.
     //
-    // The countdown runs the whole run and the score decides only what lands in
-    // the slot. Gating the countdown itself was the first attempt, and it made
-    // the early game *harder*: the egg pattern is a coin line with a trap in it
-    // and a free lane beside it, which is one of the few genuine rests in the
-    // table. Skipping the slot handed those layouts back to the ordinary draw
-    // and tightened the opening minutes by a couple of percent — the opposite
-    // of the point, since the reason the bird was moved out of the early game
-    // is that the early game is where people are still learning.
-    //
-    // So below the threshold the same slot deals the coin line without the
-    // trap. The rhythm of the run is identical either side of two hundred
-    // thousand; what changes is whether there is something in the line.
+    // The countdown runs the whole run; the score decides what lands in the
+    // slot and how fast the slot comes back round. Below the threshold it is a
+    // coin line with nothing in it, on the slow cadence — see REST_EVERY.
     if (hazardDue) {
-      this.hazardIn = HAZARD_EVERY + Math.floor(this.rng() * HAZARD_SPREAD * 2) - HAZARD_SPREAD;
-      if (score >= HAZARD_FROM_SCORE) return crowEggPattern(z, context);
+      const hatching = score >= HAZARD_FROM_SCORE;
+      const cadence = hatching ? HAZARD_EVERY : REST_EVERY;
+      this.hazardIn = cadence + Math.floor(this.rng() * HAZARD_SPREAD * 2) - HAZARD_SPREAD;
+      if (hatching) return crowEggPattern(z, context);
       const rest = patternById("coins");
       if (rest) return rest.build(context);
     }

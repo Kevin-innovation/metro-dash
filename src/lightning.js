@@ -3,7 +3,7 @@ import { ALL_LANES } from "./patterns.js";
 import { laneX } from "./lanes.js";
 
 /**
- * The night storm.
+ * The storm.
  *
  * Everything else that can kill you is a thing on the track: it is placed a
  * known distance ahead, it arrives at a known speed, and the fairness audit can
@@ -30,10 +30,23 @@ import { laneX } from "./lanes.js";
  * longer: the decision was made during the warning, and stretching the danger
  * out past it would start killing players for a choice they already got right.
  *
- * Night only. It is the one zone dark enough for a flash to read as a flash,
- * and confining it there makes the storm something a run passes through rather
- * than weather it lives in.
+ * Not night only, and not anywhere with a roof.
+ *
+ * It started as a night thing, on the reasoning that darkness is what makes a
+ * flash read as a flash. That made it weather a run passed through two or three
+ * times rather than a hazard the run has, and the night zone is 40 seconds of a
+ * run that no longer has an end — so most of a long run had no storm in it at
+ * all. It is keyed to score now, like the crow and the road: time is what the
+ * player survived, score is how well.
+ *
+ * The one place it cannot happen is under a ceiling. A bolt that comes through
+ * a tunnel roof or a station canopy is not difficulty, it is a bug that happens
+ * to kill you, and the rule is the physical one rather than a list of zone
+ * names so a zone added later cannot forget to be on it.
  */
+
+/** The score from which the sky is in play at all. */
+export const STORM_FROM_SCORE = 400_000;
 
 /** How long a strike is painted on the ground before it lands. */
 export const WARN_SECONDS = 1.2;
@@ -46,11 +59,11 @@ export const STRIKE_PERIOD = 4.4;
 export const STRIKE_SPREAD = 1.3;
 
 /**
- * Seconds of night that pass before the first bolt.
+ * Seconds under open sky that pass before the first bolt.
  *
- * The zone change is already a lot to take in — the sky, the fog and the ground
- * all move at once — and a strike landing inside that is read as part of the
- * scenery rather than as something aimed at you.
+ * Coming out of a tunnel is already a lot to take in — the sky, the fog and the
+ * ground all move at once — and a strike landing inside that is read as part of
+ * the scenery rather than as something aimed at you.
  */
 export const FIRST_STRIKE_AFTER = 2.2;
 
@@ -77,7 +90,7 @@ export class LightningStorm {
     this.nextIn = FIRST_STRIKE_AFTER;
     /** True for the frames the sky is actually lit. */
     this.flash = 0;
-    this.wasNight = false;
+    this.wasOpen = false;
   }
 
   /** The lane that will be hit, while it is only a warning. */
@@ -95,23 +108,25 @@ export class LightningStorm {
   /**
    * Advance the storm.
    *
-   * Leaving the night puts everything back rather than letting a warning follow
-   * the run out into daylight, where there is nothing on screen to explain it.
+   * Running under a roof puts everything back rather than letting a warning
+   * follow the runner into a tunnel, where a bolt could not reach and there is
+   * nothing on screen to explain the mark on the ground.
    *
    * @param {number} dt
-   * @param {{ night: boolean }} opts
+   * @param {{ open: boolean, lanes?: number[] }} opts `open` is 「the sky can
+   *   reach the runner and the run has earned a storm」
    * @returns {"warn"|"strike"|null} what happened this step, for the sound and
    *   the screen to answer
    */
-  update(dt, { night, lanes = ALL_LANES }) {
+  update(dt, { open, lanes = ALL_LANES }) {
     this.flash = Math.max(0, this.flash - dt * 3.4);
 
-    if (!night) {
-      if (this.wasNight) this.reset();
+    if (!open) {
+      if (this.wasOpen) this.reset();
       return null;
     }
-    if (!this.wasNight) {
-      this.wasNight = true;
+    if (!this.wasOpen) {
+      this.wasOpen = true;
       this.nextIn = FIRST_STRIKE_AFTER;
     }
 
@@ -151,7 +166,7 @@ export class LightningStorm {
  *
  * One object per storm rather than one per strike: there is only ever a single
  * strike alive, so this is moved and shown rather than built and thrown away —
- * a run passes through several nights and none of them should be allocating.
+ * a run passes through several tunnels and none of them should be allocating.
  *
  * The mark is drawn on the ground instead of in the air because the ground is
  * where the player is looking. A glow hanging in the sky is scenery; a lane

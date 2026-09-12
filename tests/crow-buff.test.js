@@ -70,16 +70,31 @@ describe("when the crow is dealt at all", () => {
     expect(dealEggs(400, HAZARD_FROM_SCORE)).toBeGreaterThan(0);
   });
 
-  it("is dealt at a rate that leaves the track readable", () => {
-    // The number this replaces was one egg every five layouts, which is one
-    // every six seconds against a crow that lasts four and a half: 77% of a
-    // five-minute run spent unable to see. That is not pressure, it is the
-    // lights going out.
+  it("is dealt often enough to be a question and not an event", () => {
+    // One egg in three layouts. Deliberately far more bird than the one in nine
+    // this replaces, and worth saying why it is not the one-in-five that was
+    // measured at 77% of a run spent blind.
+    //
+    // That measurement was of a *crow*, not of an egg. The egg is a coin line
+    // with something in it and a free lane beside it: a player who leaves the
+    // line alone is never blinded at all, however many are dealt. What the
+    // cadence sets is how often the game asks the question, and asking it every
+    // three layouts is what makes the coin line a decision rather than scenery.
     const layouts = 400;
-    const eggs = dealEggs(layouts, HAZARD_FROM_SCORE);
-    const every = layouts / eggs;
-    expect(every).toBeGreaterThan(7);
-    expect(every).toBeLessThan(12);
+    const every = layouts / dealEggs(layouts, HAZARD_FROM_SCORE);
+    expect(every).toBeGreaterThan(2.4);
+    expect(every).toBeLessThan(4);
+  });
+
+  it("never collapses into an egg every single layout", () => {
+    // The jitter exists so an egg cannot be predicted by counting layouts, and
+    // it is written as 「cadence ± spread」 — so a spread that reaches the
+    // cadence does not mean 「sometimes sooner」, it means the countdown lands
+    // due on the very next layout and there is no cadence left. At the old
+    // spread of three this cadence would have done exactly that.
+    const layouts = 600;
+    const every = layouts / dealEggs(layouts, HAZARD_FROM_SCORE);
+    expect(every).toBeGreaterThan(2);
   });
 
   it("never deals one to the title screen's preview", () => {

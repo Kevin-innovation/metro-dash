@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.51";
+export const VERSION = "4.60";
 
 /**
  * Which season the board is playing.
@@ -68,6 +68,19 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.60",
+    date: "2026-09-12",
+    kind: "major",
+    title: "까마귀·차선·번개가 훨씬 일찍, 자주 나옵니다",
+    notes: [
+      "까마귀 알이 15만점부터 나옵니다 (전에는 50만). 레이아웃 3개마다 한 번씩이라 훨씬 자주 만나요 — 알은 함정이 든 코인 줄이고 옆에 항상 빈 레인이 있으니, 줄을 안 먹으면 까마귀도 안 붙습니다. 「이 코인 줄 정말 먹을까」를 계속 묻는 게 목적이에요.",
+      "길 폭이 30만점부터 바뀝니다 (전에는 50만). 5만점마다 한 칸씩이라 15초쯤에 한 번씩 모양이 달라집니다.",
+      "번개가 40만점부터, 밤이 아니어도 칩니다. 대신 지붕 아래에서는 안 쳐요 — 터널이나 역 구내에서는 하늘이 안 보이니까요.",
+      "셋 다 나오기 전에 미리 알려 드립니다. 어떤 게 언제 시작되는지 모르고 만나면 그건 그냥 버그처럼 느껴지니까요.",
+      "15만점 전까지는 아무것도 안 바뀝니다. 배우는 동안은 예전 그대로예요.",
+    ],
+  },
   {
     version: "4.51",
     date: "2026-09-12",

@@ -45,13 +45,18 @@ describe("판이 읽히는 숫자들", () => {
     expect(survivalGain(60)).toBe(TARGET_SCORE_PER_MINUTE);
   });
 
-  it("까마귀는 벽과 같은 숫자에 있다", () => {
-    // 벽은 50만이고, 까마귀는 벽을 벽으로 만드는 물건이다. 문턱이 스케일과
-    // 따로 놀면 — 실제로 그랬다 — 새가 조용히 게임에서 빠진다.
-    const wall = TARGET_SCORE_PER_MINUTE * 2.5;
-    expect(HAZARD_FROM_SCORE).toBe(wall);
-    // 그리고 판 안에서 닿을 수 있는 곳이어야 한다.
-    expect(HAZARD_FROM_SCORE).toBeLessThan(survivalGain(TYPICAL_RUN_SECONDS) * 1.5);
+  it("까마귀는 보통 판 안에서 만난다", () => {
+    // 이 단언이 지키는 건 문턱의 값이 아니라 「새가 조용히 게임에서 빠지는
+    // 일은 없다」이다. 실제로 그런 적이 있다 — 70만에 남아 있던 동안 스케일이
+    // 두 번 바뀌었고, 아무도 이 숫자를 같이 옮기지 않아서 초보는 까마귀를 한
+    // 번도 못 봤다. 어떤 테스트도 그렇게 말해주지 않았다.
+    //
+    // 그래서 스케일에서 유도한다. 1분이 20만이므로 이건 45초 언저리, 보통
+    // 플레이가 확실히 지나가는 지점이다.
+    expect(HAZARD_FROM_SCORE).toBeLessThan(TARGET_SCORE_PER_MINUTE);
+    // 그러면서 첫 몇십 초는 아니어야 한다. 코인 줄을 믿고 먹는 법을 배우기
+    // 전에 그 믿음을 시험하면 그건 함정이 아니라 그냥 사고다.
+    expect(HAZARD_FROM_SCORE).toBeGreaterThan(TARGET_SCORE_PER_MINUTE * 0.5);
   });
 });
 

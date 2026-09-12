@@ -4,6 +4,7 @@ import { ALL_LANES } from "../src/patterns.js";
 import {
   FIRST_STRIKE_AFTER,
   LightningStorm,
+  STORM_FROM_SCORE,
   STRIKE_PERIOD,
   STRIKE_SECONDS,
   STRIKE_SPREAD,
@@ -19,13 +20,13 @@ const sequence = (values) => {
 };
 
 /** Run the storm forward and collect what it did. */
-const storm = (seconds, { night = true, rng = () => 0.5, dt = 1 / 60 } = {}) => {
+const storm = (seconds, { open = true, rng = () => 0.5, dt = 1 / 60 } = {}) => {
   const s = new LightningStorm(rng);
   const events = [];
   const lethalLanes = new Set();
   let lethalFrames = 0;
   for (let t = 0; t < seconds; t += dt) {
-    const event = s.update(dt, { night: typeof night === "function" ? night(t) : night });
+    const event = s.update(dt, { open: typeof open === "function" ? open(t) : open });
     if (event) events.push({ t, event, lane: s.strike?.lane ?? null });
     if (s.danger != null) {
       lethalLanes.add(s.danger);
@@ -35,7 +36,7 @@ const storm = (seconds, { night = true, rng = () => 0.5, dt = 1 / 60 } = {}) => 
   return { s, events, lethalLanes, lethalSeconds: lethalFrames * dt };
 };
 
-describe("밤 번개", () => {
+describe("번개", () => {
   it("예고가 반응 시간보다 길다", () => {
     // The whole fairness argument, and the only one that can be made here: a
     // bolt is not on the track, so there is no approach to audit. What there
@@ -59,7 +60,7 @@ describe("밤 번개", () => {
     const dt = 1 / 120;
     const s = new LightningStorm(sequence([0.05, 0.4, 0.95, 0.6, 0.1]));
     for (let t = 0; t < 120; t += dt) {
-      s.update(dt, { night: true });
+      s.update(dt, { open: true });
       const live = [s.warning?.lane, s.danger].filter((lane) => lane != null);
       expect(new Set(live).size, `t=${t.toFixed(2)}`).toBeLessThanOrEqual(1);
       if (s.danger != null) {
@@ -76,7 +77,7 @@ describe("밤 번개", () => {
     let warnedFor = 0;
     let lastLane = null;
     for (let t = 0; t < 180; t += dt) {
-      s.update(dt, { night: true });
+      s.update(dt, { open: true });
       if (s.warning) {
         if (s.warning.lane !== lastLane) {
           lastLane = s.warning.lane;
@@ -92,29 +93,29 @@ describe("밤 번개", () => {
     }
   });
 
-  it("낮에는 아무 일도 없다", () => {
-    const { events, lethalSeconds } = storm(120, { night: false });
+  it("지붕 아래에서는 아무 일도 없다", () => {
+    const { events, lethalSeconds } = storm(120, { open: false });
     expect(events).toEqual([]);
     expect(lethalSeconds).toBe(0);
   });
 
-  it("밤이 끝나면 예고도 같이 끝난다", () => {
-    // A warning that follows the run out into daylight has nothing on screen
-    // to explain it, and would kill somebody in a lane that looks clear.
+  it("터널에 들어가면 예고도 같이 끝난다", () => {
+    // A warning that follows the runner under a roof has nothing on screen to
+    // explain it, and would kill somebody in a lane that looks clear.
     const dt = 1 / 120;
     const s = new LightningStorm(() => 0.5);
     for (let t = 0; t < FIRST_STRIKE_AFTER + WARN_SECONDS * 0.5; t += dt) {
-      s.update(dt, { night: true });
+      s.update(dt, { open: true });
     }
     expect(s.warning, "예고 중이어야 한다").not.toBeNull();
-    s.update(dt, { night: false });
+    s.update(dt, { open: false });
     expect(s.warning).toBeNull();
     expect(s.danger).toBeNull();
   });
 
-  it("밤 한 구간에 칠 만큼은 치고, 쉴 틈도 남긴다", () => {
-    // A night zone is 40 seconds. Few enough that a strike is an event, often
-    // enough that the zone is about something.
+  it("30초에 칠 만큼은 치고, 쉴 틈도 남긴다", () => {
+    // Few enough that a strike is an event, often enough that the sky is worth
+    // watching.
     const { events } = storm(40);
     const strikes = events.filter((e) => e.event === "strike").length;
     expect(strikes).toBeGreaterThanOrEqual(4);
@@ -124,9 +125,9 @@ describe("밤 번개", () => {
     expect(STRIKE_PERIOD - STRIKE_SPREAD).toBeGreaterThan(WARN_SECONDS + STRIKE_SECONDS);
   });
 
-  it("첫 번개는 밤이 시작되고 조금 뒤에 온다", () => {
-    // The zone change moves the sky, the fog and the ground at once; a bolt
-    // inside that reads as scenery rather than as something aimed at you.
+  it("첫 번개는 하늘이 열리고 조금 뒤에 온다", () => {
+    // Coming out of a tunnel moves the sky, the fog and the ground at once; a
+    // bolt inside that reads as scenery rather than as something aimed at you.
     const { events } = storm(FIRST_STRIKE_AFTER * 0.9);
     expect(events.filter((e) => e.event === "strike")).toEqual([]);
     expect(FIRST_STRIKE_AFTER).toBeGreaterThan(WARN_SECONDS);
@@ -138,5 +139,16 @@ describe("밤 번개", () => {
     // using.
     const { lethalLanes } = storm(400, { rng: sequence([0.05, 0.45, 0.95]) });
     expect([...lethalLanes].sort()).toEqual([...ALL_LANES].sort());
+  });
+
+  it("점수로 열리고, 하늘이 있어야 친다", () => {
+    // It was a night-zone thing, and a night zone is 40 seconds of a run that
+    // no longer ends — so most of a long run had no storm in it at all. Keyed
+    // to score now, like the crow and the road: time is what the player
+    // survived, score is how well.
+    expect(STORM_FROM_SCORE).toBeGreaterThan(0);
+    // Past the point where a player has the lane change down cold, and inside
+    // what an ordinary good run reaches.
+    expect(STORM_FROM_SCORE).toBeLessThan(1_000_000);
   });
 });
