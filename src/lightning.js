@@ -54,6 +54,10 @@ export const STRIKE_SPREAD = 1.3;
  */
 export const FIRST_STRIKE_AFTER = 2.2;
 
+/** Warning red, and the white of the bolt itself. See makeLightning. */
+const WARN_COLOUR = 0xff2246;
+const STRIKE_COLOUR = 0xf2f8ff;
+
 /**
  * A strike in progress.
  *
@@ -156,12 +160,17 @@ export class LightningStorm {
 export function makeLightning() {
   const root = new THREE.Group();
 
-  // Amber while it is a warning, not the blue of the bolt itself. The mark is
-  // not a picture of lightning, it is 「여기 서 있지 마라」, and every other
-  // thing on this road that means that is warm — the barriers, the signs, the
-  // hazard stripes. Pale blue on a bright road was also simply hard to see.
+  // Red, and specifically not amber.
+  //
+  // Amber was the first answer and it was wrong for a reason that only shows up
+  // on the actual road: the lane lines are painted 0xf2d64b and the coins are
+  // gold, so a wide warm strip laid down the middle of a lane does not read as
+  // a warning at all — it reads as more road. The first person to see it asked
+  // whether the yellow was the four-lane change.
+  //
+  // Nothing else on this track is red. That is the whole argument for it.
   const markMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffae1f,
+    color: 0xff2246,
     transparent: true,
     opacity: 0,
     depthWrite: false,
@@ -174,7 +183,7 @@ export function makeLightning() {
   root.add(mark);
 
   const boltMaterial = new THREE.MeshBasicMaterial({
-    color: 0xdff1ff,
+    color: WARN_COLOUR,
     transparent: true,
     opacity: 0,
     depthWrite: false,
@@ -220,13 +229,23 @@ export function updateLightning(rig, storm, z, t) {
     const urgency = 5 + warning.progress * 13;
     const pulse = 0.5 + 0.5 * Math.sin(t * urgency);
     const base = 0.5 + warning.progress * 0.32;
-    rig.markMaterial.color.setHex(0xffae1f);
+    rig.markMaterial.color.setHex(WARN_COLOUR);
     rig.markMaterial.opacity = base * (0.78 + 0.22 * pulse);
-    rig.boltMaterial.opacity = 0;
+
+    // The column comes up during the warning rather than only at the strike,
+    // because a mark on the ground says where and says nothing about what. Shown
+    // on its own it was read as something rising out of the road; the same
+    // column standing over the lane the whole time it is charging is what makes
+    // the sky the obvious source, and it is the second thing that separates
+    // this from a road marking.
+    rig.bolt.scale.y = 1;
+    rig.boltMaterial.color.setHex(WARN_COLOUR);
+    rig.boltMaterial.opacity = 0.12 + warning.progress * 0.3 * (0.6 + 0.4 * pulse);
   } else {
     // White the instant it lands, so the colour change alone says 「now」.
-    rig.markMaterial.color.setHex(0xf2f8ff);
+    rig.markMaterial.color.setHex(STRIKE_COLOUR);
     rig.markMaterial.opacity = 0.92;
+    rig.boltMaterial.color.setHex(STRIKE_COLOUR);
     rig.boltMaterial.opacity = 0.95;
   }
 }

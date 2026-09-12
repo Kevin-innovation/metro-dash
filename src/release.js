@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.50";
+export const VERSION = "4.51";
 
 /**
  * Which season the board is playing.
@@ -68,6 +68,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.51",
+    date: "2026-09-12",
+    kind: "fix",
+    title: "번개 경고를 빨간색으로 바꿨습니다",
+    notes: [
+      "번개가 칠 자리를 주황색으로 칠했더니 도로의 노란 차선과 구분이 안 됐어요. 「저 노란 길은 뭐지?」 하는 게 당연했습니다. 이제 빨간색입니다 — 이 게임에서 빨간 건 이것뿐이에요.",
+      "예고하는 동안 하늘까지 붉은 기둥이 섭니다. 바닥 표시만으로는 어디가 위험한지는 알아도 무엇이 오는지는 모르니까요.",
+    ],
+  },
   {
     version: "4.50",
     date: "2026-09-12",
