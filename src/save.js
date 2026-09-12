@@ -31,6 +31,16 @@ export function defaultSave() {
      */
     best: 0,
     bestSeason: 0,
+    /**
+     * The record from before the season turned, and which season it was.
+     *
+     * Kept rather than dropped. A season's record stops being something this
+     * season can be measured against, but it is still the best run that player
+     * ever had — and dropping it silently is how somebody ends up looking for a
+     * number the game told them they had and finding nowhere it is written.
+     */
+    prevBest: 0,
+    prevBestSeason: 0,
     coins: 0,
     runs: 0,
     totalDistance: 0,
@@ -125,6 +135,8 @@ export function normalizeSave(raw) {
     ...base,
     version: SAVE_VERSION,
     best: clampInt(raw.best),
+    prevBest: clampInt(raw.prevBest),
+    prevBestSeason: clampInt(raw.prevBestSeason),
     coins: clampInt(raw.coins),
     runs: clampInt(raw.runs),
     totalDistance: clampInt(raw.totalDistance),
@@ -148,6 +160,7 @@ export function normalizeSave(raw) {
   // Defaulting it to zero would have wiped everybody's record on the deploy
   // rather than on the boundary.
   out.bestSeason = raw.bestSeason === undefined ? seasonAt(0) : clampInt(raw.bestSeason);
+
 
   // A save written before the balance moved to the server has no marker, and
   // defaulting it to zero would read the player's entire balance as freshly
@@ -205,6 +218,30 @@ export function normalizeSave(raw) {
 }
 
 /**
+ * Carry a record across a season boundary, once, as the save comes off disk.
+ *
+ * A season is a rule set. The record set under the last one is not a number
+ * this one can be measured against — but it is still the best run that player
+ * ever had, and dropping it silently is how somebody ends up hunting for a
+ * figure the game told them they had and finding nowhere it is written.
+ *
+ * Here rather than in normalizeSave, which is also used on the profile coming
+ * down from the server and on both sides of a merge. A rule that reads the wall
+ * clock does not belong in a function whose job is to coerce a shape; this is a
+ * migration, and a migration runs when the file is opened.
+ */
+export function rollSeason(save, season = seasonAt()) {
+  if (save.bestSeason === season || !(save.best > 0)) return save;
+  return {
+    ...save,
+    prevBest: save.best,
+    prevBestSeason: save.bestSeason,
+    best: 0,
+    bestSeason: season,
+  };
+}
+
+/**
  * Profile store backed by localStorage, with the storage injected so tests can
  * run against an in-memory stub.
  */
@@ -225,7 +262,7 @@ export class SaveStore {
 
     const save = normalizeSave(parsed);
     if (!parsed) save.best = Math.max(save.best, this.readLegacyBest());
-    return save;
+    return rollSeason(save);
   }
 
   /** Pull the high score written by the pre-profile version of the game. */
@@ -540,6 +577,12 @@ export function mergeProfiles(local, cloud) {
   // device's streak from both.
   out.pendingClaimCoins = a.pendingClaimCoins;
   out.pendingClaimXp = a.pendingClaimXp;
+
+  // The old record is a record: the higher of the two sides, like `best` itself.
+  if ((a.prevBest ?? 0) > (out.prevBest ?? 0)) {
+    out.prevBest = a.prevBest;
+    out.prevBestSeason = a.prevBestSeason;
+  }
 
   return { save: out, carried };
 }

@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.18";
+export const VERSION = "4.20";
 
 /**
  * Which season the board is playing.
@@ -44,6 +44,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.20",
+    date: "2026-09-12",
+    kind: "minor",
+    title: "호버보드 키 · 일시정지 커서 · 지난 시즌 기록",
+    notes: [
+      "호버보드 키를 정하면 점프 두 번은 꺼집니다. 점프를 두 번 눌러도 호버보드가 나오던 걸 고쳤어요 — 키를 정하러 설정에 들어간 이유가 바로 그 제스처가 오작동해서인데, 둘 다 켜두면 피하고 싶었던 게 그대로 남습니다.",
+      "일시정지했을 때 마우스 커서가 안 보이던 문제를 고쳤습니다. 「계속하기」를 안 보이는 커서로 눌러야 했어요.",
+      "타이틀 화면에 「지난 시즌」 기록이 같이 나옵니다. 시즌이 바뀌면 그 전 기록은 이번 시즌 것이 아니지만 없어지는 것도 아니거든요. 지금까지는 화면이 지난 시즌 숫자를 「내 시즌 최고 점수」라고 부르고 있었습니다.",
+    ],
+  },
   {
     version: "4.18",
     date: "2026-09-12",

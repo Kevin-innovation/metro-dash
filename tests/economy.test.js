@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seasonAt } from "../src/release.js";
 import { restingScaleZ } from "../src/entities.js";
 import { SPEC } from "../src/specs.js";
 import { POWERUP_IDS, POWERUP_MAX_LEVEL } from "../src/powerups.js";
@@ -75,17 +76,43 @@ describe("SaveStore", () => {
     expect(store.data.character).toBe("runner");
   });
 
-  it("migrates the legacy high-score key on a fresh profile", () => {
+  it("migrates the legacy high-score key, into the season it belongs to", () => {
+    // A score from before seasons were tracked belongs to the one that was
+    // running then, not to this one — so it arrives as last season's record
+    // rather than as a number this season has to be beaten from.
     const storage = createMemoryStorage({ "metro-dash-best": "8421" });
-    expect(new SaveStore(storage).data.best).toBe(8421);
+    const save = new SaveStore(storage).data;
+    expect(save.prevBest).toBe(8421);
+    expect(save.best).toBe(0);
   });
 
   it("does not let the legacy key overwrite an existing profile", () => {
     const storage = createMemoryStorage({
       "metro-dash-best": "999999",
-      [SAVE_KEY]: JSON.stringify({ ...defaultSave(), best: 100 }),
+      [SAVE_KEY]: JSON.stringify({ ...defaultSave(), best: 100, bestSeason: seasonAt() }),
     });
     expect(new SaveStore(storage).data.best).toBe(100);
+  });
+
+  it("시즌이 넘어가면 기록을 지난 시즌으로 옮긴다", () => {
+    // 화면들이 전부 best 를 그대로 읽고 있었다. 시즌이 바뀐 아침에
+    // 「내 시즌 최고 점수 864,080」 이라고 적혀 있었고, 그건 지난 시즌 숫자였다.
+    const storage = createMemoryStorage({
+      [SAVE_KEY]: JSON.stringify({ ...defaultSave(), best: 864_080, bestSeason: seasonAt() - 1 }),
+    });
+    const save = new SaveStore(storage).data;
+    expect(save.best).toBe(0);
+    expect(save.prevBest).toBe(864_080);
+    expect(save.prevBestSeason).toBe(seasonAt() - 1);
+  });
+
+  it("같은 시즌이면 그대로 둔다", () => {
+    const storage = createMemoryStorage({
+      [SAVE_KEY]: JSON.stringify({ ...defaultSave(), best: 500_000, bestSeason: seasonAt() }),
+    });
+    const save = new SaveStore(storage).data;
+    expect(save.best).toBe(500_000);
+    expect(save.prevBest).toBe(0);
   });
 
   it("refuses to spend coins it does not have", () => {

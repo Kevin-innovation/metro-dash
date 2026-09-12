@@ -242,6 +242,15 @@
               <div class="hero-score">
                 <p class="hero-label">내 시즌 최고 점수</p>
                 <strong id="best-score" class="hero-value">0</strong>
+                <!-- The record from before the season turned. Shown only when
+                     there is one, because a season-one player has nothing to
+                     compare against and an empty line saying so is noise. It is
+                     also the number a player goes looking for the morning after
+                     a reset — the game told them they had it, so the game has to
+                     be able to show it. -->
+                <p id="prev-best" class="hero-prev hidden">
+                  지난 시즌 <strong id="prev-best-score">0</strong>
+                </p>
               </div>
 
               <!-- Three supporting figures. The two ranks answer the question a

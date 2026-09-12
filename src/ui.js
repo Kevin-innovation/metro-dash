@@ -542,7 +542,7 @@ export function renderSettings(root, settings, activeTier) {
     <div class="setting-row static">
       <span class="setting-text">
         <span class="setting-label">호버보드 키</span>
-        <span class="setting-hint">기본은 점프 두 번입니다. 키를 하나 정해두면 그 키로도 꺼낼 수 있어요</span>
+        <span class="setting-hint">기본은 점프 두 번입니다. 키를 정하면 점프 두 번은 꺼지고 그 키로만 나옵니다</span>
       </span>
       <span class="key-bind">
         <button type="button" class="key-pill${settings.boardKey ? " on" : ""}" data-bind="board">${escapeHtml(

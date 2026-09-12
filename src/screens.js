@@ -80,7 +80,9 @@ export class Screens {
   setBoardHint(label) {
     const howto = $("howto-board");
     if (!howto) return;
-    const how = label ? `${BOARD_HINT} · ${label} 키` : BOARD_HINT;
+    // Replaces rather than adds. Saying both would be describing a control the
+    // player has just turned off.
+    const how = label ? `${label} 키` : BOARD_HINT;
     howto.textContent = `${how} — 충돌을 한 번 막아 줍니다`;
   }
 
@@ -794,6 +796,15 @@ export class Screens {
    */
   showPause(visible, left = 0) {
     $("pause-screen").classList.toggle("hidden", !visible);
+    // And the cursor comes back with the card.
+    //
+    // The rule was already written — 「Pause, death and every dialog put it
+    // back」 — but pausing is the one of those three that does not go through
+    // setOverlay: the HUD stays up behind the card, so the class that hides the
+    // pointer was never taken off. The 「계속하기」 button had to be clicked
+    // blind, which is a strange thing to ask of somebody who has just stopped
+    // the game to deal with something else.
+    document.body.classList.toggle("running", !visible);
     const note = $("pause-note");
     if (note) note.classList.toggle("hidden", left > 0);
   }
@@ -990,6 +1001,16 @@ export class Screens {
     for (const id of ["best-score", "hud-best", "over-best"]) {
       const el = $(id);
       if (el) el.textContent = best;
+    }
+
+    // And the one from before the season turned, which is a different number
+    // and has to say so. Hidden when there is none.
+    const prev = Math.max(0, Math.floor(save.prevBest ?? 0));
+    const prevRow = $("prev-best");
+    if (prevRow) {
+      prevRow.classList.toggle("hidden", prev <= 0);
+      const value = $("prev-best-score");
+      if (value) value.textContent = prev.toLocaleString();
     }
     // The game-over card shows the bank too, so a run's earnings can be read
     // against what they add up to.

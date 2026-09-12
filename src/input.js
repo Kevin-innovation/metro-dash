@@ -8,7 +8,7 @@ export const DOUBLE_TAP_MS = 280;
  * places at once and went stale in two of them the moment the control changed.
  */
 export const BOARD_HINT = "점프를 두 번 빠르게";
-/** The same line once a key has been bound to it. */
+/** The same line once a key has been bound to it — the key *replaces* the gesture. */
 export const boardHintFor = (label) => (label ? `${label} 키` : BOARD_HINT);
 export const BOARD_HINT_LONG =
   "달리는 중 점프를 두 번 빠르게 누르면 꺼내지고, 충돌 1회를 막아줍니다";
@@ -152,7 +152,13 @@ export class Input {
 
     // A second jump in quick succession means "hoverboard". The first one still
     // jumps — the same gesture on keyboard and on touch, with no extra key.
-    if (act === "jump") {
+    //
+    // Off once a key is bound, and that is the whole point of binding one. The
+    // gesture's failure mode is that two deliberate jumps in a row spend a
+    // hoverboard, so somebody who has gone and chosen a key has said exactly
+    // that they do not want the gesture. Leaving both on would have left the
+    // thing they went to the settings screen to escape still armed.
+    if (act === "jump" && !this.boardKey) {
       const now = performance.now();
       if (now - this.lastJumpAt <= DOUBLE_TAP_MS) {
         this.lastJumpAt = -Infinity; // consumed, so a third tap starts over

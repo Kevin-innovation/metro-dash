@@ -3930,3 +3930,17 @@ body.admin {
     font-size: 15px;
   }
 }
+
+/* Last season's record, under this season's. Quiet: it is context for the big
+   number above it, not a second headline. */
+.hero-prev {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(226, 242, 255, 0.45);
+}
+
+.hero-prev strong {
+  font-family: var(--font-numeric);
+  font-weight: 700;
+  color: rgba(226, 242, 255, 0.7);
+}
