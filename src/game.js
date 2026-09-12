@@ -1978,6 +1978,7 @@ export class Game {
     const expired = this.run.advance(dt, {
       travelled: this.speed * dt,
       mounted: !!this.player.mounted,
+      nextHazardIn: this.secondsToNextHazard(),
     });
     for (const id of expired) {
       if (id === "jetpack") this.screens.showToast("착지!");
@@ -1991,6 +1992,31 @@ export class Game {
 
     this.hintT -= dt;
     if (this.hintT <= 0) this.screens.hideHint();
+  }
+
+  /**
+   * How long until the next thing the runner could lose a combo to, in seconds.
+   *
+   * Only the lethal, unscored ones ahead count: coins are not something a chain
+   * can be broken on, and an obstacle already credited is behind the decision.
+   * Infinity when the track ahead is empty, which is what holds the window open
+   * across a deliberate rest — see the note beside the combo clock in run.js.
+   */
+  secondsToNextHazard() {
+    let nearest = Infinity;
+    for (const item of this.pool.live) {
+      if (!item.lethal || item.scored || item.taken) continue;
+      const ahead = item.z - this.player.z;
+      if (ahead <= 0) continue;
+      // Something coming the other way arrives far sooner than its distance
+      // says: its own speed adds to the runner's. Dividing by the runner's
+      // speed alone would read it as further off than it is and hold the combo
+      // clock open through a stretch that was never empty.
+      const closing = this.speed - (item.moving ? item.vz : 0);
+      const seconds = closing > 0 ? ahead / closing : Infinity;
+      if (seconds < nearest) nearest = seconds;
+    }
+    return nearest;
   }
 
   /** Kick up dust the moment the runner reconnects with the deck. */

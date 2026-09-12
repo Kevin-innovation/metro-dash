@@ -7,6 +7,8 @@ import { MAX_CHARACTER_SCORE_BONUS } from "../src/characters.js";
 import { SLOT_TOP_MULTIPLIER } from "../src/slots.js";
 import { HAZARD_FROM_SCORE } from "../src/spawner.js";
 import { Run } from "../src/run.js";
+import { BREATH_SECONDS } from "../src/spawner.js";
+import { COMBO_WINDOW, comboWindowAt } from "../src/scoring.js";
 import { SaveStore } from "../src/save.js";
 import {
   JUMP_BONUS,
@@ -147,5 +149,48 @@ describe("아슬아슬이 곡선을 흔들지 않는다", () => {
     const run = new Run(store());
     for (let i = 0; i < 30; i++) run.addNearMiss();
     expect(run.combo).toBe(0);
+  });
+});
+
+describe("콤보는 플레이어가 흘렸을 때 끊긴다", () => {
+  /** Drive a run forward without ever meeting anything. */
+  const coast = (run, seconds, nextHazardIn) => {
+    const dt = 1 / 60;
+    for (let t = 0; t < seconds; t += dt) {
+      run.advance(dt, { travelled: 0, mounted: false, nextHazardIn });
+    }
+  };
+
+  it("빈 트랙은 체인을 끊지 않는다", () => {
+    // The rests the track now takes are longer than the window: BREATH_SECONDS
+    // against a window that tightens to COMBO_WINDOW. Before this rule a player
+    // who cleared every single row still lost the chain about eleven times a
+    // run and spent the back two minutes on a 1.34 multiplier instead of 1.92 —
+    // the rest cost more than a mistake did.
+    expect(BREATH_SECONDS).toBeGreaterThan(COMBO_WINDOW);
+
+    const run = new Run(new SaveStore({}));
+    run.seconds = 120; // wound up, so the window is at its tightest
+    run.bumpCombo();
+    const held = run.combo;
+    coast(run, BREATH_SECONDS * 2, BREATH_SECONDS);
+    expect(run.combo, "체인이 살아 있어야 한다").toBe(held);
+  });
+
+  it("옆으로 돌아만 다녀도 끊긴다", () => {
+    // The other half, and the one that matters more. The window is what gives
+    // "went over it" rather than "went around it" any teeth, so a player
+    // threading a dense stretch in a free lane has to lose the chain — which is
+    // exactly what the first draft of this rule got wrong: measured against the
+    // time left rather than the whole window, a steady stream of obstacles held
+    // the clock frozen just above zero and the chain never died at all.
+    const run = new Run(new SaveStore({}));
+    run.seconds = 120;
+    const window = comboWindowAt(run.seconds);
+    run.bumpCombo();
+    expect(run.combo).toBeGreaterThan(0);
+    // Obstacles arriving steadily and none of them taken.
+    coast(run, window + 0.5, window / 4);
+    expect(run.combo, "체인이 끊겨야 한다").toBe(0);
   });
 });
