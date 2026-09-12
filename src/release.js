@@ -11,7 +11,7 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.21";
+export const VERSION = "4.22";
 
 /**
  * Which season the board is playing.
@@ -68,6 +68,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "4.22",
+    date: "2026-09-12",
+    kind: "fix",
+    title: "리더보드 상자가 탭마다 커졌다 작아지던 문제",
+    notes: [
+      "이번 주 · 지난 시즌 · 레벨 · 명예의 전당을 오갈 때 상자 크기가 바뀌던 걸 고쳤습니다. 네 개는 한 보드의 네 가지 모습인데, 탭을 누를 때마다 상자가 줄었다 늘었다 하면서 다음에 누르려던 탭까지 같이 움직였어요.",
+      "이제 너비도 높이도 넷이 같습니다. 줄 수가 적은 탭이라고 쪼그라들지 않고, 꽉 찬 탭이라고 늘어나지도 않아요 — 목록 안쪽만 스크롤됩니다.",
+      "지난 시즌과 레벨은 학교 열이 없어서 상자를 좁히고 있었는데, 그건 상자가 아니라 가운데 한 줄만 읽기 좋은 너비로 두면 되는 일이었습니다.",
+    ],
+  },
   {
     version: "4.21",
     date: "2026-09-12",

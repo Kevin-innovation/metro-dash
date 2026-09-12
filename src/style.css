@@ -9,6 +9,9 @@
      a 2px one put their bars half a pixel apart, which rounds to one and reads
      as a row that does not line up. */
   --chip-edge: 1.5px;
+  /* The leaderboard's body height. One number for every tab, so the panel is
+     the same box whichever of the four is open. */
+  --board-body-h: clamp(340px, 52vh, 560px);
   --ink: #071018;
   --paper: #f4fbff;
   --gold: #ffd24a;
@@ -2686,13 +2689,14 @@ kbd {
   opacity: 0.85;
 }
 
-/* One column: the ladder has no school half, so the width goes to the names. */
+/* One column: the ladder has no school half, so the width goes to the names.
+   The panel itself does not change size — the tabs are four views of one board,
+   and a box that grows and shrinks as you move along a row of tabs makes the
+   tab you are aiming for move too. The single column is centred at a readable
+   measure instead, which is what narrowing the dialog was really for. */
 #leaderboard-screen.solo .board-split {
-  grid-template-columns: 1fr;
-}
-
-#leaderboard-screen.solo .dialog.board {
-  width: min(560px, 100%);
+  grid-template-columns: min(560px, 100%);
+  justify-content: center;
 }
 
 /* --- hall of fame --------------------------------------------------------- */
@@ -2882,6 +2886,27 @@ button.report-flag:disabled {
   gap: 16px;
   margin-bottom: 12px;
   text-align: left;
+  /* Fixed, not a floor. A floor keeps a short tab from collapsing but still
+     lets a full one grow, and the panel resized under the cursor either way —
+     the thing that moved most was the row of tabs you were aiming at.
+     The list inside each column scrolls instead; the headings and the notes
+     above it stay put. */
+  height: var(--board-body-h);
+  align-content: stretch;
+}
+
+.board-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board-col .leaderboard-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the scrollbar so rows do not shift when one appears. */
+  scrollbar-gutter: stable;
 }
 
 .board-col {
