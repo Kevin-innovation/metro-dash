@@ -21,9 +21,15 @@ function sequence(values) {
 }
 
 describe("the diamond wheel — the table", () => {
-  it("has thirty faces, all of them distinct", () => {
-    expect(SLOT_FACES).toHaveLength(30);
-    expect(new Set(SLOT_FACES.map((face) => face.id)).size).toBe(30);
+  it("is a wheel of distinct faces, every one of them landable", () => {
+    // The count is a presentation choice and has moved once already; that no
+    // face is decoration is not. A reel showing an outcome the draw can never
+    // produce misrepresents the bet the player is taking.
+    expect(SLOT_FACES.length).toBeGreaterThanOrEqual(20);
+    expect(new Set(SLOT_FACES.map((face) => face.id)).size).toBe(SLOT_FACES.length);
+    for (const face of SLOT_FACES) {
+      expect(face.weight, `${face.id} is on the reel but cannot be drawn`).toBeGreaterThan(0);
+    }
   });
 
   it("can hurt as well as help", () => {
@@ -43,32 +49,43 @@ describe("the diamond wheel — the table", () => {
     }
   });
 
-  it("gives chasers ninety-five percent good spins", () => {
+  it("gives ninety-five percent good spins", () => {
     const n = 20000;
     let good = 0;
     const rng = sequence(Array.from({ length: n }, (_, i) => (i + 0.5) / n));
     for (let i = 0; i < n; i++) {
-      const { face } = spinSlots(rng, { chase: true });
+      const { face } = spinSlots(rng);
       if (face.effect.value > 1) good += 1;
     }
     expect(good / n).toBeCloseTo(0.95, 2);
   });
 
-  it("gives weekly first a mixed wheel", () => {
-    const n = 20000;
-    let good = 0;
-    let blank = 0;
-    let bad = 0;
-    const rng = sequence(Array.from({ length: n }, (_, i) => (i + 0.5) / n));
-    for (let i = 0; i < n; i++) {
-      const { face } = spinSlots(rng, { chase: false });
-      if (face.effect.value > 1) good += 1;
-      else if (face.effect.value === 1) blank += 1;
-      else bad += 1;
+  it("is the same wheel for the player at the top of the board", () => {
+    // It was not. Whoever led the week drew from a second, harsher table — 70%
+    // good instead of 95, and 「점수 ×0」 seven spins in a hundred instead of
+    // one. It could not do the job it was there for: a score already on the
+    // board is never touched, so it pulled nobody back towards the field. It
+    // only taxed the person winning, mid-run, on odds they could not see.
+    //
+    // Pinned as a test rather than left as an absence, because the seam it left
+    // behind — a second number on every face and a flag on the call — is small
+    // enough to grow back by accident.
+    const draw = (opts) => {
+      const n = 4000;
+      const rng = sequence(Array.from({ length: n }, (_, i) => (i + 0.5) / n));
+      const counts = new Map();
+      for (let i = 0; i < n; i++) {
+        const { face } = spinSlots(rng, opts);
+        counts.set(face.id, (counts.get(face.id) ?? 0) + 1);
+      }
+      return [...counts.entries()].sort().map(([id, n]) => `${id}:${n}`).join(" ");
+    };
+    // Whatever anyone passes about who is spinning, the same wheel comes back.
+    expect(draw({ chase: true })).toBe(draw(undefined));
+    expect(draw({ chase: false })).toBe(draw(undefined));
+    for (const face of SLOT_FACES) {
+      expect(Object.keys(face), face.id).not.toContain("chase");
     }
-    expect(good / n).toBeCloseTo(0.7, 2);
-    expect(blank / n).toBeCloseTo(0.1, 2);
-    expect(bad / n).toBeCloseTo(0.2, 2);
   });
 
   it("never lands outside the wheel, whatever the draw", () => {

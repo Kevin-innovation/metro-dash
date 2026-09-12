@@ -141,7 +141,7 @@ export class Game {
     this.rankRequest = 0;
     /** The same, for the title screen's two rank cells. */
     this.standingRequest = 0;
-    /** Weekly personal rank at last lookup. 1 is the only rank that is not chasing. */
+    /** Weekly personal rank at last lookup, for the cells that show it. */
     this.weekRank = null;
     /** Live leaderboard subscriptions, and a counter to retire stale ones. */
     this.boardSubscriptions = [];
@@ -1066,7 +1066,7 @@ export class Game {
     if (this.state !== "playing") return;
     if (!this.run.takeSpin()) return;
 
-    const { face, index } = spinSlots(() => Math.random(), { chase: this.weekRank !== 1 });
+    const { face, index } = spinSlots(() => Math.random());
     this.state = "slots";
     this.accumulator = 0;
     this.audio.resume();
