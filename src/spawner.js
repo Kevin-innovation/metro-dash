@@ -11,12 +11,18 @@ import {
   SLIDE_DEAD_BAND,
   candidatesFor,
   crowEggPattern,
+  chuseokMoonPattern,
   describePattern,
   diamondPattern,
   inSlideDeadBand,
   patternById,
   requiredGapSeconds,
 } from "./patterns.js";
+import {
+  CHUSEOK_MOON_FIRST_AT,
+  CHUSEOK_MOON_MAX_PER_RUN,
+  nextMoonGap,
+} from "./chuseok.js";
 
 /**
  * How close the lead correction below has to get before it stops.
@@ -314,6 +320,8 @@ export class Spawner {
     // pile onto the same layout and leave the rest of the run untouched.
     this.breathIn = Math.ceil(BREATH_EVERY / 2);
     this.diamondIn = DIAMOND_EVERY;
+    this.chuseokMoonAt = CHUSEOK_MOON_FIRST_AT;
+    this.chuseokMoons = 0;
     this.patternCount = 0;
     /**
      * The last hazard actually placed, wherever it came from. Tracked across
@@ -494,6 +502,9 @@ export class Spawner {
     eventPatterns = null,
     score = 0,
     lanes = ALL_LANES,
+    runTime = null,
+    chuseok = false,
+    flying = false,
   }) {
     const context = patternContext({ z, speed, pressure, rng: this.rng, lanes });
 
@@ -523,6 +534,19 @@ export class Spawner {
         .map((id) => patternById(id))
         .filter((pattern) => pattern && typeof pattern.build === "function");
       if (chosen.length) return pickFrom(this.rng, chosen).build(context);
+    }
+
+    // A due moon waits through a jetpack or a section rather than being spent
+    // while it is unreachable. Time, not layout count, owns this cadence.
+    const moonDue =
+      chuseok &&
+      runTime !== null &&
+      this.chuseokMoons < CHUSEOK_MOON_MAX_PER_RUN &&
+      runTime >= this.chuseokMoonAt;
+    if (moonDue && !flying) {
+      this.chuseokMoons += 1;
+      this.chuseokMoonAt = runTime + nextMoonGap(this.rng);
+      return chuseokMoonPattern(z, context);
     }
 
     if (this.patternCount % POWERUP_EVERY === 0) {

@@ -104,7 +104,7 @@ export function renderPowerupHud(el, timers, durations, crow = null, slot = null
   // The wheel first: it is the largest number on the screen while it runs, and
   // a ×10 that appears below three power-up chips is a ×10 nobody sees.
   const chips = [...(slot ? [SLOT_CHIP] : []), ...active, ...(crow ? [CROW.id] : [])];
-  const signature = chips.join(",");
+  const signature = `${chips.join(",")}|${slot?.face?.theme ?? "diamond"}`;
 
   if (el.dataset.signature !== signature) {
     el.dataset.signature = signature;
@@ -166,10 +166,11 @@ const SLOT_CHIP = "slot";
 /** What the wheel's chip looks like, given what it is currently paying. */
 function slotChipSpec(slot) {
   const down = slot.multiplier < 1;
+  const moon = slot?.face?.theme === "chuseok";
   return {
     name: `점수 ×${slot.multiplier}`,
-    icon: down ? "💧" : "💎",
-    colour: down ? "#64748b" : "#7dd3fc",
+    icon: down ? "💧" : moon ? "🌕" : "💎",
+    colour: down ? "#64748b" : moon ? "#ffe59a" : "#7dd3fc",
   };
 }
 

@@ -40,7 +40,7 @@ import { POWERUP_PATTERNS } from "../src/patterns.js";
 import { SLOT_FACES } from "../src/slots.js";
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
 import { SLOT_TOP_MULTIPLIER } from "../src/slots.js";
-import { MAX_MULTIPLIER } from "../src/leaderboard-rules.js";
+import { MAX_MULTIPLIER, MAX_WHEEL_MULTIPLIER } from "../src/leaderboard-rules.js";
 import { Run } from "../src/run.js";
 import { SaveStore, normalizeSave } from "../src/save.js";
 import { HAZARD_FROM_SCORE } from "../src/spawner.js";
@@ -143,7 +143,7 @@ describe("점수 2배 is gone", () => {
 
   it("does not sit in the server's ceiling", () => {
     expect(MAX_MULTIPLIER).toBe(
-      MAX_COMBO_MULTIPLIER * MAX_EVENT_MULTIPLIER * SLOT_TOP_MULTIPLIER * MAX_CHARACTER_SCORE_BONUS,
+      MAX_COMBO_MULTIPLIER * MAX_EVENT_MULTIPLIER * MAX_WHEEL_MULTIPLIER * MAX_CHARACTER_SCORE_BONUS,
     );
   });
 });

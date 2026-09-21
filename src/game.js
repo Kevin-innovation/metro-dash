@@ -61,6 +61,7 @@ import { randomSeed } from "./rng.js";
 import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
+import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
 import { perkFor } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import {
@@ -1065,8 +1066,23 @@ export class Game {
     this.audio.powerup();
     vibrate(event.ready ? [24, 40, 24] : 12);
     this.screens.flashDiamond();
-    if (event.ready) this.spinPending = true;
+    if (event.ready) this.wheelQueue.push({ kind: "diamond" });
     else this.screens.showToast(`💎 다이아몬드 ${event.held}/${DIAMOND_GOAL}`);
+  }
+
+  onChuseokMoon(event) {
+    this.audio.powerup();
+    vibrate([22, 35, 22, 35, 28]);
+    this.particles.rainbow(event.x, event.y, event.z);
+    this.screens.flashRainbow();
+    this.screens.showToast("🌈 추석 이벤트 추가 효과! 보름달 룰렛이 열렸어요");
+    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      this.fovPunch = Math.max(this.fovPunch, 0.55);
+    }
+    // Let the earned moment read before the full-screen wheel arrives. Hitstop
+    // freezes the track but leaves the particles and DOM presentation running.
+    this.hitstop = Math.max(this.hitstop, 0.85);
+    this.wheelQueue.push({ kind: "chuseok" });
   }
 
   /**
@@ -1079,15 +1095,29 @@ export class Game {
    * front of a wheel the player did not ask for and cannot decline.
    */
   spinWheel() {
-    this.spinPending = false;
     if (this.state !== "playing") return;
-    if (!this.run.takeSpin()) return;
+    const wheel = this.wheelQueue.shift();
+    if (!wheel) return;
 
-    const { face, index } = spinSlots(() => Math.random());
+    let faces;
+    let face;
+    let index;
+    let options;
+    if (wheel.kind === "chuseok") {
+      faces = CHUSEOK_SLOT_FACES;
+      ({ face, index } = spinChuseok(() => Math.random()));
+      options = { theme: "chuseok", title: "🌕 보름달 룰렛" };
+    } else {
+      if (!this.run.takeSpin()) return;
+      faces = SLOT_FACES;
+      ({ face, index } = spinSlots(() => Math.random()));
+      options = { theme: "diamond", title: "💎 다이아몬드 3개" };
+    }
+
     this.state = "slots";
     this.accumulator = 0;
     this.audio.resume();
-    this.screens.showSlots(SLOT_FACES, index, face, () => this.settleWheel(face));
+    this.screens.showSlots(faces, index, face, () => this.settleWheel(face), options);
   }
 
   /**
@@ -1407,6 +1437,7 @@ export class Game {
 
   resetRunState() {
     this.run.reset();
+    this.wheelQueue = [];
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
@@ -1460,7 +1491,7 @@ export class Game {
     // still on screen, if the player died on the frame the third diamond was
     // taken. Nothing else clears it, because nothing else can: the spin is
     // owed to a run that no longer exists.
-    this.spinPending = false;
+    this.wheelQueue = [];
     this.screens.hideSlots();
     // Retrying straight from the game-over card still has to close out the run.
     if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
@@ -1519,7 +1550,7 @@ export class Game {
   }
 
   toTitle() {
-    this.spinPending = false;
+    this.wheelQueue = [];
     this.screens.hideSlots();
     if (this.state === "playing" || this.state === "paused" || this.state === "dead") {
       this.bankProgress(true);
@@ -1667,7 +1698,7 @@ export class Game {
     // inside the fixed-step loop below, which may be part-way through four
     // steps, and stopping the run from inside step two leaves the other two to
     // simulate a game that has already been told it is not running.
-    if (this.spinPending && this.state === "playing" && this.hitstop <= 0) this.spinWheel();
+    if (this.wheelQueue.length && this.state === "playing" && this.hitstop <= 0) this.spinWheel();
 
     if (this.hitstop > 0) {
       this.hitstop = Math.max(0, this.hitstop - frameDt);
@@ -2269,6 +2300,10 @@ export class Game {
       // never deals the frenzy behind the menu.
       score: playing ? this.run.score : 0,
       tutorial: playing,
+      chuseok: playing && chuseokAt(),
+      // A due moon waits until it can be reached by the jump it was designed
+      // for instead of passing underneath an active jetpack.
+      flying: playing && this.run.powerupActive("jetpack"),
     });
   }
 
@@ -2338,6 +2373,11 @@ export class Game {
         const t = this.player.runT * 3 + item.z;
         item.mesh.position.y = item.y + Math.sin(t) * 0.22;
         item.mesh.scale.setScalar(1 + Math.sin(t * 1.7) * 0.1);
+      } else if (item.token === "chuseokMoon") {
+        const t = this.player.runT * 2.2 + item.z * 0.15;
+        item.mesh.rotation.z = Math.sin(t * 0.55) * 0.07;
+        item.mesh.position.y = item.y + Math.sin(t) * 0.18;
+        item.mesh.scale.setScalar(1 + Math.sin(t * 1.35) * 0.07);
       } else if (item.powerup) {
         item.mesh.rotation.y += dt * 2.4;
         item.mesh.position.y = item.y + Math.sin(this.player.runT * 4 + item.z) * 0.14;
@@ -2361,7 +2401,8 @@ export class Game {
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
       } else if (event.type === "token") {
-        this.onDiamond(event);
+        if (event.id === "chuseokMoon") this.onChuseokMoon(event);
+        else this.onDiamond(event);
       } else if (event.type === "hazard") {
         if (event.blocked) {
           // The antidote is the only thing in the game that stops something

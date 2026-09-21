@@ -11,6 +11,7 @@ import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
 import { VERSION, previousSeason, seasonAt } from "./release.js";
+import { CHUSEOK_EVENT_NAME, chuseokAt } from "./chuseok.js";
 
 /** How long a 「지붕 ×1.5 +310」 stays up. Long enough to read all three. */
 const TRICK_FLASH_MS = 950;
@@ -46,12 +47,20 @@ export class Screens {
     if (badge) badge.textContent = `ver ${VERSION}`;
     const season = $("season-badge");
     if (season) season.textContent = `SEASON ${seasonAt()}`;
+    const chuseok = chuseokAt();
+    const eventBadge = $("chuseok-badge");
+    if (eventBadge) {
+      eventBadge.textContent = `🌕 ${CHUSEOK_EVENT_NAME}`;
+      eventBadge.classList.toggle("hidden", !chuseok);
+    }
+    document.documentElement.classList.toggle("chuseok-event", chuseok);
     /** Text for the two standing lines, kept together so they move together. */
     this.standings = { mine: "", school: "", schoolNote: "" };
     this.toastTimer = 0;
     this.gainTimer = 0;
     this.nearMissTimer = 0;
     this.shopNoteTimer = 0;
+    this.rainbowTimer = 0;
     this.bind();
     this.writeControlHints();
   }
@@ -846,7 +855,7 @@ export class Screens {
    * @param {object} face that face, for the result line
    * @param {() => void} onDone called once the result has been read
    */
-  showSlots(faces, index, face, onDone) {
+  showSlots(faces, index, face, onDone, options = {}) {
     const screen = $("slots-screen");
     const reel = $("slots-reel");
     const result = $("slots-result");
@@ -858,6 +867,10 @@ export class Screens {
 
     clearTimeout(this.slotLandTimer);
     clearTimeout(this.slotDoneTimer);
+
+    screen.dataset.theme = options.theme ?? "diamond";
+    const title = screen.querySelector(".slots-title");
+    if (title) title.textContent = options.title ?? "💎 다이아몬드 3개";
 
     const strip = [...faces, ...faces, ...faces];
     reel.innerHTML = strip
@@ -933,6 +946,16 @@ export class Screens {
     chip.classList.remove("pop");
     void chip.offsetWidth;
     chip.classList.add("pop");
+  }
+
+  flashRainbow() {
+    const flash = $("rainbow-flash");
+    if (!flash) return;
+    flash.classList.remove("on");
+    void flash.offsetWidth;
+    flash.classList.add("on");
+    clearTimeout(this.rainbowTimer);
+    this.rainbowTimer = setTimeout(() => flash.classList.remove("on"), 1100);
   }
 
   openShop(save) {

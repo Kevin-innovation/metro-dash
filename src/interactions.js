@@ -129,7 +129,11 @@ export class Interactions {
         // to the crow egg would mean the two power-ups that make you jump
         // higher also drag traps in from three metres away, and a trap you
         // cannot dodge is not a choice.
-        const reach = item.hazard ? PICKUP_REACH : rewardReach;
+        // The moon is authored as a jump-timing pickup. Super sneakers widen
+        // ordinary reward reach so their high arc does not miss coins, but
+        // applying that reach here would collect a 4.1m moon from the deck.
+        const preciseToken = item.token === "chuseokMoon";
+        const reach = item.hazard || preciseToken ? PICKUP_REACH : rewardReach;
         if (Math.abs(midY - itemY) > reach) continue;
       }
 
@@ -168,6 +172,16 @@ export class Interactions {
         });
         const ready = this.run.addDiamond();
         events.push({ type: "token", id: "diamond", held: this.run.diamonds, ready });
+      } else if (item.token === "chuseokMoon") {
+        this.particles.burst(itemX, itemY, item.z, {
+          count: 30,
+          colour: 0xffdc73,
+          speed: 7.2,
+          life: 0.9,
+          size: 0.46,
+          gravity: -4,
+        });
+        events.push({ type: "token", id: "chuseokMoon", x: itemX, y: itemY, z: item.z });
       } else if (item.powerup) {
         this.particles.burst(itemX, itemY, item.z, {
           count: 26,

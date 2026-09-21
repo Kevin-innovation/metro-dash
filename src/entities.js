@@ -3,6 +3,7 @@ import { BUS_ROOF, SIGN_BOARD_BOTTOM, SIGN_BOARD_TOP, SIGN_TOP, TRAIN_COLORS } f
 import { laneX } from "./lanes.js";
 import { SPEC } from "./specs.js";
 import { makeContainerSkin } from "./textures.js";
+import { chuseokAt } from "./chuseok.js";
 
 const BUS_COLORS = [0xffc107, 0x26c6da, 0xef5350, 0x66bb6a];
 
@@ -290,6 +291,21 @@ export function makeCrate() {
 }
 
 export function makeCoin() {
+  const songpyeon = chuseokAt() ? eventTexture("/assets/events/chuseok/songpyeon.png") : null;
+  if (songpyeon) {
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.96, 0.64),
+      new THREE.MeshBasicMaterial({
+        map: songpyeon,
+        transparent: true,
+        alphaTest: 0.06,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    mesh.renderOrder = 1;
+    return mesh;
+  }
   const mesh = new THREE.Mesh(
     new THREE.CylinderGeometry(0.36, 0.36, 0.09, 18),
     new THREE.MeshLambertMaterial({
@@ -300,6 +316,61 @@ export function makeCoin() {
   );
   mesh.rotation.z = Math.PI / 2;
   return mesh;
+}
+
+const eventTextures = new Map();
+
+/** Browser-only asset load. Unit tests keep the procedural mesh fallback. */
+function eventTexture(path) {
+  if (typeof document === "undefined") return null;
+  if (eventTextures.has(path)) return eventTextures.get(path);
+  const texture = new THREE.TextureLoader().load(path);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  eventTextures.set(path, texture);
+  return texture;
+}
+
+export function makeChuseokMoon() {
+  const texture = eventTexture("/assets/events/chuseok/full-moon-rabbit.png");
+  const group = new THREE.Group();
+
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(0.84, 0.045, 8, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd76a,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    }),
+  );
+  group.add(halo);
+
+  if (texture) {
+    const moon = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.52, 1.52),
+      new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.03,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    moon.renderOrder = 2;
+    group.add(moon);
+  } else {
+    // A generated asset should never make the game fail to boot. The fallback
+    // keeps the pickup playable and unmistakably moon-shaped.
+    group.add(
+      new THREE.Mesh(
+        new THREE.CircleGeometry(0.72, 28),
+        new THREE.MeshBasicMaterial({ color: 0xffe59a, side: THREE.DoubleSide }),
+      ),
+    );
+  }
+
+  return group;
 }
 
 /** Shared shell for every power-up pickup: a glowing gem on a tinted disc. */
@@ -561,6 +632,7 @@ const FACTORIES = {
   sneakers: makeSneakers,
   crowEgg: makeCrowEgg,
   diamond: makeDiamond,
+  chuseokMoon: makeChuseokMoon,
 };
 
 export { SPEC };

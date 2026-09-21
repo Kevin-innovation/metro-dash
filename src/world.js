@@ -3,6 +3,7 @@ import { BUILDING_COLORS, FOG_COLOR, MAX_SPEED, SEGMENT_COUNT, SEGMENT_LEN, STAR
 import { LANE_WIDTHS, laneSet, laneX } from "./lanes.js";
 import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
 import { OPEN_CEILING } from "./zones.js";
+import { chuseokAt } from "./chuseok.js";
 
 function hexOf(n) {
   return `#${n.toString(16).padStart(6, "0")}`;
@@ -15,6 +16,8 @@ const SUN_DISTANCE = 150;
 const BUILDING_COUNT = 24;
 const POLE_COUNT = 16;
 const POLE_SPACING = 30;
+const CHUSEOK_DECOR_COUNT = 16;
+const CHUSEOK_DECOR_SPACING = 36;
 
 /**
  * Scenery is recycled a full cycle at a time so a piece only ever jumps while
@@ -24,6 +27,7 @@ const POLE_SPACING = 30;
  */
 const BUILDING_CYCLE = (BUILDING_COUNT / 2) * SEGMENT_LEN;
 const POLE_CYCLE = POLE_COUNT * POLE_SPACING;
+const CHUSEOK_DECOR_CYCLE = CHUSEOK_DECOR_COUNT * CHUSEOK_DECOR_SPACING;
 /** How far behind the camera a piece must be before it may be moved. */
 const RECYCLE_BEHIND = 48;
 
@@ -359,10 +363,46 @@ export function createWorld(scene, quality) {
     poles.push({ group: pole, z: i * POLE_SPACING });
   }
 
+  // Lightweight roadside season dressing. It owns no lights and casts no
+  // shadows. Basic materials keep the lanterns self-lit and avoid compiling
+  // an extra shadow-receiving shader on lower-end mobile GPUs.
+  const decorations = [];
+  for (let i = 0; i < CHUSEOK_DECOR_COUNT; i++) {
+    const group = new THREE.Group();
+    const side = i % 2 === 0 ? -1 : 1;
+    const postMat = new THREE.MeshBasicMaterial({ color: 0x4a3a31 });
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 3.8, 6), postMat);
+    post.position.y = 1.9;
+    group.add(post);
+
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), postMat);
+    cross.position.set(side * -0.35, 3.55, 0);
+    group.add(cross);
+
+    const warm = new THREE.MeshBasicMaterial({ color: 0xffd878 });
+    const blue = new THREE.MeshBasicMaterial({ color: 0x2d73b9 });
+    const red = new THREE.MeshBasicMaterial({ color: 0xd9504f });
+    if (i % 3 === 0) {
+      const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.58, 10), warm);
+      lantern.position.set(side * -0.72, 3.12, 0);
+      group.add(lantern);
+    } else {
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.34, 0.34), blue);
+      const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.34, 0.34), red);
+      top.position.set(side * -0.72, 3.28, 0);
+      bottom.position.set(side * -0.72, 2.92, 0);
+      group.add(top, bottom);
+    }
+    group.position.x = side * 8.6;
+    group.visible = chuseokAt() && i < (quality.decorationCount ?? 0);
+    scene.add(group);
+    decorations.push({ group, z: i * CHUSEOK_DECOR_SPACING, index: i });
+  }
+
   return {
     scene, sky, sunBall, sun, hemi, ambient, ground, clouds,
     shell, roof, walls, lamps, mouth,
-    segments, buildings, poles, quality,
+    segments, buildings, poles, decorations, quality,
   };
 }
 
@@ -532,6 +572,13 @@ export function syncWorld(world, playerZ) {
     pole.group.position.z = recycle(pole, POLE_CYCLE, playerZ);
   }
 
+  const eventOn = chuseokAt();
+  for (const decoration of world.decorations ?? []) {
+    decoration.group.position.z = recycle(decoration, CHUSEOK_DECOR_CYCLE, playerZ);
+    decoration.group.visible =
+      eventOn && decoration.index < (world.quality.decorationCount ?? 0);
+  }
+
   world.sky.position.z = playerZ;
   world.ground.position.z = playerZ;
   world.shell.position.z = playerZ + TUNNEL_LEN / 2 - TUNNEL_BEHIND;
@@ -563,5 +610,9 @@ export function applyWorldQuality(world, quality) {
   world.quality = quality;
   world.sun.castShadow = quality.shadows;
   configureShadow(world.sun, quality);
+  for (const decoration of world.decorations ?? []) {
+    decoration.group.visible =
+      chuseokAt() && decoration.index < (quality.decorationCount ?? 0);
+  }
   return world;
 }

@@ -4,6 +4,7 @@ import { MAX_EVENT_MULTIPLIER } from "./events.js";
 import { speedAt } from "./pace.js";
 
 import { SLOT_TOP_MULTIPLIER } from "./slots.js";
+import { CHUSEOK_TOP_MULTIPLIER } from "./chuseok.js";
 import {
   COIN_BASE,
   COIN_COMBO_CAP,
@@ -85,15 +86,18 @@ export function maxDistanceIn(seconds) {
  *
  * Four multipliers stack, and Run.multiplier() is the list: the combo tier
  * (×2.5), the section running at the time (×2 during 코인 러시), the diamond
- * wheel (×10 on its best face) and the equipped runner. 점수 2배는 빠졌다.
+ * active wheel channel (×30 on the Chuseok wheel) and the equipped runner.
+ * The two wheels replace one another, so their maxima are not multiplied.
  *
  * Derived from the pieces rather than written as a number, so a multiplier
  * added to the game cannot fail to be added here.
  */
+export const MAX_WHEEL_MULTIPLIER = Math.max(SLOT_TOP_MULTIPLIER, CHUSEOK_TOP_MULTIPLIER);
+
 export const MAX_MULTIPLIER =
   MAX_COMBO_MULTIPLIER *
   MAX_EVENT_MULTIPLIER *
-  SLOT_TOP_MULTIPLIER *
+  MAX_WHEEL_MULTIPLIER *
   MAX_CHARACTER_SCORE_BONUS;
 /**
  * Ceiling on what one second of running can be worth.

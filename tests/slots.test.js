@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DIAMOND_GOAL, SLOT_FACES, SLOT_MAX_MULTIPLIER, SLOT_TOP_MULTIPLIER, spinSlots } from "../src/slots.js";
 import { MAX_CHARACTER_SCORE_BONUS, CHARACTERS } from "../src/characters.js";
-import { MAX_MULTIPLIER } from "../src/leaderboard-rules.js";
+import { MAX_MULTIPLIER, MAX_WHEEL_MULTIPLIER } from "../src/leaderboard-rules.js";
 import { MAX_COMBO_MULTIPLIER } from "../src/scoring.js";
 
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
@@ -126,7 +126,7 @@ describe("the diamond wheel — the server's ceiling", () => {
     expect(MAX_MULTIPLIER).toBe(
       MAX_COMBO_MULTIPLIER *
         MAX_EVENT_MULTIPLIER *
-        SLOT_TOP_MULTIPLIER *
+        MAX_WHEEL_MULTIPLIER *
         MAX_CHARACTER_SCORE_BONUS,
     );
   });

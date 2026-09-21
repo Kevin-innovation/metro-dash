@@ -586,6 +586,27 @@ export function diamondPattern(z, context) {
 }
 
 /**
+ * The Chuseok moon: a visible choice and a jump-timing test, never a death bet.
+ * The rising songpyeon show when to jump; the neighbouring ground line is the
+ * safe alternative for a player who does not want the wheel.
+ */
+export function chuseokMoonPattern(z, context) {
+  const moonLane = context.lane;
+  const groundLane = context.lanes.find((lane) => lane !== moonLane) ?? moonLane;
+  const moonZ = z + 6.8;
+
+  return [
+    { type: "coin", lane: moonLane, z, y: 0.7 },
+    { type: "coin", lane: moonLane, z: z + 2.2, y: 1.5 },
+    { type: "coin", lane: moonLane, z: z + 4.4, y: 2.7 },
+    { type: "chuseokMoon", lane: moonLane, z: moonZ, y: 4.1 },
+    { type: "coin", lane: moonLane, z: z + 9.2, y: 2.7 },
+    { type: "coin", lane: moonLane, z: z + 11.4, y: 1.5 },
+    ...coinLine(groundLane, z, 8, 1.6, 0.7),
+  ];
+}
+
+/**
  * The trail that shows where the jetpack is about to take you.
  *
  * The steps grow as the line recedes. Evenly spaced in metres they were not

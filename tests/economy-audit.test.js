@@ -14,6 +14,7 @@ import { MAX_CHARACTER_SCORE_BONUS } from "../src/characters.js";
 import { SLOT_TOP_MULTIPLIER } from "../src/slots.js";
 import {
   MAX_MULTIPLIER,
+  MAX_WHEEL_MULTIPLIER,
   maxDistanceIn,
   validateRun,
 } from "../src/leaderboard-rules.js";
@@ -72,7 +73,7 @@ describe("the run validator knows every multiplier that exists", () => {
     expect(MAX_MULTIPLIER).toBe(
       MAX_COMBO_MULTIPLIER *
         MAX_EVENT_MULTIPLIER *
-        SLOT_TOP_MULTIPLIER *
+        MAX_WHEEL_MULTIPLIER *
         MAX_CHARACTER_SCORE_BONUS,
     );
   });

@@ -156,6 +156,36 @@ body.running #game-canvas {
      curve the fog uses, and a CSS transition on top of that would fight it. */
 }
 
+.rainbow-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from 20deg,
+    rgba(255, 77, 109, 0.78),
+    rgba(255, 159, 28, 0.72),
+    rgba(255, 228, 94, 0.7),
+    rgba(85, 224, 111, 0.72),
+    rgba(76, 201, 240, 0.76),
+    rgba(181, 108, 255, 0.78),
+    rgba(255, 77, 109, 0.78)
+  );
+  mask-image: radial-gradient(circle at 50% 48%, transparent 0 44%, #000 76% 100%);
+  -webkit-mask-image: radial-gradient(circle at 50% 48%, transparent 0 44%, #000 76% 100%);
+}
+
+.rainbow-flash.on {
+  animation: rainbowFlash 1.05s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rainbowFlash {
+  0% { opacity: 0; transform: scale(0.82) rotate(-8deg); }
+  28% { opacity: 0.95; }
+  100% { opacity: 0; transform: scale(1.08) rotate(8deg); }
+}
+
 /* The blur is the expensive half — a backdrop-filter forces the compositor to
    read back the whole canvas each frame — so it is added by the quality tier
    rather than being part of the base effect. Without it the veil still dims
@@ -296,6 +326,20 @@ body.running #game-canvas {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff4b0, #ffd24a 42%, #d49412);
   box-shadow: inset 0 -3px 0 #c07a00, 0 0 10px rgba(255, 210, 74, 0.6);
+}
+
+html.chuseok-event .coin-orb {
+  width: 28px;
+  height: 22px;
+  border-radius: 0;
+  background: url("/assets/events/chuseok/songpyeon.png") center / contain no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 0 7px rgba(255, 220, 115, 0.55));
+}
+
+html.chuseok-event .coin-orb.small {
+  width: 23px;
+  height: 18px;
 }
 
 /* Under the score: the section banner and the power-up chips, side by side on
@@ -1241,6 +1285,21 @@ body.running #game-canvas {
   box-shadow:
     0 2px 0 #8a5c04,
     0 5px 16px rgba(255, 210, 74, 0.32);
+}
+
+.chuseok-badge {
+  padding: 0.2em 0.52em 0.16em;
+  border: 1px solid rgba(255, 229, 154, 0.72);
+  border-radius: 0.38em;
+  background: linear-gradient(135deg, rgba(66, 42, 92, 0.96), rgba(20, 52, 82, 0.96));
+  color: #ffe59a;
+  font-family: var(--font-display);
+  font-style: normal;
+  font-size: min(clamp(10px, 2.1vw, 14px), 1.7vh);
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 0 16px rgba(255, 213, 108, 0.28);
 }
 
 h1 {
@@ -3749,6 +3808,37 @@ body.admin {
 
 .slot-none .slot-label {
   color: rgba(226, 232, 240, 0.5);
+}
+
+.slots-screen[data-theme="chuseok"] {
+  background: radial-gradient(circle at 50% 42%, rgba(92, 55, 111, 0.72), rgba(4, 8, 20, 0.95));
+}
+
+.slots-screen[data-theme="chuseok"] .slots-title {
+  color: #ffe59a;
+  text-shadow: 0 0 22px rgba(255, 215, 106, 0.72);
+}
+
+.slots-screen[data-theme="chuseok"] .slots-window {
+  border-color: rgba(255, 215, 106, 0.56);
+  box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.8), 0 0 34px rgba(181, 108, 255, 0.24);
+}
+
+.slots-screen[data-theme="chuseok"] .slots-pointer {
+  border-color: rgba(255, 229, 154, 0.9);
+  background: linear-gradient(90deg, rgba(255, 77, 109, 0.14), rgba(85, 224, 111, 0.1), rgba(76, 201, 240, 0.14));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rainbow-flash.on {
+    animation: rainbowFlashReduced 0.7s ease-out;
+  }
+
+  @keyframes rainbowFlashReduced {
+    0% { opacity: 0; }
+    35% { opacity: 0.72; }
+    100% { opacity: 0; }
+  }
 }
 
 /* The line the reel stops against. Drawn over the window rather than inside

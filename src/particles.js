@@ -188,6 +188,28 @@ export class ParticleField {
     });
   }
 
+  /** Six-colour celebration without adding another particle system or draw call. */
+  rainbow(x, y, z, { count = 54, speed = 8.4, life = 1.05 } = {}) {
+    const colours = [0xff4d6d, 0xff9f1c, 0xffe45e, 0x55e06f, 0x4cc9f0, 0xb56cff].map(hexToRgb);
+    this.emit(count, (i, total) => {
+      const theta = (i / total) * Math.PI * 2 + Math.random() * 0.18;
+      const power = speed * (0.65 + Math.random() * 0.55);
+      return {
+        x: x + (Math.random() - 0.5) * 0.5,
+        y: y + (Math.random() - 0.5) * 0.4,
+        z: z + (Math.random() - 0.5) * 0.5,
+        vx: Math.cos(theta) * power,
+        vy: 3.2 + Math.random() * power * 0.75,
+        vz: Math.sin(theta) * power * 0.65,
+        life: life * (0.8 + Math.random() * 0.35),
+        size: 0.4,
+        colour: colours[i % colours.length],
+        gravity: -5.5,
+        drag: 1.25,
+      };
+    });
+  }
+
   /** Flat ring of dust, used when the runner lands. */
   dust(x, y, z, { count = 10, colour = 0xd8c9a8, speed = 3.4 } = {}) {
     const rgb = hexToRgb(colour);

@@ -11,7 +11,9 @@
  * student nothing; "게이트 뒤에 바로 버스가 서 있어 피할 수 없던 배치를
  * 없앴어요" is the same change described from the seat they are sitting in.
  */
-export const VERSION = "4.60";
+import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
+
+export const VERSION = "5.00";
 
 /**
  * Which season the board is playing.
@@ -26,7 +28,13 @@ export const VERSION = "4.60";
  * question about where the last number came from. Times are the epoch millis of
  * midnight KST, which is 15:00 UTC on the day before.
  */
-const SEASONS = [{ season: 4, from: Date.UTC(2026, 8, 11, 15, 0, 0) }];
+const SEASONS = [
+  { season: 4, from: Date.UTC(2026, 8, 11, 15, 0, 0) },
+  // The event raises the wheel ceiling from ×10 to ×30. A score set under it
+  // cannot honestly share a board with either the rule before or after it.
+  { season: 5, from: CHUSEOK_EVENT_FROM },
+  { season: 6, from: CHUSEOK_EVENT_TO },
+];
 
 /** The season everything before the table belongs to. */
 const BASE_SEASON = 3;
@@ -68,6 +76,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.00",
+    date: "2026-09-21",
+    kind: "major",
+    title: "한가위 달빛 축제가 시작됐습니다",
+    notes: [
+      "코인이 송편으로 바뀌고, 도시에는 한지등과 청사초롱이 걸렸습니다. 값과 자석·미션 규칙은 코인일 때와 같습니다.",
+      "40초를 넘기면 공중의 달토끼 보름달을 만날 수 있습니다. 점프해서 먹으면 무지개가 터지고 별도의 보름달 룰렛이 열립니다.",
+      "보름달 룰렛은 꽝부터 점수 ×30까지 있습니다. ×30도 10초 동안 유지되며, 기존 다이아 룰렛과 배율이 곱해지지는 않습니다.",
+      "이벤트 점수는 일반 점수와 같은 순위표에서 겨루지 않습니다. 규칙이 바뀐 만큼 새 시즌으로 시작합니다.",
+    ],
+  },
   {
     version: "4.60",
     date: "2026-09-12",

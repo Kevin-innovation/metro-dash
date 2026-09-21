@@ -1,6 +1,7 @@
 import {
   BUS_ROOF,
   JETPACK_ALTITUDE,
+  JUMP_APEX,
   PLAYER_HEIGHT,
   SIGN_BAND_TOP,
   SIGN_BOARD_BOTTOM,
@@ -86,6 +87,17 @@ export const SPEC = {
   // one of them does nothing at all. Same band as the rest of the pickups, so
   // it is placed by the same rules and read by the same collision test.
   diamond: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "diamond" },
+  // High enough that running underneath cannot collect it. The coarse band
+  // reaches the top of a normal jump; interactions.js applies the precise
+  // pickup reach around the image's 4.1m centre.
+  chuseokMoon: {
+    length: 0.9,
+    depth: 0.42,
+    minY: 0,
+    maxY: JUMP_APEX + PLAYER_HEIGHT + 0.5,
+    lethal: false,
+    token: "chuseokMoon",
+  },
 };
 
 export const ENTITY_TYPES = Object.keys(SPEC);

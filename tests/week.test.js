@@ -47,7 +47,16 @@ describe("시즌", () => {
     const turn = Date.UTC(2026, 8, 11, 15, 0, 0);
     expect(seasonAt(turn - 1)).toBe(3);
     expect(seasonAt(turn)).toBe(4);
-    expect(seasonAt(turn + 90 * 24 * 60 * 60 * 1000)).toBe(4);
+    expect(seasonAt(turn + 90 * 24 * 60 * 60 * 1000)).toBe(6);
+  });
+
+  it("한가위 이벤트의 시작과 끝은 서로 다른 점수 시즌이다", () => {
+    const event = Date.UTC(2026, 8, 20, 15, 0, 0);
+    const after = Date.UTC(2026, 9, 11, 15, 0, 0);
+    expect(seasonAt(event - 1)).toBe(4);
+    expect(seasonAt(event)).toBe(5);
+    expect(seasonAt(after - 1)).toBe(5);
+    expect(seasonAt(after)).toBe(6);
   });
 
   it("시즌이 바뀌는 순간은 주가 바뀌는 순간이다", () => {
