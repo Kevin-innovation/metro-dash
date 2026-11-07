@@ -53,6 +53,8 @@ const TICK_MS = 40;
 
 /** Where the music sits against the sound effects, under the same master. */
 const BGM_LEVEL = 1;
+/** Seconds between two coins before the next one starts the arpeggio again. */
+const COIN_RUN_GAP = 0.7;
 
 export class Bgm {
   /** @param {AudioBus} bus shares the AudioContext with the sound effects */
@@ -120,6 +122,18 @@ export class Bgm {
 
   setPhase(phaseId) {
     this.phaseId = phaseId;
+  }
+
+  /**
+   * The note a coin plays: up through the chord the carol is on, an octave higher,
+   * so a line of coins plays an arpeggio that belongs to the music under it.
+   */
+  coinHz() {
+    const now = this.ctx?.currentTime ?? 0;
+    this.coinRun = now - (this.coinAt ?? -1) < COIN_RUN_GAP ? (this.coinRun ?? 0) + 1 : 0;
+    this.coinAt = now;
+    const { triad } = CHORDS[carolStep(this.step).chord];
+    return midiToHz(triad[this.coinRun % 3] + 12 * (1 + (Math.floor(this.coinRun / 3) % 2)));
   }
 
   /** Duck the music briefly so a crash or toast still cuts through. */

@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.31";
+export const VERSION = "6.40";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,20 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.40",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "달릴수록 크리스마스가 되는 도시",
+    notes: [
+      "🌃 불 꺼진 뉴욕이 콤보로 켜집니다. 벽 전구, 건물 창문, 거리 트리 순으로 밝아지고 콤보가 끊기면 다시 어두워져요.",
+      "🧭 북극까지 달리세요. 2,000m부터 눈 덮인 숲, 5,000m부터 오로라 뜬 북극 들판이고, 6,000m에 도착하면 코인 2,000을 받습니다.",
+      "🧊 터널은 얼음 동굴로, 역은 크리스마스 마켓으로 바뀌었습니다.",
+      "🛷 파워업이 변신했습니다. 제트팩은 하늘 썰매, 자석은 산타 자루, 슈퍼 스니커즈는 루돌프 부츠, 질주는 방울, 호버보드는 스노보드예요. 효과는 그대로입니다.",
+      "🎵 코인을 먹으면 지금 나오는 캐럴에 맞는 음이 납니다. 연달아 먹으면 멜로디가 돼요.",
+      "❄️ 착지하면 눈이 튀고, 슬라이드하면 눈보라가 일며, 지나간 자리에 썰매 자국이 남습니다.",
+    ],
+  },
   {
     version: "6.31",
     date: "2026-11-07",

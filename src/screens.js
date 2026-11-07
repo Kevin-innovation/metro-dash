@@ -1193,6 +1193,7 @@ export class Screens {
     durations.sneakers *= game.run.sneakerScale ?? 1;
 
     renderHud({
+      christmas: game.christmas,
       score: game.run.score,
       coins: game.run.coins,
       combo: game.run.combo,

@@ -11,6 +11,12 @@ import {
   RAID_GAP_MIN,
   RAID_MAX_PER_RUN,
   SANTA_DROP_COINS,
+  CHRISTMAS_POWERUP_LOOK,
+  JOURNEY,
+  NORTH_POLE_COINS,
+  NORTH_POLE_METRES,
+  cityLight,
+  journeyStage,
   WHEEL_TEASE_CHANCE,
   teasePath,
   wheelTeases,
@@ -62,6 +68,7 @@ import {
 } from "../src/missions.js";
 import { CLIENT_COINS_PER_DAY, clientCoinsPerDay } from "../convex/scores.js";
 import { makeRng } from "../src/rng.js";
+import { POWERUPS } from "../src/powerups.js";
 import { Run } from "../src/run.js";
 import { setCostume } from "../src/costumes.js";
 import { SaveStore, hasProgress, normalizeSave } from "../src/save.js";
@@ -889,6 +896,38 @@ describe("트랙 이벤트", () => {
     empty.distance = 5000;
     expect(empty.addEventCoins(500)).toBe(500);
     expect(empty.santaCoins).toBe(500);
+  });
+});
+
+describe("달리는 동안의 크리스마스", () => {
+  it("콤보가 오르면 벽, 창문, 트리 순으로 켜지고 끊기면 모두 꺼진다", () => {
+    expect(cityLight(0)).toEqual({ walls: 0, towers: 0, trees: 0 });
+    expect(cityLight(5).walls).toBe(1);
+    expect(cityLight(5).towers).toBeGreaterThan(0);
+    expect(cityLight(5).trees).toBe(0);
+    expect(cityLight(15)).toMatchObject({ towers: 1, trees: 0 });
+    expect(cityLight(30)).toEqual({ walls: 1, towers: 1, trees: 1 });
+    expect(cityLight(500)).toEqual({ walls: 1, towers: 1, trees: 1 });
+  });
+
+  it("거리에 따라 뉴욕, 숲, 북극 순으로 가고, 도착은 북극 들판 뒤에 있다", () => {
+    expect(JOURNEY[journeyStage(0)].id).toBe("city");
+    expect(JOURNEY[journeyStage(1999)].id).toBe("city");
+    expect(JOURNEY[journeyStage(2000)].id).toBe("forest");
+    expect(JOURNEY[journeyStage(5000)].id).toBe("arctic");
+    expect(JOURNEY[journeyStage(99999)].id).toBe("arctic");
+    expect(NORTH_POLE_METRES).toBeGreaterThan(JOURNEY.at(-1).at);
+    // The bonus never gets a run refused: it goes through the same capped payment.
+    const run = new Run(store());
+    run.distance = NORTH_POLE_METRES;
+    run.addEventCoins(NORTH_POLE_COINS);
+    expect(validateRun({ score: 0, distance: run.distance, coins: run.coins, seconds: 120 })).toEqual({ ok: true });
+  });
+
+  it("모든 파워업에 크리스마스 이름과 아이콘이 있다", () => {
+    for (const id of Object.keys(POWERUPS)) {
+      expect(CHRISTMAS_POWERUP_LOOK[id], id).toMatchObject({ name: expect.any(String), icon: expect.any(String) });
+    }
   });
 });
 

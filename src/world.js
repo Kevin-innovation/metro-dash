@@ -721,6 +721,23 @@ function makeClouds(scene) {
  *   shrank to match would close the world in around a runner who is standing
  *   still.
  */
+/** The sky as the run gets further north. Tunnels keep their own. */
+const JOURNEY_SKY = [
+  null,
+  { sky: [0x10253a, 0x2c4f5c], fog: 0x24414d },
+  { sky: [0x07222f, 0x1d6f77], fog: 0x4f96a3 },
+];
+
+function onTheJourney(look, journey) {
+  const tint = JOURNEY_SKY[journey?.index ?? 0];
+  if (!tint || look.ceiling !== null) return look;
+  return {
+    ...look,
+    sky: [mixColor(look.sky[0], tint.sky[0], journey.k), mixColor(look.sky[1], tint.sky[1], journey.k)],
+    fogColor: mixColor(look.fogColor, tint.fog, journey.k),
+  };
+}
+
 /** Any zone, as it looks with the lights out. Tunnels stay as dark as they were. */
 function winterNight(look) {
   return {
@@ -739,7 +756,7 @@ function winterNight(look) {
 }
 
 export function applyLookAtSpeed(world, zoneLook, quality, speed) {
-  const look = world.christmas ? winterNight(zoneLook) : zoneLook;
+  const look = world.christmas ? onTheJourney(winterNight(zoneLook), world.journey) : zoneLook;
   world.sky.material.map = skyFor(world, look.sky);
   world.sky.material.opacity = 1;
   world.sky.material.needsUpdate = true;
@@ -843,8 +860,11 @@ export function syncWorld(world, playerZ) {
   });
 
   for (const building of world.buildings) {
+    const was = building.z;
     building.mesh.position.z = recycle(building, BUILDING_CYCLE, playerZ);
     if (building.rooftop) building.rooftop.position.z = building.mesh.position.z;
+    if (building.alt) building.alt.position.z = building.mesh.position.z;
+    if (building.z !== was) world.onBuildingWrap?.(building);
   }
 
   for (const pole of world.poles) {
@@ -865,7 +885,9 @@ export function syncWorld(world, playerZ) {
       tree.group.position.x = (world.roadCentre ?? 0) + tree.side * edge;
     }
     if (world.twinkle && world.trees.length) {
-      world.trees[0].bulbMaterial.color.setScalar(0.72 + Math.sin(playerZ * 0.09) * 0.28);
+      world.trees[0].bulbMaterial.color.setScalar(
+        (world.treeGlow ?? 1) * (0.72 + Math.sin(playerZ * 0.09) * 0.28),
+      );
     }
   }
 

@@ -17,6 +17,9 @@ import {
   GIFT_GAP_MAX,
   GIFT_GAP_MIN,
   AURORA_COIN_BONUS,
+  NORTH_POLE_COINS,
+  NORTH_POLE_METRES,
+  CHRISTMAS_POWERUP_LOOK,
   AURORA_COMBO,
   AURORA_SECONDS,
   AVALANCHE_COINS,
@@ -125,13 +128,13 @@ let powerupFills = [];
  *   a draining bar — because "a timed thing is on you" is one idea and should
  *   have one shape. The colour is what says which kind.
  */
-export function renderPowerupHud(el, timers, durations, crow = null, slot = null) {
+export function renderPowerupHud(el, timers, durations, crow = null, slot = null, christmas = false) {
   if (!el) return;
   const active = Object.keys(POWERUPS).filter((id) => timers[id] > 0);
   // The wheel first: it is the largest number on the screen while it runs, and
   // a ×10 that appears below three power-up chips is a ×10 nobody sees.
   const chips = [...(slot ? [SLOT_CHIP] : []), ...active, ...(crow ? [CROW.id] : [])];
-  const signature = `${chips.join(",")}|${slot?.face?.theme ?? "diamond"}|${slot?.face?.icon ?? ""}|${crow?.spec?.name ?? ""}`;
+  const signature = `${christmas}|${chips.join(",")}|${slot?.face?.theme ?? "diamond"}|${slot?.face?.icon ?? ""}|${crow?.spec?.name ?? ""}`;
 
   if (el.dataset.signature !== signature) {
     el.dataset.signature = signature;
@@ -142,7 +145,7 @@ export function renderPowerupHud(el, timers, durations, crow = null, slot = null
             ? (crow.spec ?? CROW)
             : id === SLOT_CHIP
               ? slotChipSpec(slot)
-              : POWERUPS[id];
+              : { ...POWERUPS[id], ...(christmas ? CHRISTMAS_POWERUP_LOOK[id] : null) };
         const bad = id === CROW.id || (id === SLOT_CHIP && slot.multiplier < 1) ? " bad" : "";
         // The name is kept in the DOM but hidden by CSS: the icon is what a
         // player reads mid-run, and four spelled-out names used to cover the
@@ -415,7 +418,7 @@ export function renderHud(state) {
     last.combo = combo;
   }
 
-  renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow, state.slot);
+  renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow, state.slot, state.christmas);
 
   renderSpeedGauge(el, state);
   renderRunStats(el, state);
@@ -785,6 +788,9 @@ function christmasRules() {
       ${row("🏔️", "눈사태 탈출", `뒤에서 눈사태가 밀려오고 ${TRACK_EVENT_SECONDS.avalanche}초 동안 빨라집니다. 끝까지 버티면 코인 +${AVALANCHE_COINS.toLocaleString()}.`)}
       ${row("🧊", "빙판 구간", `${TRACK_EVENT_SECONDS.ice}초 동안 레인을 바꿀 때 미끄럽습니다. 빙판에서 장애물을 넘을 때마다 코인 +${ICE_CLEAR_COINS}.`)}
       ${row("🌌", "오로라 타임", `콤보 ${AURORA_COMBO}을 넘기면 오로라가 뜨고 ${AURORA_SECONDS}초 동안 코인이 ${1 + AURORA_COIN_BONUS}배가 됩니다. 콤보가 끊기면 바로 끝납니다.`)}
+      ${row("🌃", "콤보로 켜지는 도시", "콤보가 오르면 벽 전구, 건물 창문, 거리 트리 순으로 불이 켜집니다. 콤보가 끊기면 다시 어두워져요.")}
+      ${row("🧭", "북극까지", `2,000m부터 눈 덮인 숲, 5,000m부터 북극 들판입니다. ${NORTH_POLE_METRES.toLocaleString()}m에 도착하면 코인 +${NORTH_POLE_COINS.toLocaleString()}.`)}
+      ${row("🛷", "파워업 변신", "제트팩은 하늘 썰매, 자석은 산타 자루, 슈퍼 스니커즈는 루돌프 부츠, 질주는 방울, 호버보드는 스노보드로 보입니다. 효과는 그대로입니다.")}
       ${row("🔴", "루돌프 코", "코인이 루돌프 코로 보입니다. 값과 자석·미션·상점 규칙은 그대로입니다.")}
       ${row(
         "🍪",

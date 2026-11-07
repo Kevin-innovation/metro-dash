@@ -375,3 +375,38 @@ export class Aurora {
     return "start";
   }
 }
+
+/**
+ * How lit the dark city is, by combo: first the bulbs on the walls, then the
+ * windows, and last the trees. Each runs 0 to 1. Keeping a combo going is what
+ * turns the lights on, and losing it lets the avenue go dark again.
+ */
+export function cityLight(combo) {
+  const part = (from, to) => Math.min(1, Math.max(0, (combo - from) / (to - from)));
+  return { walls: part(0, 5), towers: part(3, 15), trees: part(15, 30) };
+}
+
+/** The run is a journey north. Metres are where each stretch begins. */
+export const JOURNEY = [
+  { at: 0, id: "city", name: "뉴욕" },
+  { at: 2000, id: "forest", name: "눈 덮인 숲" },
+  { at: 5000, id: "arctic", name: "북극 들판" },
+];
+export const NORTH_POLE_METRES = 6000;
+export const NORTH_POLE_COINS = 2000;
+
+export function journeyStage(distance) {
+  let index = 0;
+  JOURNEY.forEach((stage, i) => {
+    if (distance >= stage.at) index = i;
+  });
+  return index;
+}
+
+/** The power-ups in their Christmas clothes. What they do does not change. */
+export const CHRISTMAS_POWERUP_LOOK = {
+  jetpack: { name: "하늘 썰매", icon: "🛷" },
+  magnet: { name: "산타 자루", icon: "🎒" },
+  sneakers: { name: "루돌프 부츠", icon: "🥾" },
+  focus: { name: "방울 질주", icon: "🔔" },
+};

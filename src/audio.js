@@ -37,7 +37,13 @@ export class AudioBus {
     o.stop(t + dur);
   }
 
-  coin() {
+  /** @param {number} [hz] a note from the carol to play instead of the usual pair */
+  coin(hz) {
+    if (hz) {
+      this.beep(hz, 0.16, "triangle", 0.3);
+      this.beep(hz * 2, 0.08, "sine", 0.09);
+      return;
+    }
     // Under the music. A coin comes several times a second, and at more than this
     // the two square waves sat on top of the carol and buried it.
     this.beep(980, 0.08, "square", 0.17);

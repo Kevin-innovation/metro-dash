@@ -56,7 +56,7 @@ const reducedMotion = () => Boolean(window.matchMedia?.("(prefers-reduced-motion
 const selfLit = () => new THREE.MeshBasicMaterial({ vertexColors: true });
 
 /** Self-lit parts have no light to shape them, so the shape is painted on instead. */
-function shaded(geometry) {
+export function shaded(geometry) {
   const { color, normal } = geometry.attributes;
   for (let i = 0; i < color.count; i++) {
     const k = 0.74 + 0.26 * Math.max(0, normal.getY(i)) + 0.07 * normal.getX(i);
@@ -534,7 +534,9 @@ export class TrackEventStage {
     const aurora = this.meshes.aurora;
     if (!aurora) return;
     const g = this.game;
-    this.auroraGlow += ((this.aurora.active ? 1 : 0) - this.auroraGlow) * approach(1.8, dt);
+    // Past the forest it stays up: this is what the journey north was for.
+    const wanted = this.aurora.active ? 1 : this.skyAurora ? 0.55 : 0;
+    this.auroraGlow += (wanted - this.auroraGlow) * approach(1.8, dt);
     aurora.visible = this.auroraGlow > 0.01;
     if (!aurora.visible) return;
     aurora.position.set(g.player.x * 0.4, AURORA_HEIGHT, g.player.z + AURORA_AHEAD);

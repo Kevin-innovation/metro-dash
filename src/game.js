@@ -63,7 +63,16 @@ import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
-import { BLIZZARD, CHRISTMAS_SLOT_FACES, SantaRaid, christmasAt, spinChristmas, wheelTeases } from "./christmas.js";
+import {
+  BLIZZARD,
+  CHRISTMAS_POWERUP_LOOK,
+  CHRISTMAS_SLOT_FACES,
+  SantaRaid,
+  christmasAt,
+  spinChristmas,
+  wheelTeases,
+} from "./christmas.js";
+import { FestiveStage } from "./festive.js";
 import { TrackEventStage } from "./trackevents.js";
 import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
@@ -1642,6 +1651,7 @@ export class Game {
     this.screens.setChristmas(on);
     this.syncSkin();
     if (on) this.prepareChristmas();
+    this.festive.setChristmas(on);
   }
 
   /**
@@ -1653,27 +1663,34 @@ export class Game {
    */
   prepareChristmas() {
     if (this.flyer) return;
+    const scenery = this.festive.build();
     this.flyer = makeFlyingSanta();
     this.flyer.scale.setScalar(3.2);
     this.scene.add(this.flyer);
     const parked = [
       this.flyer,
+      ...scenery,
       ...this.trackEvents.prepare(),
-      ...this.pool.prepare(["gift", "santaDrop", "elfGift", "elfSack", "crowEgg"]),
+      ...this.pool.prepare(["gift", "santaDrop", "elfGift", "elfSack", "crowEgg", "jetpack", "magnet", "focus", "sneakers"]),
     ];
 
     // Drawn once and wiped before anyone can see it. Compiling alone would still
     // leave the geometry and textures to go up to the GPU on their first real frame.
-    const setCulled = (object, culled) => object.traverse((child) => (child.frustumCulled = culled));
+    const alwaysDrawn = new Set();
     for (const object of parked) {
       object.visible = true;
-      setCulled(object, false);
+      object.traverse((child) => {
+        if (!child.frustumCulled) alwaysDrawn.add(child);
+        child.frustumCulled = false;
+      });
     }
     this.renderer.render(this.scene, this.camera);
     this.renderer.clear();
     for (const object of parked) {
       object.visible = false;
-      setCulled(object, true);
+      object.traverse((child) => {
+        child.frustumCulled = !alwaysDrawn.has(child);
+      });
     }
   }
 
@@ -1693,6 +1710,8 @@ export class Game {
     if (this.flyer) this.flyer.visible = false;
     if (this.trackEvents) this.trackEvents.reset();
     else this.trackEvents = new TrackEventStage(this);
+    if (this.festive) this.festive.reset();
+    else this.festive = new FestiveStage(this);
     this.screens?.hideRaid();
     this.hintT = 0;
     this.deadAt = 0;
@@ -1996,6 +2015,7 @@ export class Game {
     this.emitAmbientParticles(frameDt);
     this.updateFlyer(frameDt);
     this.trackEvents.present(frameDt);
+    this.festive.present(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
     // The title screen holds the opening look; only a run travels through zones.
@@ -2356,7 +2376,10 @@ export class Game {
   advanceRun(dt) {
     this.runTime += dt;
     this.advanceSantaRaid(dt);
-    if (this.christmas) this.trackEvents.advance(dt);
+    if (this.christmas) {
+      this.trackEvents.advance(dt);
+      this.festive.advance();
+    }
     this.announceDebuts();
     this.advanceRoad(dt);
 
@@ -2518,6 +2541,7 @@ export class Game {
 
     this.particles.dust(p.x, 0, p.z, { count: 9, speed: 3 + this.speed * 0.05 });
     this.shake = Math.max(this.shake, 0.14);
+    if (this.christmas) this.festive.onLanding();
   }
 
   onMount(_item, hop) {
@@ -2761,7 +2785,7 @@ export class Game {
       upgradeLevel: (id) => this.store.upgradeLevel(id),
     })) {
       if (event.type === "coin") {
-        this.audio.coin();
+        this.audio.coin(this.christmas ? this.bgm.coinHz() : undefined);
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
         this.trackEvents.onCoin();
@@ -2811,7 +2835,8 @@ export class Game {
       } else {
         if (event.id === "jetpack") this.audio.jetpack();
         else this.audio.powerup();
-        this.screens.showToast(`${POWERUPS[event.id].icon} ${POWERUPS[event.id].name}!`);
+        const look = this.christmas ? CHRISTMAS_POWERUP_LOOK[event.id] : POWERUPS[event.id];
+        this.screens.showToast(`${look.icon} ${look.name}!`);
         if (event.id === "focus") {
           this.fovPunch = Math.max(this.fovPunch, 1);
           this.speedBurst(10);

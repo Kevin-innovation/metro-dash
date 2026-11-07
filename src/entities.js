@@ -1033,7 +1033,78 @@ function makeGingerbreadCrate() {
  * Same entity and same rules, drawn differently while the event is on. Nothing
  * here touches SPEC, so nothing about a hitbox can change with the costume.
  */
+/** A toy sleigh for the jetpack. Same halo, so it still reads as a power-up. */
+function makeSleighPickup() {
+  const g = powerupShell(0xff7a3c, 0xff3d00);
+  const body = new THREE.Mesh(
+    mergeGeometries([
+      tinted(new THREE.BoxGeometry(0.46, 0.2, 0.7), 0xdc2626, 0, 0.3, 0),
+      tinted(new THREE.BoxGeometry(0.46, 0.28, 0.08), 0xb91c1c, 0, 0.42, -0.33),
+      tinted(new THREE.BoxGeometry(0.5, 0.05, 0.74), 0xffd54f, 0, 0.42, 0),
+      tinted(new THREE.BoxGeometry(0.05, 0.05, 0.86), 0xffd54f, -0.19, 0.12, 0.04),
+      tinted(new THREE.BoxGeometry(0.05, 0.05, 0.86), 0xffd54f, 0.19, 0.12, 0.04),
+    ]),
+    new THREE.MeshBasicMaterial({ vertexColors: true }),
+  );
+  g.add(body);
+  return g;
+}
+
+/** Santa's sack for the magnet, which pulls in the Rudolph noses. */
+function makeSackPickup() {
+  const g = powerupShell(0xb388ff, 0x7c4dff);
+  g.add(
+    new THREE.Mesh(
+      mergeGeometries([
+        tinted(new THREE.SphereGeometry(0.3, 10, 8).scale(1, 1.05, 1), 0xb0824f, 0, 0.3, 0),
+        tinted(new THREE.CylinderGeometry(0.09, 0.14, 0.1, 8), 0xffd54f, 0, 0.6, 0),
+        tinted(new THREE.SphereGeometry(0.07, 6, 5), 0xef4444, 0, 0.7, 0),
+      ]),
+      new THREE.MeshBasicMaterial({ vertexColors: true }),
+    ),
+  );
+  return g;
+}
+
+/** A sleigh bell for 질주. */
+function makeBellPickup() {
+  const g = powerupShell(0xfbbf24, 0xf59e0b);
+  g.add(
+    new THREE.Mesh(
+      mergeGeometries([
+        tinted(new THREE.SphereGeometry(0.2, 10, 8), 0xfcd34d, 0, 0.42, 0),
+        tinted(new THREE.CylinderGeometry(0.2, 0.32, 0.26, 12), 0xf59e0b, 0, 0.26, 0),
+        tinted(new THREE.SphereGeometry(0.07, 6, 5), 0xb45309, 0, 0.1, 0),
+        tinted(new THREE.TorusGeometry(0.06, 0.02, 6, 10), 0xdc2626, 0, 0.66, 0),
+      ]),
+      new THREE.MeshBasicMaterial({ vertexColors: true }),
+    ),
+  );
+  return g;
+}
+
+/** A red boot with a white cuff for the super sneakers. */
+function makeBootPickup() {
+  const g = powerupShell(0x14d4b8, 0x00897b);
+  g.add(
+    new THREE.Mesh(
+      mergeGeometries([
+        tinted(new THREE.BoxGeometry(0.24, 0.36, 0.26), 0xdc2626, 0, 0.36, -0.06),
+        tinted(new THREE.BoxGeometry(0.24, 0.16, 0.46), 0xb91c1c, 0, 0.16, 0.04),
+        tinted(new THREE.BoxGeometry(0.3, 0.12, 0.32), 0xffffff, 0, 0.58, -0.06),
+        tinted(new THREE.BoxGeometry(0.26, 0.05, 0.5), 0x1f2937, 0, 0.06, 0.04),
+      ]),
+      new THREE.MeshBasicMaterial({ vertexColors: true }),
+    ),
+  );
+  return g;
+}
+
 const CHRISTMAS_FACTORIES = {
+  jetpack: makeSleighPickup,
+  magnet: makeSackPickup,
+  focus: makeBellPickup,
+  sneakers: makeBootPickup,
   coin: makeNoseCoin,
   crowEgg: makeSnowball,
   train: makeChristmasTrain,
