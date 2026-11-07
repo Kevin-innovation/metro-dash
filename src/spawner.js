@@ -12,6 +12,7 @@ import {
   candidatesFor,
   crowEggPattern,
   chuseokMoonPattern,
+  santaDropPattern,
   describePattern,
   diamondPattern,
   inSlideDeadBand,
@@ -23,7 +24,7 @@ import {
   CHUSEOK_MOON_MAX_PER_RUN,
   nextMoonGap,
 } from "./chuseok.js";
-import { RAID_MAX_PER_RUN, firstGiftAt, firstRaidAt, nextGiftGap, nextRaidGap } from "./christmas.js";
+import { firstGiftAt, nextGiftGap } from "./christmas.js";
 
 /**
  * How close the lead correction below has to get before it stops.
@@ -326,8 +327,6 @@ export class Spawner {
     // Rolled on the first event layout rather than here: an extra draw in reset
     // would shift every other draw of a run that has no gifts in it.
     this.giftAt = null;
-    this.raidAt = null;
-    this.raids = 0;
     this.patternCount = 0;
     /**
      * The last hazard actually placed, wherever it came from. Tracked across
@@ -513,7 +512,8 @@ export class Spawner {
     christmas = false,
     giftGap = 1,
     flying = false,
-    skyOpen = true,
+    santaDrop = false,
+    preferLane = 0,
   }) {
     const context = patternContext({ z, speed, pressure, rng: this.rng, lanes });
 
@@ -543,6 +543,13 @@ export class Spawner {
         .map((id) => patternById(id))
         .filter((pattern) => pattern && typeof pattern.build === "function");
       if (chosen.length) return pickFrom(this.rng, chosen).build(context);
+    }
+
+    // The count has already reached zero on screen, so the parcel takes the very
+    // next layout rather than queueing behind a power-up.
+    if (santaDrop) {
+      this.hooks.onSantaDrop?.();
+      return santaDropPattern(z, context, preferLane);
     }
 
     // A due moon waits through a jetpack or a section rather than being spent
@@ -588,24 +595,6 @@ export class Spawner {
       this.giftAt = runTime + nextGiftGap(this.rng) * giftGap;
       if (hazardDue) this.hazardIn = 1;
       return diamondPattern(z, context, "gift");
-    }
-
-    // A due raid waits for open sky and for a runner who can reach it, the same
-    // way a gift waits. Comes after the gift, so the two never share a layout.
-    if (christmas && runTime !== null && this.raidAt === null) this.raidAt = firstRaidAt(this.rng);
-    const raidDue =
-      christmas &&
-      runTime !== null &&
-      this.raids < RAID_MAX_PER_RUN &&
-      runTime >= this.raidAt &&
-      !flying &&
-      skyOpen;
-    if (raidDue) {
-      this.raids += 1;
-      this.raidAt = runTime + nextRaidGap(this.rng);
-      if (hazardDue) this.hazardIn = 1;
-      this.hooks.onSantaRaid?.();
-      return chuseokMoonPattern(z, context, "santaDrop");
     }
 
     // The wheel wins the tie. It is the better thing to meet, and the egg it

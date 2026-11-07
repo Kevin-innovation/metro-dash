@@ -5,12 +5,13 @@ import {
   CHRISTMAS_EVENT_TO,
   CHRISTMAS_SLOT_FACES,
   GIFT_FIRST_MAX,
-  RAID_FIRST_MAX,
+  RAID_ANNOUNCE_SECONDS,
+  RAID_COUNT_FROM,
   RAID_FIRST_MIN,
-  RAID_GAP_MAX,
   RAID_GAP_MIN,
   RAID_MAX_PER_RUN,
   SANTA_DROP_COINS,
+  SantaRaid,
   christmasTickets,
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
@@ -25,10 +26,12 @@ import { Bgm, layerFor } from "../src/bgm.js";
 import { CHORDS, EIGHTHS_PER_BAR, MEDLEY, MEDLEY_STEPS, carolStep } from "../src/carols.js";
 import { MAX_CHARACTER_SCORE_BONUS, characterById, wearableCharacter } from "../src/characters.js";
 import { applyCrowGloom } from "../src/crow.js";
+import { JUMP_APEX } from "../src/config.js";
 import { EntityPool, makeOncoming } from "../src/entities.js";
 import { Game } from "../src/game.js";
 import { Interactions } from "../src/interactions.js";
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
+import { SANTA_DROP_Y } from "../src/patterns.js";
 import { MAX_WHEEL_MULTIPLIER, maxDistanceIn, validateRun } from "../src/leaderboard-rules.js";
 import { JUMP_BONUS, MAX_COMBO_MULTIPLIER, MOUNT_BONUS, SLIDE_BONUS } from "../src/scoring.js";
 import { applyAction, createPlayer, resetPlayer, updatePlayer } from "../src/player.js";
@@ -640,63 +643,121 @@ describe("눈보라 돌파", () => {
 });
 
 describe("산타 습격", () => {
-  const raids = (options, layouts = 240, step = 2) => {
-    const pool = fakePool();
-    let announced = 0;
-    const spawner = new Spawner(pool, { onSantaRaid: () => (announced += 1) });
-    spawner.reset(17);
-    const times = [];
-    for (let i = 0; i < layouts; i++) {
-      const before = pool.live.length;
-      const runTime = i * step;
-      spawner.place(100 + i * 100, { speed: 40, phaseId: 4, runTime, christmas: true, ...options });
-      if (pool.live.slice(before).some((item) => item.type === "santaDrop")) times.push(runTime);
+  const runner = (y) => ({ x: 0, prevX: 0, y, prevY: y, z: 0.4, prevZ: -0.4, height: 1.55, prevHeight: 1.55 });
+  const tick = (raid, seconds, runTime, canStart = true) => {
+    const events = [];
+    for (let t = 0; t < seconds; t += 0.1) {
+      const event = raid.update(0.1, runTime + t, canStart);
+      if (event) events.push(event.value ?? event.type);
     }
-    return { times, announced };
+    return events;
   };
 
-  it("지정한 시간에 오고 한 판에 세 번까지이며, 올 때마다 알린다", () => {
-    const { times, announced } = raids({});
-    expect(times).toHaveLength(RAID_MAX_PER_RUN);
-    expect(announced).toBe(RAID_MAX_PER_RUN);
-    expect(times[0]).toBeGreaterThanOrEqual(RAID_FIRST_MIN);
-    expect(times[0]).toBeLessThanOrEqual(RAID_FIRST_MAX + 6);
-    times.slice(1).forEach((time, i) => {
-      expect(time - times[i]).toBeGreaterThanOrEqual(RAID_GAP_MIN);
-      expect(time - times[i]).toBeLessThanOrEqual(RAID_GAP_MAX + 6);
-    });
+  it("멘트 2초, 3·2·1을 거쳐 선물을 내리고, 다음은 간격 뒤에 온다", () => {
+    const raid = new SantaRaid(() => 0);
+    expect(raid.at).toBe(RAID_FIRST_MIN);
+    expect(tick(raid, 3, RAID_FIRST_MIN - 3.5)).toEqual([]);
+    expect(tick(raid, 6.2, RAID_FIRST_MIN)).toEqual(["announce", 3, 2, 1, "drop"]);
+    expect(raid.phase).toBe("dropping");
+    // Nothing further until the parcel is actually on the track.
+    expect(tick(raid, 5, RAID_FIRST_MIN + 7)).toEqual([]);
+    raid.dropped(RAID_FIRST_MIN + 12);
+    expect(raid.at).toBe(RAID_FIRST_MIN + 12 + RAID_GAP_MIN);
+    expect(tick(raid, 1, raid.at - 2)).toEqual([]);
   });
 
-  it("터널과 제트팩 중에는 미루고, 일반 모드와 타이틀에는 없다", () => {
-    expect(raids({ skyOpen: false }).times).toEqual([]);
-    expect(raids({ flying: true }).times).toEqual([]);
-    expect(raids({ christmas: false }).times).toEqual([]);
-    expect(raids({ runTime: null }).times).toEqual([]);
+  it("하늘이 막혀 있으면 시작을 미루지만, 시작한 카운트는 끊지 않는다", () => {
+    const raid = new SantaRaid(() => 0);
+    expect(tick(raid, 3, RAID_FIRST_MIN, false)).toEqual([]);
+    expect(raid.update(0.1, RAID_FIRST_MIN + 3, true)).toEqual({ type: "announce" });
+    expect(tick(raid, 6, RAID_FIRST_MIN + 4, false)).toEqual([3, 2, 1, "drop"]);
   });
 
-  it("점프해야 먹을 수 있고, 코인만 늘며 점수와 일일 한도를 쓰지 않는다", () => {
+  it("한 판에 세 번까지만 온다", () => {
+    const raid = new SantaRaid(() => 0);
+    let drops = 0;
+    for (let t = 0; t < 2000; t += 0.1) {
+      if (raid.update(0.1, t, true)?.type === "drop") {
+        drops += 1;
+        raid.dropped(t);
+      }
+    }
+    expect(drops).toBe(RAID_MAX_PER_RUN);
+  });
+
+  it("선물은 달리던 레인으로 떨어지고, 구간 중에는 기다린다", () => {
     const pool = fakePool();
-    pool.spawn("santaDrop", 0, 0, 4.1);
-    const run = new Run(store());
-    const interactions = new Interactions(pool, run, { burst() {} });
-    const runner = (y) => ({ x: 0, prevX: 0, y, prevY: y, z: 0.4, prevZ: -0.4, height: 1.55, prevHeight: 1.55 });
-    const score = run.score;
+    let placed = 0;
+    const spawner = new Spawner(pool, { onSantaDrop: () => (placed += 1) });
+    spawner.reset(17);
+    const at = { speed: 40, phaseId: 4, runTime: 60, christmas: true, santaDrop: true };
+    spawner.place(200, { ...at, preferLane: 1, eventPatterns: ["coins"] });
+    expect(placed).toBe(0);
+    // The first layout out of a section is always a breather.
+    spawner.place(300, { ...at, preferLane: 1 });
+    expect(placed).toBe(0);
+    spawner.place(400, { ...at, preferLane: 1 });
+    expect(placed).toBe(1);
+    expect(pool.live.find((item) => item.type === "santaDrop").lane).toBe(1);
 
-    expect(interactions.collectPickups(runner(0), { upgradeLevel: () => 1 })).toEqual([]);
-    expect(interactions.collectPickups(runner(2.2), { upgradeLevel: () => 1 })).toEqual([
-      { type: "token", id: "santaDrop", gain: SANTA_DROP_COINS },
+    const later = fakePool();
+    const other = new Spawner(later);
+    other.reset(17);
+    other.place(400, { ...at, preferLane: -1 });
+    expect(later.live.find((item) => item.type === "santaDrop").lane).toBe(-1);
+  });
+
+  it("달리기만 해서는 못 먹고, 뛰기만 하면 어느 높이에서든 잡힌다", () => {
+    for (const [y, caught] of [
+      [0, false],
+      [0.5, true],
+      [1.6, true],
+      [JUMP_APEX, true],
+    ]) {
+      const pool = fakePool();
+      pool.spawn("santaDrop", 0, 0, SANTA_DROP_Y);
+      const interactions = new Interactions(pool, new Run(store()), { burst() {} });
+      const events = interactions.collectPickups(runner(y), { upgradeLevel: () => 1 });
+      expect(events.length > 0, `y=${y}`).toBe(caught);
+    }
+  });
+
+  it("코인 1,500을 주되 점수와 일일 한도와 코인 미션에는 들어가지 않는다", () => {
+    const pool = fakePool();
+    pool.spawn("santaDrop", 0, 0, SANTA_DROP_Y);
+    const s = store();
+    s.data.missions = [
+      { id: "coins-run", target: 150, progress: 0 },
+      { id: "coins-total", target: 5000, progress: 0 },
+    ];
+    const run = new Run(s);
+    const interactions = new Interactions(pool, run, { burst() {} });
+    const score = run.score;
+    expect(interactions.collectPickups(runner(1), { upgradeLevel: () => 1 })).toEqual([
+      { type: "token", id: "santaDrop", gain: 1500 },
     ]);
-    expect(interactions.collectPickups(runner(2.2), { upgradeLevel: () => 1 })).toEqual([]);
-    expect(run.coins).toBe(SANTA_DROP_COINS);
-    expect(run.metrics.santaDrops).toBe(1);
+    expect(interactions.collectPickups(runner(1), { upgradeLevel: () => 1 })).toEqual([]);
+    expect(run.coins).toBe(1500);
     expect(run.score).toBe(score);
     expect(run.claimed.coins).toBe(0);
+
+    const banked = s.data.coins;
+    run.addCoin();
+    run.bank(false);
+    expect(s.data.coins - banked).toBe(1501);
+    expect(s.data.missions.map((mission) => mission.progress)).toEqual([1, 1]);
   });
 
-  it("세 번 다 먹어도 서버 코인 검증을 통과한다", () => {
-    const seconds = RAID_FIRST_MIN + RAID_GAP_MIN * 2 + 3;
-    const coins = SANTA_DROP_COINS * RAID_MAX_PER_RUN;
-    expect(validateRun({ score: 0, distance: maxDistanceIn(seconds) * 0.8, coins, seconds })).toEqual({ ok: true });
+  it("가장 이른 습격을 모두 잡아도 서버 코인 검증을 통과한다", () => {
+    // Earliest each catch can come: the first gap, the line, the count, the flight
+    // down the track. With a good run's ordinary coins on top.
+    const lead = RAID_ANNOUNCE_SECONDS + RAID_COUNT_FROM + 2;
+    for (let caught = 1; caught <= RAID_MAX_PER_RUN; caught++) {
+      const seconds = RAID_FIRST_MIN + (caught - 1) * (RAID_GAP_MIN + lead) + lead;
+      const distance = maxDistanceIn(seconds);
+      const coins = caught * SANTA_DROP_COINS + Math.floor(distance * 0.25);
+      expect(validateRun({ score: 0, distance, coins, seconds }), `catch ${caught}`).toEqual({ ok: true });
+    }
   });
 });
 

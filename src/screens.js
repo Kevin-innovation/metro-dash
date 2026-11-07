@@ -993,6 +993,28 @@ export class Screens {
     chip.classList.add("pop");
   }
 
+  /**
+   * The raid's line, count and prompt, in the middle of the track. Its own element
+   * rather than a toast: a count has to be read at a glance, in the same place,
+   * and a toast can be replaced by anything else that happens in those seconds.
+   */
+  showRaid(text, big = false) {
+    const el = $("raid-banner");
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle("big", big);
+    el.classList.remove("hidden", "pop");
+    void el.offsetWidth;
+    el.classList.add("pop");
+    clearTimeout(this.raidTimer);
+    this.raidTimer = setTimeout(() => el.classList.add("hidden"), big ? 1000 : 2000);
+  }
+
+  hideRaid() {
+    clearTimeout(this.raidTimer);
+    $("raid-banner")?.classList.add("hidden");
+  }
+
   flashRainbow() {
     const flash = $("rainbow-flash");
     if (!flash) return;

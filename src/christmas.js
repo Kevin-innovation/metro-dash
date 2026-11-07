@@ -45,7 +45,7 @@ export const GIFT_GAP_MIN = 40;
 export const GIFT_GAP_MAX = 55;
 
 /**
- * The Santa raid: a sleigh goes over and leaves one golden parcel in the air.
+ * The Santa raid: a line, the sleigh, a countdown, then one golden parcel.
  *
  * Paid as ordinary run coins, which the server checks against distance. The
  * daily allowance for client claims is already spent in full by a good day's
@@ -56,7 +56,10 @@ export const RAID_FIRST_MAX = 70;
 export const RAID_GAP_MIN = 70;
 export const RAID_GAP_MAX = 100;
 export const RAID_MAX_PER_RUN = 3;
-export const SANTA_DROP_COINS = 150;
+export const SANTA_DROP_COINS = 1500;
+/** How long the line stands before the count starts, and where the count starts. */
+export const RAID_ANNOUNCE_SECONDS = 2;
+export const RAID_COUNT_FROM = 3;
 
 const between = (rng, low, high) => low + Math.floor(rng() * (high - low + 1));
 
@@ -78,6 +81,54 @@ export function firstRaidAt(rng = Math.random) {
 /** Seconds of play until the next raid after one has come. */
 export function nextRaidGap(rng = Math.random) {
   return between(rng, RAID_GAP_MIN, RAID_GAP_MAX);
+}
+
+/**
+ * The raid's clock: waiting, then the line, then the count, then waiting for the
+ * parcel to be placed. Ticks on play time alone, so a pause or a wheel holds it.
+ */
+export class SantaRaid {
+  constructor(rng = Math.random) {
+    this.rng = rng;
+    this.phase = "waiting";
+    this.at = firstRaidAt(rng);
+    this.t = 0;
+    this.count = 0;
+    this.raids = 0;
+  }
+
+  /**
+   * @param {number} dt seconds of play
+   * @param {number} runTime
+   * @param {boolean} canStart whether there is open sky long enough for all of it.
+   *   Only asked before it starts: a count already running is not called off.
+   * @returns {{ type: "announce" } | { type: "count", value: number } | { type: "drop" } | null}
+   */
+  update(dt, runTime, canStart) {
+    if (this.phase === "waiting") {
+      if (this.raids >= RAID_MAX_PER_RUN || runTime < this.at || !canStart) return null;
+      this.raids += 1;
+      this.phase = "announce";
+      this.t = RAID_ANNOUNCE_SECONDS;
+      return { type: "announce" };
+    }
+    if (this.phase === "dropping") return null;
+
+    this.t -= dt;
+    if (this.t > 0) return null;
+    this.t += 1;
+    this.count = this.phase === "announce" ? RAID_COUNT_FROM : this.count - 1;
+    this.phase = "count";
+    if (this.count > 0) return { type: "count", value: this.count };
+    this.phase = "dropping";
+    return { type: "drop" };
+  }
+
+  /** The parcel is on the track, so the next raid can be scheduled. */
+  dropped(runTime) {
+    this.phase = "waiting";
+    this.at = runTime + nextRaidGap(this.rng);
+  }
 }
 
 const multiplier = (value, seconds, weight, extra = {}) => ({

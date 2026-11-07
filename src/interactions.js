@@ -135,7 +135,7 @@ export class Interactions {
         // The moon is authored as a jump-timing pickup. Super sneakers widen
         // ordinary reward reach so their high arc does not miss coins, but
         // applying that reach here would collect a 4.1m moon from the deck.
-        const preciseToken = item.token === "chuseokMoon" || item.token === "santaDrop";
+        const preciseToken = item.token === "chuseokMoon";
         const reach = item.hazard || preciseToken ? PICKUP_REACH : rewardReach;
         if (Math.abs(midY - itemY) > reach) continue;
       }

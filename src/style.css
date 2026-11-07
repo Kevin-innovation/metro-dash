@@ -798,6 +798,54 @@ html.chuseok-event .coin-orb.small {
   pointer-events: none;
 }
 
+.raid-banner {
+  position: absolute;
+  left: 50%;
+  top: 24%;
+  z-index: 5;
+  width: min(92%, 640px);
+  transform: translateX(-50%);
+  color: #fff4c2;
+  font-family: var(--font-display);
+  font-size: clamp(20px, 4.6vw, 34px);
+  line-height: 1.2;
+  text-align: center;
+  text-shadow:
+    0 3px 0 #7c2d12,
+    0 0 20px rgba(255, 196, 64, 0.8);
+  pointer-events: none;
+  word-break: keep-all;
+}
+
+.raid-banner.big {
+  color: #ffffff;
+  font-size: clamp(44px, 12vw, 84px);
+  text-shadow:
+    0 4px 0 #b91c1c,
+    0 0 28px rgba(255, 90, 90, 0.9);
+}
+
+.raid-banner.pop {
+  animation: raidPop 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes raidPop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raid-banner.pop {
+    animation: none;
+  }
+}
+
 .near-miss.pop {
   animation: nearPop 0.95s ease-out;
 }

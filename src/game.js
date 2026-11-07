@@ -63,7 +63,7 @@ import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
-import { BLIZZARD, CHRISTMAS_SLOT_FACES, christmasAt, spinChristmas } from "./christmas.js";
+import { BLIZZARD, CHRISTMAS_SLOT_FACES, SantaRaid, christmasAt, spinChristmas } from "./christmas.js";
 import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import {
@@ -135,8 +135,13 @@ const SNOW_PER_BUDGET = 0.06;
 /** How many times the flakes a blizzard is. */
 const BLIZZARD_SNOW = 7;
 /** How long the raid's sleigh is in the sky, and how fast it pulls away. */
-const RAID_FLY_SECONDS = 3.6;
-const RAID_FLY_SPEED = 32;
+/** How far down the avenue the raid's sleigh hovers, and how fast it then leaves. */
+const RAID_HOVER_AHEAD = 58;
+const RAID_LEAVE_SPEED = 34;
+/** Seconds of clear sky a raid asks for before it will start. */
+const RAID_CLEAR_SECONDS = 8;
+/** How long before the parcel the player is told to jump. A whole jump's worth. */
+const RAID_JUMP_PROMPT_SECONDS = 0.7;
 
 /**
  * Metres between two coins in the jetpack's sky trail.
@@ -253,7 +258,7 @@ export class Game {
     this.particles = new ParticleField(this.scene, 260);
     this.spawner = new Spawner(this.pool, {
       onOncoming: (item) => this.makeItemOncoming(item),
-      onSantaRaid: () => this.startSantaRaid(),
+      onSantaDrop: () => this.onSantaDropPlaced(),
     });
     this.interactions = new Interactions(this.pool, this.run, this.particles);
 
@@ -1110,39 +1115,98 @@ export class Game {
     this.wheelQueue.push({ kind: "gift" });
   }
 
-  /**
-   * The sleigh goes over as the parcel it dropped comes into range. Called from
-   * inside the spawner, so all it does is start things that run on their own.
-   */
-  startSantaRaid() {
-    if (this.state !== "playing") return;
-    this.audio.bells();
-    this.screens.showToast("🎅 산타 습격! 뛰어올라 황금 선물을 낚아채세요");
-    if (reducedMotion()) return;
-    if (!this.flyer) {
-      this.flyer = makeFlyingSanta();
-      this.flyer.scale.setScalar(2.2);
-      this.scene.add(this.flyer);
-    }
-    this.flyerT = RAID_FLY_SECONDS;
+  /** Open sky now and for long enough that the whole raid will happen in it. */
+  raidCanStart() {
+    const t = this.runTime;
+    const ceiling = this.schedule.nextCeilingAt(t);
+    return (
+      !this.run.powerupActive("jetpack") &&
+      this.lookNow().ceiling === null &&
+      !this.schedule.eventAt(t) &&
+      !this.schedule.eventAt(t + RAID_CLEAR_SECONDS) &&
+      !(ceiling && ceiling.seconds < RAID_CLEAR_SECONDS)
+    );
   }
 
-  /** Over the camera, then away down the avenue, climbing into the dark. */
+  /** A line, the sleigh arriving, a three second count, and then the parcel. */
+  advanceSantaRaid(dt) {
+    if (!this.christmas) return;
+    const event = this.raid.update(dt, this.runTime, this.raidCanStart());
+    if (!event) return;
+    if (event.type === "announce") {
+      this.audio.bells();
+      this.screens.showRaid("🎅 호호호! 산타가 선물을 들고 왔어요!");
+      if (!reducedMotion()) {
+        if (!this.flyer) {
+          this.flyer = makeFlyingSanta();
+          this.flyer.scale.setScalar(3.2);
+          this.scene.add(this.flyer);
+        }
+        this.flyerAhead = -10;
+        this.flyerLeaving = false;
+        this.flyer.visible = true;
+      }
+    } else if (event.type === "count") {
+      this.audio.tick();
+      this.screens.showRaid(String(event.value), true);
+    } else {
+      this.audio.bells();
+      this.screens.showRaid("🎁 선물 투하!");
+    }
+  }
+
+  /** The spawner has laid the parcel. Called from inside it, so nothing heavy. */
+  onSantaDropPlaced() {
+    this.raid.dropped(this.runTime);
+    this.flyerLeaving = true;
+  }
+
+  /** In over the camera, hold down the avenue through the count, then away. */
   updateFlyer(dt) {
-    if (!this.flyer) return;
-    if (!(this.flyerT > 0)) {
+    if (!this.flyer?.visible) return;
+    if (this.state === "title") {
       this.flyer.visible = false;
       return;
     }
-    if (this.state === "playing") this.flyerT -= dt;
-    const flown = RAID_FLY_SECONDS - this.flyerT;
+    if (this.state === "playing") {
+      this.flyerAhead = this.flyerLeaving
+        ? this.flyerAhead + RAID_LEAVE_SPEED * dt
+        : this.flyerAhead + (RAID_HOVER_AHEAD - this.flyerAhead) * approach(1.5, dt);
+    }
+    if (this.flyerAhead > 160) {
+      this.flyer.visible = false;
+      return;
+    }
     const p = this.player;
     const { position } = this.flyer;
-    position.set(Math.sin(flown * 1.1) * 2.5, 11 + flown * 2.2, p.z - 10 + flown * RAID_FLY_SPEED);
-    this.flyer.rotation.x = -0.1 + Math.sin(flown * 3) * 0.05;
-    this.flyer.visible = true;
+    position.x += (p.x * 0.6 - position.x) * approach(3, dt);
+    position.y = 15 + Math.sin(p.runT * 2) * 0.5 + (this.flyerLeaving ? (this.flyerAhead - RAID_HOVER_AHEAD) * 0.1 : 0);
+    position.z = p.z + this.flyerAhead;
+    this.flyer.rotation.x = -0.08 + Math.sin(p.runT * 3) * 0.04;
     if (this.state === "playing" && Math.random() < this.quality.particleBudget / 200) {
       this.particles.trail(position.x, position.y + 1, position.z, { count: 1, colour: 0xffe082, spread: 1.4, back: 1 });
+    }
+  }
+
+  /**
+   * The parcel coming down as it comes in, and what to do about it. The fall is
+   * over by the time it is close enough to touch, so it is never somewhere other
+   * than where the collision test thinks it is.
+   */
+  updateSantaDrop(item, dt) {
+    const speed = Math.max(1, this.speed);
+    const seconds = (item.z - this.player.z) / speed;
+    const t = this.player.runT * 2.2 + item.z * 0.15;
+    item.mesh.rotation.y += dt * 1.6;
+    item.mesh.rotation.z = Math.sin(t * 0.55) * 0.07;
+    item.mesh.position.y = item.y + Math.sin(t) * 0.1 + Math.max(0, seconds - RAID_JUMP_PROMPT_SECONDS) * 7;
+    if (this.state !== "playing" || item.taken) return;
+    if (!item.prompted && seconds < RAID_JUMP_PROMPT_SECONDS) {
+      item.prompted = true;
+      this.screens.showRaid("⬆️ 지금 점프!", true);
+    } else if (item.prompted && !item.missed && seconds < -0.25) {
+      item.missed = true;
+      this.screens.showRaid("😢 아깝다! 다음 선물을 노려보세요");
     }
   }
 
@@ -1150,7 +1214,7 @@ export class Game {
     this.audio.purchase();
     vibrate([20, 30, 40]);
     this.screens.flashCoinGain(event.gain);
-    this.screens.showToast(`🎁 산타의 선물! 코인 +${event.gain}`);
+    this.screens.showRaid(`🎁 코인 +${event.gain.toLocaleString()}!`, true);
     if (!reducedMotion()) this.fovPunch = Math.max(this.fovPunch, 0.6);
   }
 
@@ -1586,7 +1650,9 @@ export class Game {
     this.wheelQueue = [];
     this.rudolph = false;
     this.wheelRetries = 0;
-    this.flyerT = 0;
+    this.raid = new SantaRaid();
+    if (this.flyer) this.flyer.visible = false;
+    this.screens?.hideRaid();
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
@@ -2239,6 +2305,7 @@ export class Game {
 
   advanceRun(dt) {
     this.runTime += dt;
+    this.advanceSantaRaid(dt);
     this.announceDebuts();
     this.advanceRoad(dt);
 
@@ -2539,7 +2606,8 @@ export class Game {
       // Not gated on `playing`: the title preview must not deal diamonds either.
       christmas: this.christmas,
       giftGap: this.giftGap,
-      skyOpen: !playing || this.lookNow().ceiling === null,
+      santaDrop: playing && this.raid.phase === "dropping" && !this.run.powerupActive("jetpack"),
+      preferLane: this.player.lane,
       // A due moon waits until it can be reached by the jump it was designed
       // for instead of passing underneath an active jetpack.
       flying: playing && this.run.powerupActive("jetpack"),
@@ -2612,7 +2680,9 @@ export class Game {
         const t = this.player.runT * 3 + item.z;
         item.mesh.position.y = item.y + Math.sin(t) * 0.22;
         item.mesh.scale.setScalar(1 + Math.sin(t * 1.7) * 0.1);
-      } else if (item.token === "chuseokMoon" || item.token === "santaDrop") {
+      } else if (item.token === "santaDrop") {
+        this.updateSantaDrop(item, dt);
+      } else if (item.token === "chuseokMoon") {
         const t = this.player.runT * 2.2 + item.z * 0.15;
         item.mesh.rotation.z = Math.sin(t * 0.55) * 0.07;
         item.mesh.position.y = item.y + Math.sin(t) * 0.18;
@@ -2755,6 +2825,7 @@ export class Game {
     });
     vibrate(40);
     this.screens.hideHint();
+    this.screens.hideRaid();
     this.store.recordBest(this.run.score);
   }
 

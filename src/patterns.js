@@ -1,6 +1,12 @@
 import { GRAVITY, JETPACK_ALTITUDE, JUMP_V, SLIDE_TIME, SNEAKER_JUMP_MULT } from "./config.js";
 
 /** Seconds a jump spends off the deck: up and back down again. */
+/**
+ * Just past what a runner on the ground can reach, and still in reach at the top
+ * of an ordinary jump, so the whole of a jump catches it. See santaDropPattern.
+ */
+export const SANTA_DROP_Y = 2.6;
+
 const JUMP_AIRTIME = (2 * JUMP_V) / -GRAVITY;
 import { shuffled } from "./rng.js";
 import { SPEC } from "./specs.js";
@@ -590,7 +596,7 @@ export function diamondPattern(z, context, type = "diamond") {
  * The rising songpyeon show when to jump; the neighbouring ground line is the
  * safe alternative for a player who does not want the wheel.
  */
-export function chuseokMoonPattern(z, context, type = "chuseokMoon") {
+export function chuseokMoonPattern(z, context) {
   const moonLane = context.lane;
   const groundLane = context.lanes.find((lane) => lane !== moonLane) ?? moonLane;
   const moonZ = z + 6.8;
@@ -599,10 +605,28 @@ export function chuseokMoonPattern(z, context, type = "chuseokMoon") {
     { type: "coin", lane: moonLane, z, y: 0.7 },
     { type: "coin", lane: moonLane, z: z + 2.2, y: 1.5 },
     { type: "coin", lane: moonLane, z: z + 4.4, y: 2.7 },
-    { type, lane: moonLane, z: moonZ, y: 4.1 },
+    { type: "chuseokMoon", lane: moonLane, z: moonZ, y: 4.1 },
     { type: "coin", lane: moonLane, z: z + 9.2, y: 2.7 },
     { type: "coin", lane: moonLane, z: z + 11.4, y: 1.5 },
     ...coinLine(groundLane, z, 8, 1.6, 0.7),
+  ];
+}
+
+/**
+ * The parcel from the Santa raid: in the lane the runner is already in, low
+ * enough that any jump gets it and just too high to run under by accident. The
+ * player has been counted in, so the only thing asked of them is the jump.
+ */
+export function santaDropPattern(z, context, preferLane) {
+  const lane = context.lanes.includes(preferLane) ? preferLane : context.lane;
+  const dropZ = z + 7;
+  return [
+    { type: "coin", lane, z, y: 0.8 },
+    { type: "coin", lane, z: z + 2.3, y: 1.2 },
+    { type: "coin", lane, z: z + 4.6, y: 1.7 },
+    { type: "santaDrop", lane, z: dropZ, y: SANTA_DROP_Y },
+    { type: "coin", lane, z: dropZ + 2.3, y: 1.7 },
+    { type: "coin", lane, z: dropZ + 4.6, y: 1.2 },
   ];
 }
 

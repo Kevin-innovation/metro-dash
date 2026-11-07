@@ -62,6 +62,7 @@ export class Run {
     this.scoreCoins = 0;
     this.scoreBonus = 0;
     this.coins = 0;
+    this.santaCoins = 0;
     /** Set by Game while a section is running; 1 the rest of the time. */
     this.eventMultiplier = 1;
     /**
@@ -137,7 +138,7 @@ export class Run {
     };
     // A run is banked when the player dies and again when they leave the card,
     // so progress is always committed as a delta against this.
-    this.banked = { coins: 0, distance: 0, xp: 0, ...this.metrics };
+    this.banked = { coins: 0, santaCoins: 0, distance: 0, xp: 0, ...this.metrics };
     this.runCounted = false;
     this.runClosed = false;
     /** Client-computed payouts this run, for the server to bound. */
@@ -435,10 +436,14 @@ export class Run {
     this.bumpCombo();
   }
 
-  /** The Santa raid's parcel. Real run coins, checked the way coins are. */
+  /**
+   * The Santa raid's parcel. Real run coins, checked the way coins are, and kept
+   * out of the coin missions: one catch would otherwise finish all of them.
+   */
   addSantaDrop(coins) {
     this.metrics.santaDrops += 1;
     this.coins += coins;
+    this.santaCoins += coins;
   }
 
   /** A Christmas gift. It spins straight away, so nothing is held toward a goal. */
@@ -567,7 +572,7 @@ export class Run {
     }
     // Career coin total is a cumulative goal of its own, separate from the
     // run-scoped "coins this run" reading.
-    deltas.coinsTotal = coinsDelta;
+    deltas.coinsTotal = coinsDelta - (this.santaCoins - this.banked.santaCoins);
 
     // The character's coin perk lands here rather than on `addCoin`: the score
     // and the missions count coins picked up, and a runner who earns more per
@@ -585,6 +590,7 @@ export class Run {
 
     this.banked = {
       coins: this.coins,
+      santaCoins: this.santaCoins,
       distance: this.distance,
       xp: earnedXp,
       ...this.metrics,
@@ -592,7 +598,7 @@ export class Run {
 
     const { missions, completed } = applyMetrics(save.missions, {
       // Run-scoped readings are absolute; the cumulative ones are deltas.
-      coins: this.coins,
+      coins: this.coins - this.santaCoins,
       distance: Math.floor(this.distance),
       comboMax: this.comboMax,
       score: Math.floor(score),

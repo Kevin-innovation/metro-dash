@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.80";
+export const VERSION = "5.90";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.90",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "산타 습격을 잡기 쉽게 바꿨습니다",
+    notes: [
+      "산타가 먼저 말을 걸고, 날아와서 3초를 센 뒤에 선물을 떨어뜨립니다.",
+      "선물은 달리던 레인으로, 더 낮게 떨어집니다. \"지금 점프!\"가 뜰 때 뛰면 잡힙니다.",
+      "보상이 코인 +1,500으로 올랐습니다. 코인 미션에는 집계되지 않습니다.",
+    ],
+  },
   {
     version: "5.80",
     date: "2026-11-07",
