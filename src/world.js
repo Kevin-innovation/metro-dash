@@ -2,8 +2,12 @@ import * as THREE from "three";
 import { BUILDING_COLORS, FOG_COLOR, MAX_SPEED, SEGMENT_COUNT, SEGMENT_LEN, START_SPEED } from "./config.js";
 import { LANE_WIDTHS, laneSet, laneX } from "./lanes.js";
 import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
-import { OPEN_CEILING } from "./zones.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { OPEN_CEILING, mixColor } from "./zones.js";
 import { chuseokAt } from "./chuseok.js";
+
+const BALLAST_REPEAT = [3, 8];
+const WALL_REPEAT = [4, 1];
 
 function hexOf(n) {
   return `#${n.toString(16).padStart(6, "0")}`;
@@ -18,6 +22,11 @@ const POLE_COUNT = 16;
 const POLE_SPACING = 30;
 const CHUSEOK_DECOR_COUNT = 16;
 const CHUSEOK_DECOR_SPACING = 36;
+const CHRISTMAS_TREE_COUNT = 16;
+const CHRISTMAS_TREE_SPACING = 36;
+const SNOW_GROUND = 0xdfe8f1;
+/** Metres outside the road's edge. Clears the wall at every road width. */
+const TREE_MARGIN = 3.4;
 
 /**
  * Scenery is recycled a full cycle at a time so a piece only ever jumps while
@@ -28,6 +37,7 @@ const CHUSEOK_DECOR_SPACING = 36;
 const BUILDING_CYCLE = (BUILDING_COUNT / 2) * SEGMENT_LEN;
 const POLE_CYCLE = POLE_COUNT * POLE_SPACING;
 const CHUSEOK_DECOR_CYCLE = CHUSEOK_DECOR_COUNT * CHUSEOK_DECOR_SPACING;
+const CHRISTMAS_TREE_CYCLE = CHRISTMAS_TREE_COUNT * CHRISTMAS_TREE_SPACING;
 /** How far behind the camera a piece must be before it may be moved. */
 const RECYCLE_BEHIND = 48;
 
@@ -226,10 +236,10 @@ export function createWorld(scene, quality) {
   scene.add(mouth);
 
   const ballastTex = makeBallast();
-  ballastTex.repeat.set(3, 8);
+  ballastTex.repeat.set(BALLAST_REPEAT[0], BALLAST_REPEAT[1]);
   const woodTex = makeWood();
   const wallTex = makeWall();
-  wallTex.repeat.set(4, 1);
+  wallTex.repeat.set(WALL_REPEAT[0], WALL_REPEAT[1]);
 
   const facades = BUILDING_COLORS.map((c, i) => {
     const t = makeFacade(i + 2, hexOf(c));
@@ -403,7 +413,110 @@ export function createWorld(scene, quality) {
     scene, sky, sunBall, sun, hemi, ambient, ground, clouds,
     shell, roof, walls, lamps, mouth,
     segments, buildings, poles, decorations, quality,
+    materials: { track: trackMat, wood: woodMat, rail: railMat, line: lineMat, wall: wallMat, kerb: kerbMat },
+    plain: { ballast: ballastTex, wood: woodTex, wall: wallTex, facades },
+    christmas: false,
+    trees: [],
   };
+}
+
+/** Vertex colours, so a whole tree can be one mesh and so one draw call. */
+function tinted(geometry, hex, x = 0, y = 0, z = 0) {
+  const flat = geometry.index ? geometry.toNonIndexed() : geometry;
+  flat.translate(x, y, z);
+  const colour = new THREE.Color(hex);
+  const colours = new Float32Array(flat.attributes.position.count * 3);
+  for (let i = 0; i < colours.length; i += 3) colour.toArray(colours, i);
+  flat.setAttribute("color", new THREE.BufferAttribute(colours, 3));
+  return flat;
+}
+
+/**
+ * The roadside trees.
+ *
+ * Self-lit, no shadows and two meshes each however many cones and bulbs are in
+ * them. Built the first time the event is on, so a normal run allocates nothing.
+ */
+function makeChristmasTrees(scene) {
+  const treeGeometry = mergeGeometries([
+    tinted(new THREE.CylinderGeometry(0.16, 0.2, 0.8, 6), 0x5d4037, 0, 0.4, 0),
+    tinted(new THREE.ConeGeometry(1.2, 1.5, 8), 0x1b5e20, 0, 1.45, 0),
+    tinted(new THREE.ConeGeometry(0.95, 1.3, 8), 0x2e7d32, 0, 2.3, 0),
+    tinted(new THREE.ConeGeometry(0.66, 1.1, 8), 0x388e3c, 0, 3.05, 0),
+    tinted(new THREE.OctahedronGeometry(0.2), 0xffd54f, 0, 3.72, 0),
+  ]);
+  const bulbColours = [0xff5252, 0xffd54f, 0x4fc3f7, 0xff80ab];
+  const bulbs = [];
+  for (let i = 0; i < 14; i++) {
+    const turn = i * 1.9;
+    const y = 0.95 + (i / 13) * 2.3;
+    const radius = 1.14 * (1 - (y - 0.7) / 3);
+    bulbs.push(
+      tinted(new THREE.IcosahedronGeometry(0.085), bulbColours[i % 4], Math.cos(turn) * radius, y, Math.sin(turn) * radius),
+    );
+  }
+  const bulbGeometry = mergeGeometries(bulbs);
+  const treeMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
+  const bulbMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
+
+  const trees = [];
+  for (let index = 0; index < CHRISTMAS_TREE_COUNT; index++) {
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(treeGeometry, treeMaterial));
+    group.add(new THREE.Mesh(bulbGeometry, bulbMaterial));
+    group.scale.setScalar(0.92 + ((index * 5) % 4) * 0.1);
+    scene.add(group);
+    trees.push({ group, index, side: index % 2 === 0 ? -1 : 1, z: index * CHRISTMAS_TREE_SPACING, bulbMaterial });
+  }
+  return trees;
+}
+
+/** Evenly through the cycle at whatever the tier allows, rather than bunched. */
+function treeAllowed(index, quality) {
+  const count = quality.decorationCount ?? 0;
+  if (count <= 0) return false;
+  return Math.floor(((index + 1) * count) / CHRISTMAS_TREE_COUNT) > Math.floor((index * count) / CHRISTMAS_TREE_COUNT);
+}
+
+/**
+ * Dress the world for Christmas, or take it off again.
+ *
+ * Only surfaces change. Rails and lane lines stay separate meshes above the
+ * floor, so snow can never cover them, and they darken here because the pale
+ * steel that read well on brown ballast disappears against white. Obstacles are
+ * not touched at all.
+ */
+export function setWorldChristmas(world, on) {
+  if (world.christmas === on) return;
+  world.christmas = on;
+
+  if (on && !world.snowy) {
+    const ballast = makeBallast(true);
+    ballast.repeat.set(BALLAST_REPEAT[0], BALLAST_REPEAT[1]);
+    const wall = makeWall(true);
+    wall.repeat.set(WALL_REPEAT[0], WALL_REPEAT[1]);
+    world.snowy = {
+      ballast,
+      wall,
+      wood: makeWood(true),
+      facades: BUILDING_COLORS.map((c, i) => makeFacade(i + 2, hexOf(c), true)),
+    };
+    world.trees = makeChristmasTrees(world.scene);
+    world.twinkle = !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  const look = on ? world.snowy : world.plain;
+  const { track, wood, rail, line, wall, kerb } = world.materials;
+  track.map = look.ballast;
+  wood.map = look.wood;
+  wall.map = look.wall;
+  world.buildings.forEach((building, i) => {
+    building.mesh.material.map = look.facades[i % look.facades.length];
+  });
+  rail.color.setHex(on ? 0x36414b : 0xa8b4bd);
+  line.color.setHex(on ? 0xd99a00 : 0xf2d64b);
+  kerb.color.setHex(on ? 0xdfe9f2 : 0x8a8f96);
+  for (const tree of world.trees) tree.group.visible = on && treeAllowed(tree.index, world.quality);
 }
 
 function configureShadow(sun, quality) {
@@ -473,7 +586,7 @@ export function applyLookAtSpeed(world, look, quality, speed) {
   world.scene.fog.far = quality.fogSeconds[1] * metres * look.fog[1];
   world.scene.background.setHex(look.sky[1]);
 
-  world.ground.material.color.setHex(look.ground);
+  world.ground.material.color.setHex(world.christmas ? mixColor(look.ground, SNOW_GROUND, 0.6) : look.ground);
   world.hemi.color.setHex(look.hemiSky);
   world.hemi.groundColor.setHex(look.hemiGround);
   world.hemi.intensity = look.hemi;
@@ -579,6 +692,17 @@ export function syncWorld(world, playerZ) {
       eventOn && decoration.index < (world.quality.decorationCount ?? 0);
   }
 
+  if (world.christmas) {
+    const edge = (world.roadHalf ?? BASE_HALF_WIDTH) + TREE_MARGIN;
+    for (const tree of world.trees) {
+      tree.group.position.z = recycle(tree, CHRISTMAS_TREE_CYCLE, playerZ);
+      tree.group.position.x = (world.roadCentre ?? 0) + tree.side * edge;
+    }
+    if (world.twinkle && world.trees.length) {
+      world.trees[0].bulbMaterial.color.setScalar(0.72 + Math.sin(playerZ * 0.09) * 0.28);
+    }
+  }
+
   world.sky.position.z = playerZ;
   world.ground.position.z = playerZ;
   world.shell.position.z = playerZ + TUNNEL_LEN / 2 - TUNNEL_BEHIND;
@@ -613,6 +737,9 @@ export function applyWorldQuality(world, quality) {
   for (const decoration of world.decorations ?? []) {
     decoration.group.visible =
       chuseokAt() && decoration.index < (quality.decorationCount ?? 0);
+  }
+  for (const tree of world.trees ?? []) {
+    tree.group.visible = world.christmas && treeAllowed(tree.index, quality);
   }
   return world;
 }

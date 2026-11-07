@@ -12,6 +12,7 @@ import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
 import { VERSION, previousSeason, seasonAt } from "./release.js";
 import { CHUSEOK_EVENT_NAME, chuseokAt } from "./chuseok.js";
+import { CHRISTMAS_TITLE } from "./christmas.js";
 
 /** How long a 「지붕 ×1.5 +310」 stays up. Long enough to read all three. */
 const TRICK_FLASH_MS = 950;
@@ -61,8 +62,16 @@ export class Screens {
     this.nearMissTimer = 0;
     this.shopNoteTimer = 0;
     this.rainbowTimer = 0;
+    this.christmas = false;
     this.bind();
     this.writeControlHints();
+  }
+
+  /** The wordmark, the how-to and the wheel's name all follow this one class. */
+  setChristmas(on) {
+    this.christmas = on;
+    document.documentElement.classList.toggle("christmas-event", on);
+    document.title = on ? CHRISTMAS_TITLE : "MetDash";
   }
 
   /**
@@ -894,7 +903,7 @@ export class Screens {
     const step = reel.firstElementChild?.getBoundingClientRect().height || 0;
     const landing = faces.length + index;
     const settled = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const spinMs = settled ? 0 : 1900;
+    const spinMs = settled ? 0 : (options.spinMs ?? 1900);
 
     reel.style.transition = "none";
     reel.style.transform = "translateY(0px)";
@@ -913,7 +922,7 @@ export class Screens {
       this.slotDoneTimer = setTimeout(() => {
         screen.classList.add("hidden");
         onDone?.();
-      }, settled ? 700 : 1200);
+      }, settled ? 700 : (options.holdMs ?? 1200));
     };
     if (spinMs) this.slotLandTimer = setTimeout(land, spinMs + 60);
     else land();
@@ -959,7 +968,7 @@ export class Screens {
   }
 
   openShop(save) {
-    renderShop($("shop-list"), shopView(save));
+    renderShop($("shop-list"), shopView(save, { christmas: this.christmas }));
     $("shop-screen").classList.remove("hidden");
   }
 
@@ -999,12 +1008,12 @@ export class Screens {
   }
 
   refreshShop(save) {
-    renderShop($("shop-list"), shopView(save));
+    renderShop($("shop-list"), shopView(save, { christmas: this.christmas }));
   }
 
   /** @returns {{ ok: boolean, reason?: string }} */
   buy(store, kind, id) {
-    const result = purchase(store, kind, id);
+    const result = purchase(store, kind, id, { christmas: this.christmas });
     if (!result.ok) {
       this.flashShopNote(result.reason === "poor" ? "코인이 부족합니다" : "이미 최대입니다");
     }
@@ -1284,7 +1293,7 @@ export class Screens {
     if (mountEl) mountEl.textContent = String(run.metrics.mounts);
     const xpEl = $("final-xp");
     if (xpEl) xpEl.textContent = `+${runXp(rounded).toLocaleString()}`;
-    renderRunTally($("run-tally"), run.metrics);
+    renderRunTally($("run-tally"), run.metrics, this.christmas);
 
     this.renderPromotion(promotion);
     const cleared = this.renderMissionResults(result);

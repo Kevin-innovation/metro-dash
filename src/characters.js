@@ -50,6 +50,25 @@ export const CHARACTERS = [
     palette: { shirt: 0x14b8a6, trim: 0x0f766e, pack: 0xf97316, hair: 0x1c1917, streak: 0xfb923c },
   },
   {
+    // Free while the event runs and offered at no other time, so it sits outside
+    // the price ladder. No perk: the sled is a look, not an advantage.
+    id: "santa",
+    name: "산타",
+    cost: 0,
+    event: "christmas",
+    blurb: "크리스마스 이벤트 기간 무료 · 썰매를 타고 달리고, 슈퍼 스니커즈를 먹으면 루돌프가 끌어 줍니다",
+    perk: {},
+    palette: {
+      shirt: 0xc62828,
+      trim: 0xf8fafc,
+      pack: 0x8d6e63,
+      hair: 0xf8fafc,
+      streak: 0xf8fafc,
+      pants: 0xc62828,
+      shoes: 0x1c1917,
+    },
+  },
+  {
     id: "neon",
     name: "네온",
     cost: 2500,
@@ -234,6 +253,16 @@ export const MAX_CHARACTER_SCORE_BONUS = CHARACTERS.reduce(
 
 export function characterById(id) {
   return CHARACTERS.find((character) => character.id === id) ?? CHARACTERS[0];
+}
+
+/**
+ * The runner actually worn. An event skin stays in the save when its event is
+ * off and simply is not put on, so whatever is decided about keeping it later
+ * has lost nothing.
+ */
+export function wearableCharacter(id, christmas = false) {
+  const character = characterById(id);
+  return character.event && !christmas ? DEFAULT_CHARACTER : character.id;
 }
 
 /** The perks of the equipped character, safe to read for any id. */

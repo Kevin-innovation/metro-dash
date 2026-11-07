@@ -172,6 +172,16 @@ export class Interactions {
         });
         const ready = this.run.addDiamond();
         events.push({ type: "token", id: "diamond", held: this.run.diamonds, ready });
+      } else if (item.token === "gift") {
+        this.particles.burst(itemX, itemY, item.z, {
+          count: 24,
+          colour: 0xff5a5f,
+          speed: 6.2,
+          life: 0.6,
+          size: 0.34,
+        });
+        this.run.addGift();
+        events.push({ type: "token", id: "gift" });
       } else if (item.token === "chuseokMoon") {
         this.particles.burst(itemX, itemY, item.z, {
           count: 30,

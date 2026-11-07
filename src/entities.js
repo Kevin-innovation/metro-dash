@@ -594,6 +594,49 @@ export function makeDiamond() {
 }
 
 /**
+ * The Christmas gift, standing in for the diamond.
+ *
+ * Same job and the same tricks: half again as large as anything else out there,
+ * and an emissive floor so it stays bright through a tunnel and the crow's gloom.
+ */
+export function makeGift() {
+  const g = new THREE.Group();
+  const paper = new THREE.MeshLambertMaterial({ color: 0xe53935, emissive: 0xb71c1c, emissiveIntensity: 0.7 });
+  const ribbon = new THREE.MeshLambertMaterial({ color: 0xffe082, emissive: 0xffb300, emissiveIntensity: 0.75 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.72, 0.92), paper);
+  body.position.y = 0.16;
+  g.add(body);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.2, 1.02), paper);
+  lid.position.y = 0.6;
+  g.add(lid);
+
+  // Two bands crossed over the box. Slightly proud of it, so they do not fight
+  // the paper for the same depth.
+  for (const [w, d] of [
+    [1.05, 0.2],
+    [0.2, 1.05],
+  ]) {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(w, 0.96, d), ribbon);
+    band.position.y = 0.26;
+    g.add(band);
+  }
+
+  // The bow: two loops and a knot. This is the silhouette at a distance.
+  for (const side of [-1, 1]) {
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.055, 6, 14), ribbon);
+    loop.position.set(side * 0.2, 0.86, 0);
+    loop.rotation.z = side * 0.45;
+    g.add(loop);
+  }
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), ribbon);
+  knot.position.y = 0.8;
+  g.add(knot);
+
+  return g;
+}
+
+/**
  * How long a vehicle's mesh is drawn, against the length its SPEC claims.
  *
  * The two builders lay their parts out around a body modelled at the lengths
@@ -632,6 +675,7 @@ const FACTORIES = {
   sneakers: makeSneakers,
   crowEgg: makeCrowEgg,
   diamond: makeDiamond,
+  gift: makeGift,
   chuseokMoon: makeChuseokMoon,
 };
 

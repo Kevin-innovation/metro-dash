@@ -129,6 +129,7 @@ export class Run {
       crows: 0,
       antidotes: 0,
       diamonds: 0,
+      gifts: 0,
       spins: 0,
     };
     // A run is banked when the player dies and again when they leave the card,
@@ -409,9 +410,18 @@ export class Run {
   takeSpin() {
     if (this.diamonds < DIAMOND_GOAL) return false;
     this.diamonds -= DIAMOND_GOAL;
+    this.countSpin();
+    return true;
+  }
+
+  countSpin() {
     this.spins += 1;
     this.metrics.spins += 1;
-    return true;
+  }
+
+  /** A Christmas gift. It spins straight away, so nothing is held toward a goal. */
+  addGift() {
+    this.metrics.gifts += 1;
   }
 
   /**

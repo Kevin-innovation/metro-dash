@@ -1,4 +1,4 @@
-import { CHARACTERS, characterById } from "./characters.js";
+import { CHARACTERS, characterById, wearableCharacter } from "./characters.js";
 import { POWERUPS, POWERUP_IDS, POWERUP_MAX_LEVEL, powerupDuration } from "./powerups.js";
 
 export { CHARACTERS, characterById };
@@ -119,7 +119,7 @@ export function profileWorth(save) {
  * Everything the shop screen needs to render, derived from the save profile.
  * Returning plain data keeps the DOM layer dumb and the pricing testable.
  */
-export function shopView(save) {
+export function shopView(save, { christmas = false } = {}) {
   const upgrades = POWERUP_IDS.map((id) => {
     const level = save.upgrades[id] ?? 1;
     const cost = upgradeCost(level);
@@ -139,12 +139,13 @@ export function shopView(save) {
     };
   });
 
-  const characters = CHARACTERS.map((character) => {
+  const worn = wearableCharacter(save.character, christmas);
+  const characters = CHARACTERS.filter((character) => !character.event || christmas).map((character) => {
     const owned = save.characters.includes(character.id);
     return {
       ...character,
       owned,
-      equipped: save.character === character.id,
+      equipped: worn === character.id,
       affordable: owned || save.coins >= character.cost,
     };
   });
@@ -173,7 +174,7 @@ export function shopView(save) {
  *
  * @returns {{ ok: boolean, reason?: string }}
  */
-export function purchase(store, kind, id) {
+export function purchase(store, kind, id, { christmas = false } = {}) {
   const save = store.data;
 
   if (kind === "upgrade") {
@@ -205,7 +206,7 @@ export function purchase(store, kind, id) {
 
   if (kind === "character") {
     const character = CHARACTERS.find((c) => c.id === id);
-    if (!character) return { ok: false, reason: "unknown" };
+    if (!character || (character.event && !christmas)) return { ok: false, reason: "unknown" };
     if (store.ownsCharacter(character.id)) {
       store.equipCharacter(character.id);
       return { ok: true };

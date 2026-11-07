@@ -37,6 +37,7 @@ import { RunSchedule } from "./schedule.js";
 import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier, runSpeedFactor } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
+import { setSanta } from "./santa.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import {
@@ -62,13 +63,15 @@ import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
-import { perkFor } from "./characters.js";
+import { CHRISTMAS_SLOT_FACES, christmasAt, spinChristmas } from "./christmas.js";
+import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import {
   applyLookAtSpeed,
   applyWorldQuality,
   createWorld,
   placeMouth,
+  setWorldChristmas,
   shapeRoad,
   syncWorld,
 } from "./world.js";
@@ -115,6 +118,12 @@ const BOARD_MAX = 50;
 /** Seconds the whole frame freezes on a heavy impact, for weight. */
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
+/** The gift wheel's beats, in seconds and ms. Short, because it comes often. */
+const GIFT_HITSTOP = 0.18;
+const GIFT_SPIN_MS = 1000;
+const GIFT_HOLD_MS = 650;
+/** Flakes a second per slot of the quality tier's particle budget. */
+const SNOW_PER_BUDGET = 0.06;
 
 /**
  * Metres between two coins in the jetpack's sky trail.
@@ -274,6 +283,7 @@ export class Game {
     this.input.setBoardKey(this.settings.boardKey);
     this.screens.setBoardHint(keyLabel(this.settings.boardKey));
 
+    this.applyChristmas(christmasAt());
     resetPlayer(this.player, 0);
     this.seedPreview();
     this.screens.refreshProfile(this.store.data);
@@ -575,7 +585,7 @@ export class Game {
     this.pendingClaim = this.readPendingClaim();
     this.settings = this.store.data.settings;
     this.syncMissions();
-    applySkin(this.player, characterById(this.store.data.character).palette);
+    this.syncSkin();
     this.applyQuality(this.activeTier());
   }
 
@@ -1070,6 +1080,20 @@ export class Game {
     else this.screens.showToast(`💎 다이아몬드 ${event.held}/${DIAMOND_GOAL}`);
   }
 
+  /**
+   * A gift was taken. One event, one queued spin, from every skin.
+   *
+   * Queued rather than spun here for the reason onDiamond gives, and with only a
+   * short beat first: the gifts come often enough that a long wind-up would have
+   * the run feeling interrupted rather than rewarded.
+   */
+  onGift() {
+    this.audio.powerup();
+    vibrate([20, 30, 20]);
+    this.hitstop = Math.max(this.hitstop, GIFT_HITSTOP);
+    this.wheelQueue.push({ kind: "gift" });
+  }
+
   onChuseokMoon(event) {
     this.audio.powerup();
     vibrate([22, 35, 22, 35, 28]);
@@ -1107,6 +1131,16 @@ export class Game {
       faces = CHUSEOK_SLOT_FACES;
       ({ face, index } = spinChuseok(() => Math.random()));
       options = { theme: "chuseok", title: "🌕 보름달 룰렛" };
+    } else if (wheel.kind === "gift") {
+      this.run.countSpin();
+      faces = CHRISTMAS_SLOT_FACES;
+      ({ face, index } = spinChristmas(() => Math.random()));
+      options = {
+        theme: "christmas",
+        title: "🎁 선물 룰렛",
+        spinMs: GIFT_SPIN_MS,
+        holdMs: GIFT_HOLD_MS,
+      };
     } else {
       if (!this.run.takeSpin()) return;
       faces = SLOT_FACES;
@@ -1284,9 +1318,7 @@ export class Game {
       return;
     }
     this.audio.purchase();
-    if (kind === "character") {
-      applySkin(this.player, characterById(this.store.data.character).palette);
-    }
+    if (kind === "character") this.syncSkin();
     this.screens.refreshShop(this.store.data);
     this.screens.refreshProfile(this.store.data);
     // Reported now rather than folded into the next run's sync.
@@ -1435,9 +1467,30 @@ export class Game {
 
   // --- lifecycle ----------------------------------------------------------
 
+  /**
+   * Whether this run, or this visit to the title screen, is a Christmas one.
+   *
+   * Set only at those two moments and read from here everywhere else, so a run
+   * that crosses the event's boundary keeps the rules it started with.
+   */
+  applyChristmas(on) {
+    this.christmas = on;
+    setWorldChristmas(this.world, on);
+    this.screens.setChristmas(on);
+    this.syncSkin();
+  }
+
+  /** Put on whatever is equipped, and take the last skin's models off. */
+  syncSkin() {
+    const id = wearableCharacter(this.store.data.character, this.christmas);
+    applySkin(this.player, characterById(id).palette);
+    setSanta(this.player, id === "santa");
+  }
+
   resetRunState() {
     this.run.reset();
     this.wheelQueue = [];
+    this.rudolph = false;
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
@@ -1500,6 +1553,7 @@ export class Game {
     this.claimAttendance();
     this.input.clear();
     this.resetRunState();
+    this.applyChristmas(christmasAt());
     this.state = "playing";
     this.speed = START_SPEED;
     this.hintT = 6;
@@ -1563,6 +1617,7 @@ export class Game {
     this.accumulator = 0;
     this.bgm.stop();
     this.run.clearPowerups();
+    this.applyChristmas(christmasAt());
     resetPlayer(this.player, 0);
     this.cam = { x: 0, y: 3.05, z: -6.2 };
     this.seedPreview();
@@ -1869,10 +1924,62 @@ export class Game {
     }
   }
 
+  /**
+   * A few flakes a second, scaled to the tier's particle budget so the low tier
+   * spends a tenth of its pool on them at most. Not indoors, and not at all for
+   * anyone who has asked for less motion.
+   */
+  emitSnow(dt) {
+    if (!this.christmas || reducedMotion() || this.lookNow().ceiling !== null) return;
+    this.snowDue = (this.snowDue ?? 0) + dt * this.quality.particleBudget * SNOW_PER_BUDGET;
+    const count = Math.floor(this.snowDue);
+    if (count <= 0) return;
+    this.snowDue -= count;
+    const p = this.player;
+    this.particles.emit(count, () => ({
+      x: p.x + (Math.random() - 0.5) * 18,
+      y: 3 + Math.random() * 5,
+      z: p.z + this.speed * 0.4 + 4 + Math.random() * 34,
+      vx: (Math.random() - 0.5) * 0.8,
+      vy: -1.7 - Math.random(),
+      vz: 0,
+      life: 1.5,
+      size: 0.24,
+      colour: [0.8, 0.86, 0.95],
+      gravity: 0,
+      drag: 0,
+    }));
+  }
+
+  /** The poof when the reindeer arrives and when it goes, and its snow dust. */
+  emitRudolph(p) {
+    const pulling = Boolean(p.santa?.on && p.santa.pulling);
+    if (pulling !== this.rudolph) {
+      this.rudolph = pulling;
+      if (pulling) this.screens.showToast("🦌 루돌프 등장!");
+      if (!reducedMotion()) {
+        this.particles.burst(p.x, p.y + 0.8, p.z + 1.6, {
+          count: 16,
+          colour: 0xeaf6ff,
+          speed: 3.6,
+          life: 0.45,
+          size: 0.3,
+          gravity: -3,
+        });
+      }
+    }
+    if (pulling && !reducedMotion() && Math.random() < this.quality.particleBudget / 200) {
+      this.particles.trail(p.x, p.y + 0.15, p.z + 1.6, { count: 1, colour: 0xdff3ff, spread: 0.6, back: 0.2 });
+    }
+  }
+
   /** Continuous effects that belong to presentation, not simulation. */
   emitAmbientParticles(dt) {
-    if (dt <= 0 || this.state !== "playing") return;
+    if (dt <= 0) return;
+    if (this.state === "title" || this.state === "playing") this.emitSnow(dt);
+    if (this.state !== "playing") return;
     const p = this.player;
+    this.emitRudolph(p);
 
     if (this.run.powerupActive("jetpack")) {
       this.particles.trail(p.x, p.y + 0.35, p.z, { count: 2, colour: 0xffb74d });
@@ -1945,6 +2052,7 @@ export class Game {
       roofs: this.collectRoofs(),
       held: this.input.held,
       flying: this.state === "playing" && this.run.powerupActive("jetpack"),
+      reindeer: this.state === "playing" && this.run.powerupActive("sneakers"),
       // Read from the same look the world is drawn with, so the runner never
       // bumps into a roof that is not there yet.
       ceiling: this.state === "playing" ? this.lookNow().ceiling : null,
@@ -2301,6 +2409,8 @@ export class Game {
       score: playing ? this.run.score : 0,
       tutorial: playing,
       chuseok: playing && chuseokAt(),
+      // Not gated on `playing`: the title preview must not deal diamonds either.
+      christmas: this.christmas,
       // A due moon waits until it can be reached by the jump it was designed
       // for instead of passing underneath an active jetpack.
       flying: playing && this.run.powerupActive("jetpack"),
@@ -2361,7 +2471,7 @@ export class Game {
     for (const item of this.pool.live) {
       if (item.type === "coin") {
         item.mesh.rotation.y += dt * 5;
-      } else if (item.token === "diamond") {
+      } else if (item.token === "diamond" || item.token === "gift") {
         // Faster and wider than the power-ups, and breathing.
         //
         // The old one did not move at all — `token` is not `powerup`, so it
@@ -2402,6 +2512,7 @@ export class Game {
         this.screens.flashCoinGain(Math.round(event.gain));
       } else if (event.type === "token") {
         if (event.id === "chuseokMoon") this.onChuseokMoon(event);
+        else if (event.id === "gift") this.onGift();
         else this.onDiamond(event);
       } else if (event.type === "hazard") {
         if (event.blocked) {
@@ -2568,6 +2679,10 @@ export class Game {
   }
 }
 
+
+function reducedMotion() {
+  return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
 
 let hapticsEnabled = true;
 

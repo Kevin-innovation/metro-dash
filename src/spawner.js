@@ -23,6 +23,7 @@ import {
   CHUSEOK_MOON_MAX_PER_RUN,
   nextMoonGap,
 } from "./chuseok.js";
+import { firstGiftAt, nextGiftGap } from "./christmas.js";
 
 /**
  * How close the lead correction below has to get before it stops.
@@ -322,6 +323,9 @@ export class Spawner {
     this.diamondIn = DIAMOND_EVERY;
     this.chuseokMoonAt = CHUSEOK_MOON_FIRST_AT;
     this.chuseokMoons = 0;
+    // Rolled on the first event layout rather than here: an extra draw in reset
+    // would shift every other draw of a run that has no gifts in it.
+    this.giftAt = null;
     this.patternCount = 0;
     /**
      * The last hazard actually placed, wherever it came from. Tracked across
@@ -504,6 +508,7 @@ export class Spawner {
     lanes = ALL_LANES,
     runTime = null,
     chuseok = false,
+    christmas = false,
     flying = false,
   }) {
     const context = patternContext({ z, speed, pressure, rng: this.rng, lanes });
@@ -565,8 +570,21 @@ export class Spawner {
     // the crows, and nothing in either number said so. Ticking both and then
     // deciding means each cadence is what it says it is, and the only thing
     // the collision costs is which of the two lands on this particular layout.
-    const diamondDue = this.patternCount >= DIAMOND_AFTER && --this.diamondIn <= 0;
+    //
+    // During Christmas the gift takes over the diamond's slot, on the clock
+    // rather than the layout count. It is checked here, below the power-up
+    // draw, so a due gift waits one layout instead of costing a power-up; and it
+    // waits out a jetpack, whose altitude it could not be reached from.
+    const diamondDue = !christmas && this.patternCount >= DIAMOND_AFTER && --this.diamondIn <= 0;
+    if (christmas && runTime !== null && this.giftAt === null) this.giftAt = firstGiftAt(this.rng);
+    const giftDue = christmas && runTime !== null && runTime >= this.giftAt && !flying;
     const hazardDue = --this.hazardIn <= 0;
+
+    if (giftDue) {
+      this.giftAt = runTime + nextGiftGap(this.rng);
+      if (hazardDue) this.hazardIn = 1;
+      return diamondPattern(z, context, "gift");
+    }
 
     // The wheel wins the tie. It is the better thing to meet, and the egg it
     // displaces comes back on the next layout rather than being skipped.

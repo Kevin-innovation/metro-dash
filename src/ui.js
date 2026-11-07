@@ -166,11 +166,13 @@ const SLOT_CHIP = "slot";
 /** What the wheel's chip looks like, given what it is currently paying. */
 function slotChipSpec(slot) {
   const down = slot.multiplier < 1;
-  const moon = slot?.face?.theme === "chuseok";
+  const theme = slot?.face?.theme;
+  const moon = theme === "chuseok";
+  const gift = theme === "christmas";
   return {
     name: `점수 ×${slot.multiplier}`,
-    icon: down ? "💧" : moon ? "🌕" : "💎",
-    colour: down ? "#64748b" : moon ? "#ffe59a" : "#7dd3fc",
+    icon: down ? "💧" : moon ? "🌕" : gift ? "🎁" : "💎",
+    colour: down ? "#64748b" : moon ? "#ffe59a" : gift ? "#ff8a80" : "#7dd3fc",
   };
 }
 
@@ -454,7 +456,8 @@ export function renderHud(state) {
  * They appear the moment one is spent.
  */
 const TALLY_ROWS = [
-  { key: "diamonds", icon: "💎", label: "다이아몬드", always: true },
+  { key: "diamonds", icon: "💎", label: "다이아몬드", always: true, christmas: false },
+  { key: "gifts", icon: "🎁", label: "선물", always: true, christmas: true },
   { key: "spins", icon: "🎰", label: "룰렛", suffix: "회", always: true },
   // Each power-up by name rather than one 「파워업 14」.
   //
@@ -477,9 +480,13 @@ const TALLY_ROWS = [
   { key: "antidotes", icon: "💊", label: "해독제", always: false },
 ];
 
-export function renderRunTally(root, metrics = {}) {
+export function renderRunTally(root, metrics = {}, christmas = false) {
   if (!root) return;
-  const rows = TALLY_ROWS.filter((row) => row.always || (metrics[row.key] ?? 0) > 0);
+  const rows = TALLY_ROWS.filter(
+    (row) =>
+      (row.christmas === undefined || row.christmas === christmas) &&
+      (row.always || (metrics[row.key] ?? 0) > 0),
+  );
   root.innerHTML = rows
     .map((row) => {
       const value = Math.max(0, Math.floor(metrics[row.key] ?? 0));
@@ -610,7 +617,9 @@ export function renderShop(root, view) {
         ? "착용 중"
         : character.owned
           ? "착용하기"
-          : `🪙 ${money(character.cost)}`;
+          : character.cost === 0
+            ? "무료"
+            : `🪙 ${money(character.cost)}`;
       return `
       <div class="shop-item character${character.equipped ? " equipped" : ""}">
         <div class="shop-swatch" style="--a:#${character.palette.shirt

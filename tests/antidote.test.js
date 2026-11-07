@@ -205,9 +205,10 @@ describe("new characters", () => {
   });
 
   it("prices go up with the runner list, so the shop reads as a ladder", () => {
-    const costs = CHARACTERS.map((c) => c.cost);
-    for (let i = 1; i < costs.length; i++) {
-      expect(costs[i], CHARACTERS[i].id).toBeGreaterThan(costs[i - 1]);
+    // An event skin is free for its event and is not a rung on the ladder.
+    const ladder = CHARACTERS.filter((c) => !c.event);
+    for (let i = 1; i < ladder.length; i++) {
+      expect(ladder[i].cost, ladder[i].id).toBeGreaterThan(ladder[i - 1].cost);
     }
   });
 });

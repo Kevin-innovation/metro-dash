@@ -1,4 +1,4 @@
-import { DEFAULT_CHARACTER, isKnownCharacter } from "./characters.js";
+import { DEFAULT_CHARACTER, characterById, isKnownCharacter } from "./characters.js";
 import { BEST_KEY, SAVE_KEY } from "./config.js";
 import { POWERUP_IDS, POWERUP_MAX_LEVEL } from "./powerups.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings.js";
@@ -408,7 +408,7 @@ export function hasProgress(save) {
     (save.runs ?? 0) > 0 ||
     (save.xp ?? 0) > 0 ||
     (save.hoverboards ?? 0) > 0 ||
-    (save.characters?.length ?? 0) > 1
+    (save.characters ?? []).some((id) => characterById(id).cost > 0)
   );
 }
 

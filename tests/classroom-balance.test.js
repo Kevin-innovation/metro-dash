@@ -87,7 +87,8 @@ describe("the original roster no longer buys a score multiplier", () => {
 
 describe("ten more runners after 허수아비", () => {
   const originals = new Set(ORIGINAL_IDS);
-  const added = CHARACTERS.filter((character) => !originals.has(character.id));
+  // An event skin is free for its event and is not one of the paid ten.
+  const added = CHARACTERS.filter((character) => !originals.has(character.id) && !character.event);
 
   it("adds ten", () => {
     expect(added).toHaveLength(10);

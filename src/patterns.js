@@ -563,7 +563,7 @@ export function crowEggPattern(z, context) {
  * also had to be threaded between two buses would be asking a player to risk
  * the run for a coin flip. The cost is the coins and the lane, and that is all.
  */
-export function diamondPattern(z, context) {
+export function diamondPattern(z, context, type = "diamond") {
   const lane = context.lane;
   const line = context.others[0] ?? (lane === 1 ? 0 : 1);
   const stoneZ = z + 7.4;
@@ -573,7 +573,7 @@ export function diamondPattern(z, context) {
     // it — so the choice is visible for the whole approach.
     ...coinLine(line, z, 12),
 
-    { type: "diamond", lane, z: stoneZ, y: 0.95 },
+    { type, lane, z: stoneZ, y: 0.95 },
 
     // Three coins on the diamond's own lane, tight around it. Not a reward for
     // going — a signpost. A lone pickup in an empty lane at fifty metres a

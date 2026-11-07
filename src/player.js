@@ -15,6 +15,7 @@ import {
 } from "./config.js";
 import { ALL_LANES } from "./patterns.js";
 import { laneX } from "./lanes.js";
+import { resetSanta, updateSanta } from "./santa.js";
 
 function box(w, h, d, color, extra = {}) {
   const mesh = new THREE.Mesh(
@@ -31,6 +32,8 @@ const DEFAULT_PALETTE = {
   pack: 0xf97316,
   hair: 0x1c1917,
   streak: 0xfb923c,
+  pants: 0x1e293b,
+  shoes: 0xf8fafc,
 };
 
 export function createPlayer(palette = DEFAULT_PALETTE) {
@@ -42,7 +45,7 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
   root.add(hip);
 
   // Kept on the player so a shop skin change can recolour without a rebuild.
-  const parts = { shirt: [], trim: [], pack: [], hair: [], streak: [] };
+  const parts = { shirt: [], trim: [], pack: [], hair: [], streak: [], pants: [], shoes: [] };
   const tag = (mesh, slot) => {
     parts[slot].push(mesh);
     return mesh;
@@ -128,13 +131,13 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     lower.add(hand);
     arms.push(upper);
 
-    const thigh = box(0.18, 0.34, 0.18, 0x1e293b);
+    const thigh = tag(box(0.18, 0.34, 0.18, skin.pants), "pants");
     thigh.position.set(0.13 * side, 0, 0);
     hip.add(thigh);
-    const shin = box(0.16, 0.32, 0.16, 0x1e293b);
+    const shin = tag(box(0.16, 0.32, 0.16, skin.pants), "pants");
     shin.position.y = -0.3;
     thigh.add(shin);
-    const shoe = box(0.18, 0.1, 0.28, 0xf8fafc);
+    const shoe = tag(box(0.18, 0.1, 0.28, skin.shoes), "shoes");
     shoe.position.set(0, -0.2, 0.04);
     shin.add(shoe);
     const stripe = tag(box(0.19, 0.04, 0.1, skin.streak), "streak");
@@ -204,6 +207,8 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     laneScale: 1,
     /** Hoverboard deployed — absorbs the next crash. */
     boarding: false,
+    /** The Santa skin's models, once it has been worn. See santa.js. */
+    santa: null,
   };
 }
 
@@ -252,6 +257,7 @@ export function resetPlayer(p, z = 0) {
   p.shadow.visible = true;
   p.shadow.scale.setScalar(1);
   p.shadow.material.opacity = 0.3;
+  resetSanta(p);
 }
 
 export function applyAction(p, action, audio, opts = {}) {
@@ -494,6 +500,7 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
   p.shadow.visible = p.alive;
 
   animatePlayer(p, speed);
+  updateSanta(p, dt, speed, ctx);
 }
 
 function enterFlight(p) {

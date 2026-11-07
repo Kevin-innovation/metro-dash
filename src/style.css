@@ -1302,6 +1302,57 @@ html.chuseok-event .coin-orb.small {
   box-shadow: 0 0 16px rgba(255, 213, 108, 0.28);
 }
 
+/* Shown or hidden by the event class alone, so no copy has to be swapped in JS. */
+html:not(.christmas-event) .only-christmas,
+html.christmas-event .not-christmas {
+  display: none !important;
+}
+
+/* Both wordmark layouts keep the title block's own place on the card. The long
+   edition name needs the whole line, so the tags drop underneath it. */
+html.christmas-event h1 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: min(clamp(19px, 5.5vw, 46px), 7vh);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+html.christmas-event h1 .title-tags {
+  flex-direction: row;
+  align-items: center;
+  margin: 6px 0 0;
+  gap: 8px;
+  transform: none;
+}
+
+.xmas-wordmark {
+  position: relative;
+  display: block;
+}
+
+h1 .xmas-wordmark {
+  color: #f8fafc;
+}
+
+.xmas-wordmark > span {
+  color: #ff6b6b;
+}
+
+.xmas-antlers {
+  display: block;
+  width: min(30vw, 150px, 22vh);
+  height: auto;
+  margin: 0 auto -2px;
+  fill: none;
+  stroke: #d9a066;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 0 #4e2f13);
+}
+
 h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -3827,6 +3878,25 @@ body.admin {
 .slots-screen[data-theme="chuseok"] .slots-pointer {
   border-color: rgba(255, 229, 154, 0.9);
   background: linear-gradient(90deg, rgba(255, 77, 109, 0.14), rgba(85, 224, 111, 0.1), rgba(76, 201, 240, 0.14));
+}
+
+.slots-screen[data-theme="christmas"] {
+  background: radial-gradient(circle at 50% 42%, rgba(127, 29, 29, 0.74), rgba(5, 20, 16, 0.95));
+}
+
+.slots-screen[data-theme="christmas"] .slots-title {
+  color: #fff4d6;
+  text-shadow: 0 0 22px rgba(255, 138, 128, 0.75);
+}
+
+.slots-screen[data-theme="christmas"] .slots-window {
+  border-color: rgba(255, 213, 79, 0.62);
+  box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.8), 0 0 34px rgba(46, 125, 50, 0.32);
+}
+
+.slots-screen[data-theme="christmas"] .slots-pointer {
+  border-color: rgba(255, 244, 214, 0.92);
+  background: linear-gradient(90deg, rgba(229, 57, 53, 0.16), rgba(46, 125, 50, 0.16));
 }
 
 @media (prefers-reduced-motion: reduce) {

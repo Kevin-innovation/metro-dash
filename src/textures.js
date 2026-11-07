@@ -20,8 +20,55 @@ function hash(x, y) {
   return n - Math.floor(n);
 }
 
-export function makeBallast() {
+/**
+ * Snow lying over ballast: a soft pale surface with stones poking through.
+ *
+ * A base colour under the white rather than a pure white, because tone mapping
+ * would blow pure white out, and it is the surface everything else on the track
+ * has to be read against. Blobs wrap at the edges, so a tiled floor shows no seam.
+ */
+function snowOverBallast(ctx, w, h) {
+  ctx.fillStyle = "#c9d6e2";
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {
+    const x = hash(i, 41) * w;
+    const y = hash(i, 42) * h;
+    const r = 14 + hash(i, 43) * 26;
+    const light = hash(i, 44) > 0.35;
+    for (const dx of [-w, 0, w]) {
+      for (const dy of [-h, 0, h]) {
+        const g = ctx.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+        g.addColorStop(0, light ? "rgba(240,246,252,0.7)" : "rgba(150,172,195,0.28)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+      }
+    }
+  }
+  // Stones in small clumps, the way a thin cover actually breaks.
+  for (let c = 0; c < 26; c++) {
+    const cx = hash(c, 45) * w;
+    const cy = hash(c, 46) * h;
+    for (let i = 0; i < 16; i++) {
+      const v = 70 + hash(c * 31 + i, 47) * 50;
+      const s = 1 + hash(c * 31 + i, 48) * 2.5;
+      ctx.fillStyle = `rgb(${v + 14},${v + 6},${v})`;
+      ctx.fillRect(
+        (cx + (hash(c * 31 + i, 49) - 0.5) * 18 + w) % w,
+        (cy + (hash(c * 31 + i, 50) - 0.5) * 18 + h) % h,
+        s,
+        s,
+      );
+    }
+  }
+}
+
+export function makeBallast(snow = false) {
   return canvasTexture(256, 256, (ctx, w, h) => {
+    if (snow) {
+      snowOverBallast(ctx, w, h);
+      return;
+    }
     ctx.fillStyle = "#6d6053";
     ctx.fillRect(0, 0, w, h);
     for (let i = 0; i < 2200; i++) {
@@ -82,7 +129,7 @@ export function makeContainerSkin() {
   });
 }
 
-export function makeWood() {
+export function makeWood(snow = false) {
   return canvasTexture(128, 64, (ctx, w, h) => {
     ctx.fillStyle = "#5d3c24";
     ctx.fillRect(0, 0, w, h);
@@ -94,6 +141,18 @@ export function makeWood() {
     ctx.fillStyle = "rgba(0,0,0,0.22)";
     ctx.fillRect(0, 0, w, 6);
     ctx.fillRect(0, h - 6, w, 6);
+    // A dusting along the ends of each sleeper, with the middle left dark so the
+    // sleeper still reads against the snow around it.
+    if (snow) {
+      ctx.fillStyle = "rgba(236,243,250,0.9)";
+      for (let i = 0; i < 16; i++) {
+        const x = hash(i, 51) * 34;
+        const y = hash(i, 52) * h;
+        const r = 3 + hash(i, 53) * 7;
+        ctx.fillRect(x, y, r * 2, r);
+        ctx.fillRect(w - x - r * 2, h - y - r, r * 2, r);
+      }
+    }
   });
 }
 
@@ -103,7 +162,7 @@ export function makeWood() {
  * Windows are drawn as banded floors with only a scattering lit, which reads as
  * a real building at distance instead of a repeating checkerboard.
  */
-export function makeFacade(seed = 1, hex = "#51607a") {
+export function makeFacade(seed = 1, hex = "#51607a", snow = false) {
   return canvasTexture(256, 512, (ctx, w, h) => {
     ctx.fillStyle = hex;
     ctx.fillRect(0, 0, w, h);
@@ -142,7 +201,24 @@ export function makeFacade(seed = 1, hex = "#51607a") {
     ctx.fillRect(0, 0, w, 9);
     ctx.fillStyle = "rgba(255,255,255,0.2)";
     ctx.fillRect(0, 9, w, 3);
+
+    // Snow on the roofline. Painted rather than built: the top of a tower is
+    // above the lens, so a real cap would be a draw call nobody could look down
+    // on, and every tier gets this for nothing.
+    if (snow) snowCap(ctx, w, seed, 26, 20);
   });
+}
+
+/** A white band with an uneven lower edge, drooping over the top of a surface. */
+function snowCap(ctx, w, seed, depth, droop) {
+  ctx.fillStyle = "#eef4fa";
+  ctx.fillRect(0, 0, w, depth);
+  for (let x = 0; x < w; x += 18) {
+    const r = 9 + hash(x, seed) * 5;
+    ctx.beginPath();
+    ctx.ellipse(x + 9, depth, r, hash(x, seed + 1) * droop + 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 /**
@@ -150,7 +226,7 @@ export function makeFacade(seed = 1, hex = "#51607a") {
  * than the full-surface scribble it used to be — the wall should frame the
  * track, not compete with it.
  */
-export function makeWall() {
+export function makeWall(snow = false) {
   return canvasTexture(256, 128, (ctx, w, h) => {
     ctx.fillStyle = "#8d9098";
     ctx.fillRect(0, 0, w, h);
@@ -186,6 +262,25 @@ export function makeWall() {
     grime.addColorStop(1, "rgba(48,52,58,0.5)");
     ctx.fillStyle = grime;
     ctx.fillRect(0, h * 0.68, w, h * 0.32);
+
+    if (snow) {
+      snowCap(ctx, w, 3, 9, 7);
+      // String lights along the wall, in the texture so they cost no draw calls.
+      const bulbs = ["#ff5252", "#ffd54f", "#66bb6a", "#4fc3f7"];
+      ctx.strokeStyle = "rgba(30,41,59,0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 42);
+      ctx.lineTo(w, 42);
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        ctx.fillStyle = bulbs[i % bulbs.length];
+        ctx.beginPath();
+        // Narrower than tall: this texture is stretched along the wall.
+        ctx.ellipse(16 + i * 32, 48, 4, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   });
 }
 
