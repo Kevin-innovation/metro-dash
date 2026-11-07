@@ -162,6 +162,13 @@ const POWERUP_EVERY = 6;
 export const HAZARD_FROM_SCORE = 150_000;
 const HAZARD_EVERY = 3;
 /**
+ * The snowball's cadence at Christmas: half as often as the egg.
+ *
+ * A blizzard whites out the whole screen rather than dimming it, so one every
+ * three layouts was most of a long run spent in it.
+ */
+export const CHRISTMAS_HAZARD_EVERY = 6;
+/**
  * The same slot's cadence before the bird is in the game.
  *
  * Below the threshold this slot deals the coin line without the trap in it, and
@@ -615,7 +622,7 @@ export class Spawner {
     // coin line with nothing in it, on the slow cadence — see REST_EVERY.
     if (hazardDue) {
       const hatching = score >= HAZARD_FROM_SCORE;
-      const cadence = hatching ? HAZARD_EVERY : REST_EVERY;
+      const cadence = !hatching ? REST_EVERY : christmas ? CHRISTMAS_HAZARD_EVERY : HAZARD_EVERY;
       this.hazardIn = cadence + Math.floor(this.rng() * HAZARD_SPREAD * 2) - HAZARD_SPREAD;
       if (hatching) return crowEggPattern(z, context);
       const rest = patternById("coins");

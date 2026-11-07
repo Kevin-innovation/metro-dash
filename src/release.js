@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.53";
+export const VERSION = "6.54";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.54",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "눈보라 줄이기",
+    notes: [
+      "🌨️ 눈덩이(눈보라)가 전보다 절반 정도로 덜 나옵니다.",
+      "🧲 자석이 더 이상 눈덩이를 끌어오지 않습니다. 직접 부딪혀야만 눈보라가 옵니다.",
+    ],
+  },
   {
     version: "6.53",
     date: "2026-11-08",

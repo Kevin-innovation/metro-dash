@@ -4,7 +4,7 @@ import { Interactions } from "../src/interactions.js";
 import { Run } from "../src/run.js";
 import { SaveStore } from "../src/save.js";
 import { Spawner } from "../src/spawner.js";
-import { HAZARD_FROM_SCORE } from "../src/spawner.js";
+import { CHRISTMAS_HAZARD_EVERY, HAZARD_FROM_SCORE } from "../src/spawner.js";
 import { MAGNET_RANGE } from "../src/config.js";
 
 const store = () => new SaveStore({ getItem: () => null, setItem: () => {} });
@@ -44,14 +44,14 @@ function layoutSpacing(score) {
 }
 
 /** Deal `count` layouts and report how many carried a crow egg. */
-function dealEggs(count, score) {
+function dealEggs(count, score, christmas = false) {
   const pool = fakePool();
   const spawner = new Spawner(pool, {});
   spawner.reset(12345);
   let eggs = 0;
   for (let i = 0; i < count; i++) {
     const before = pool.live.filter((item) => item.type === "crowEgg").length;
-    spawner.place(i * 200, { speed: 50, phaseId: 4, score });
+    spawner.place(i * 200, { speed: 50, phaseId: 4, score, christmas });
     if (pool.live.filter((item) => item.type === "crowEgg").length > before) eggs += 1;
   }
   return eggs;
@@ -95,6 +95,15 @@ describe("when the crow is dealt at all", () => {
     const layouts = 600;
     const every = layouts / dealEggs(layouts, HAZARD_FROM_SCORE);
     expect(every).toBeGreaterThan(2);
+  });
+
+  it("deals the Christmas snowball half as often as the egg", () => {
+    const layouts = 600;
+    const egg = dealEggs(layouts, HAZARD_FROM_SCORE);
+    const snowball = dealEggs(layouts, HAZARD_FROM_SCORE, true);
+    expect(snowball).toBeGreaterThan(0);
+    expect(layouts / snowball).toBeGreaterThan(CHRISTMAS_HAZARD_EVERY - 1.5);
+    expect(snowball).toBeLessThan(egg * 0.7);
   });
 
   it("never deals one to the title screen's preview", () => {
@@ -161,6 +170,36 @@ describe("the magnet and the crow egg", () => {
     const startX = egg.mesh.position.x;
     interactions.pullCoins(player(), 0.05, 50);
     expect(egg.mesh.position.x).toBe(startX);
+  });
+
+  it("leaves the Christmas snowball alone, and takes the coins beside it", () => {
+    const { pool, run, interactions } = setup();
+    interactions.christmas = true;
+    run.powerups.magnet = 10;
+    const snowball = pool.spawn("crowEgg", 1, 3, 0.75);
+    const coin = pool.spawn("coin", 1, 3.5, 0.75);
+    const startX = snowball.mesh.position.x;
+    interactions.pullCoins(player(), 0.05, 50);
+    expect(snowball.mesh.position.x).toBe(startX);
+    expect(Math.abs(coin.mesh.position.x)).toBeLessThan(startX);
+
+    // Alongside the runner, within the magnet's grab but outside the lane, it is
+    // still not taken: only running into it counts.
+    const beside = () => {
+      pool.live = [];
+      const item = pool.spawn("crowEgg", 1, 0, 0.95);
+      item.mesh.position.y = 0.95;
+      item.mesh.position.x = 1.3;
+    };
+    beside();
+    interactions.collectPickups(player(), { upgradeLevel: () => 1 });
+    expect(run.crowActive()).toBe(false);
+
+    // The same spot outside Christmas is grabbed, so the check above means something.
+    interactions.christmas = false;
+    beside();
+    interactions.collectPickups(player(), { upgradeLevel: () => 1 });
+    expect(run.crowActive()).toBe(true);
   });
 
   it("still leaves the power-ups alone", () => {

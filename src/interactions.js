@@ -18,8 +18,10 @@ const MAGNET_GRAB = 1.35;
  * be written separately and a thing the magnet pulled but would not absorb
  * would orbit the runner for the rest of the power-up.
  */
-function magnetTakes(item) {
-  return item.type === "coin" || item.hazard === "crow";
+function magnetTakes(item, christmas) {
+  // Not the snowball: a blizzard is the whole screen, and dragging one into a
+  // runner who had steered around it was the magnet taking the choice away.
+  return item.type === "coin" || (item.hazard === "crow" && !christmas);
 }
 /** How far the runner's midpoint may sit from a pickup and still take it. */
 const PICKUP_REACH = 1.35;
@@ -108,7 +110,7 @@ export class Interactions {
       // the thing you did not want. See pullCoins.
       const grabbed =
         magnetOn &&
-        magnetTakes(item) &&
+        magnetTakes(item, this.christmas) &&
         Math.hypot(player.x - itemX, player.y + 0.95 - itemY, player.z - item.z) < MAGNET_GRAB;
 
       if (!grabbed) {
@@ -376,7 +378,7 @@ export class Interactions {
     if (!this.run.powerupActive("magnet")) return;
 
     for (const item of this.pool.live) {
-      if (!magnetTakes(item) || item.taken) continue;
+      if (!magnetTakes(item, this.christmas) || item.taken) continue;
       const dx = player.x - item.mesh.position.x;
       const dy = player.y + 1.05 - item.mesh.position.y;
       const dz = player.z + 0.7 - item.z;
