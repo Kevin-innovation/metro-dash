@@ -82,7 +82,8 @@ export const recent = query({
   args: { adminKey: v.string() },
   handler: async (ctx, { adminKey }) => {
     requireAdmin(adminKey);
-    const runs = await ctx.db.query("scores").order("desc").take(50);
+    // Enough runs to group by player and still show each one's last few.
+    const runs = await ctx.db.query("scores").order("desc").take(200);
     const seen = await ctx.db.query("players").withIndex("by_updatedAt").order("desc").take(50);
     return {
       runs: runs.map((run) => ({

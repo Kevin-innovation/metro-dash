@@ -58,20 +58,35 @@ let schools = [];
 /** The school picked to be folded into another, while staff choose the target. */
 let merging = null;
 
+/** One line per player, newest first; tapping it opens that player's recent runs. */
 function renderRuns(rows) {
-  $("admin-runs").innerHTML = rows.length
-    ? rows
-        .map(
-          (row) => `
-      <div class="admin-row">
-        <div class="admin-row-main">
-          <span class="admin-handle">${escapeHtml(row.handle)} <b class="admin-score">${row.score.toLocaleString()}점</b></span>
-          <span class="admin-meta">${ago(row.createdAt)} · ${Math.floor(row.distance).toLocaleString()}m · ${Math.floor(
-            row.seconds,
-          )}초${row.school ? ` · ${escapeHtml(row.school)}` : ""}</span>
-        </div>
-      </div>`,
-        )
+  const byPlayer = new Map();
+  for (const row of rows) {
+    if (!byPlayer.has(row.handle)) byPlayer.set(row.handle, []);
+    byPlayer.get(row.handle).push(row);
+  }
+  const line = (run) =>
+    `${ago(run.createdAt)} · ${Math.floor(run.distance).toLocaleString()}m · ${Math.floor(run.seconds)}초`;
+
+  $("admin-runs").innerHTML = byPlayer.size
+    ? [...byPlayer.values()]
+        .map(([latest, ...older]) => {
+          const head = `
+          <span class="admin-handle">${escapeHtml(latest.handle)} <b class="admin-score">${latest.score.toLocaleString()}점</b>${
+            older.length ? ` <em class="admin-count">+${older.length}판</em>` : ""
+          }</span>
+          <span class="admin-meta">${line(latest)}${latest.school ? ` · ${escapeHtml(latest.school)}` : ""}</span>`;
+          if (!older.length) return `<div class="admin-row"><div class="admin-row-main">${head}</div></div>`;
+          return `
+      <details class="admin-row admin-player">
+        <summary class="admin-row-main">${head}</summary>
+        <ul class="admin-runs">
+          ${older
+            .map((run) => `<li><b class="admin-score">${run.score.toLocaleString()}점</b> <span class="admin-meta">${line(run)}</span></li>`)
+            .join("")}
+        </ul>
+      </details>`;
+        })
         .join("")
     : `<p class="admin-empty">아직 기록된 판이 없습니다.</p>`;
 }
