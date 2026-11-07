@@ -156,6 +156,32 @@ body.running #game-canvas {
      curve the fog uses, and a CSS transition on top of that would fight it. */
 }
 
+/* The same overlay as a white-out: pale at the edges and thinner in the middle,
+   so the lane ahead stays readable through it. */
+html.christmas-event .crow-veil {
+  background: radial-gradient(
+    circle at 50% 46%,
+    rgba(226, 236, 246, 0.16) 0%,
+    rgba(226, 236, 246, 0.5) 50%,
+    rgba(240, 246, 252, 0.88) 100%
+  );
+}
+
+html.christmas-event .crow-veil::before,
+html.christmas-event .crow-veil::after {
+  background:
+    radial-gradient(ellipse 16% 2.5% at 22% 30%, rgba(255, 255, 255, 0.75), transparent 70%),
+    radial-gradient(ellipse 12% 2% at 74% 58%, rgba(255, 255, 255, 0.7), transparent 70%),
+    radial-gradient(ellipse 10% 1.8% at 45% 78%, rgba(255, 255, 255, 0.65), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.christmas-event .crow-veil::before,
+  html.christmas-event .crow-veil::after {
+    animation: none;
+  }
+}
+
 .rainbow-flash {
   position: absolute;
   inset: 0;
@@ -326,6 +352,11 @@ body.running #game-canvas {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff4b0, #ffd24a 42%, #d49412);
   box-shadow: inset 0 -3px 0 #c07a00, 0 0 10px rgba(255, 210, 74, 0.6);
+}
+
+html.christmas-event .coin-orb {
+  background: radial-gradient(circle at 35% 30%, #ffd6d6, #ff2d2d 42%, #a80f0f);
+  box-shadow: inset 0 -3px 0 #7f0a0a, 0 0 12px rgba(255, 60, 60, 0.75);
 }
 
 html.chuseok-event .coin-orb {
@@ -3892,6 +3923,55 @@ body.admin {
 .slots-screen[data-theme="christmas"] .slots-window {
   border-color: rgba(255, 213, 79, 0.62);
   box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.8), 0 0 34px rgba(46, 125, 50, 0.32);
+}
+
+/* ×99 is always on the reel and always the loudest thing on it, so it is plainly
+   there to be missed. */
+.slot-jackpot .slot-label {
+  color: #ffd54f;
+  font-size: 1.15em;
+  text-shadow: 0 0 14px rgba(255, 213, 79, 0.95);
+}
+
+.slot-jackpot {
+  background: linear-gradient(90deg, rgba(255, 193, 7, 0.28), rgba(255, 193, 7, 0.06));
+  animation: jackpotFace 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes jackpotFace {
+  to {
+    filter: brightness(1.45);
+  }
+}
+
+.slots-screen[data-jackpot="on"] {
+  background: radial-gradient(circle at 50% 42%, rgba(255, 193, 7, 0.82), rgba(120, 53, 15, 0.95));
+}
+
+.slots-screen[data-jackpot="on"] .slots-card {
+  animation: jackpotCard 0.42s cubic-bezier(0.16, 1, 0.3, 1) 3 alternate;
+}
+
+.slots-screen[data-jackpot="on"] .slots-result {
+  color: #fff8e1;
+  font-size: 2.4em;
+  text-shadow: 0 0 26px #ffd54f, 0 3px 0 #7c2d12;
+}
+
+@keyframes jackpotCard {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.14) rotate(-1.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-jackpot,
+  .slots-screen[data-jackpot="on"] .slots-card {
+    animation: none;
+  }
 }
 
 .slots-screen[data-theme="christmas"] .slots-pointer {

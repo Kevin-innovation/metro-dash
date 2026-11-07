@@ -205,8 +205,10 @@ export function updateCrow(crow, dt, player, remaining, total = CROW_TIME) {
  *
  * @param {object} world
  * @param {number} veil 0-1 from crowVeil
+ * @param {boolean} [blizzard] a white-out instead of a dusk. The sight line is
+ *   the same; what closes in is pale, and it takes less of the light with it.
  */
-export function applyCrowGloom(world, veil) {
+export function applyCrowGloom(world, veil, blizzard = false) {
   if (veil <= 0) return;
   const fog = world.scene.fog;
   // Pulled in to a bit over the runner's own shoulder: far enough that the
@@ -214,13 +216,16 @@ export function applyCrowGloom(world, veil) {
   // reading the whole track ahead stops being free.
   fog.near = fog.near * (1 - veil * 0.72);
   fog.far = fog.far * (1 - veil * 0.66);
-  fog.color.lerp(GLOOM, veil * 0.72);
-  world.scene.background.lerp(GLOOM, veil * 0.6);
+  const colour = blizzard ? WHITEOUT : GLOOM;
+  fog.color.lerp(colour, veil * 0.72);
+  world.scene.background.lerp(colour, veil * 0.6);
 
-  world.hemi.intensity *= 1 - veil * 0.45;
-  world.sun.intensity *= 1 - veil * 0.5;
-  world.ambient.intensity *= 1 - veil * 0.35;
+  const dim = blizzard ? 0.35 : 1;
+  world.hemi.intensity *= 1 - veil * 0.45 * dim;
+  world.sun.intensity *= 1 - veil * 0.5 * dim;
+  world.ambient.intensity *= 1 - veil * 0.35 * dim;
 }
 
 /** The colour everything is dragged toward: a cold, sooty dusk. */
 const GLOOM = new THREE.Color(0x161b24);
+const WHITEOUT = new THREE.Color(0xdce7f1);

@@ -144,6 +144,7 @@ export function shopView(save, { christmas = false } = {}) {
     const owned = save.characters.includes(character.id);
     return {
       ...character,
+      blurb: christmas ? character.blurb.replace("까마귀", "눈보라") : character.blurb,
       owned,
       equipped: worn === character.id,
       affordable: owned || save.coins >= character.cost,
@@ -151,6 +152,7 @@ export function shopView(save, { christmas = false } = {}) {
   });
 
   return {
+    christmas,
     coins: save.coins,
     upgrades,
     characters,

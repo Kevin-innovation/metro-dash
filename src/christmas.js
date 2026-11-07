@@ -32,6 +32,13 @@ export function christmasAt(ms = Date.now(), from = CHRISTMAS_EVENT_FROM, to = C
   return ms >= from && ms < to;
 }
 
+/**
+ * What the crow is during the event: the same trap on the same clock, with the
+ * same antidote and 허수아비 perk, but weather rather than a bird. Only how it
+ * looks and what it is called changes, so the difficulty stays where it was.
+ */
+export const BLIZZARD = { name: "눈보라", icon: "🌨️", colour: "#7dd3fc" };
+
 export const GIFT_FIRST_MIN = 25;
 export const GIFT_FIRST_MAX = 35;
 export const GIFT_GAP_MIN = 40;
@@ -49,7 +56,7 @@ export function nextGiftGap(rng = Math.random) {
   return between(rng, GIFT_GAP_MIN, GIFT_GAP_MAX);
 }
 
-const multiplier = (value, seconds, weight) => ({
+const multiplier = (value, seconds, weight, extra = {}) => ({
   id: `gift-x${value}`,
   tone: "good",
   theme: "christmas",
@@ -58,9 +65,18 @@ const multiplier = (value, seconds, weight) => ({
   detail: `${seconds}초`,
   weight,
   effect: { type: "multiplier", value, seconds },
+  ...extra,
 });
 
-/** One hundred tickets. Every face drawn on the reel can be landed on. */
+/**
+ * One thousand tickets, so the top faces can be as rare as they are.
+ *
+ * In reel order, which has no effect on the odds. ×99 sits between the two most
+ * common outcomes on purpose: more than half of all spins come to rest with it
+ * right beside the pointer, or crawl past it on the way, and that near thing is
+ * the whole of the tease. The other big faces are spaced between small ones so a
+ * slowing reel is always creeping up on something.
+ */
 export const CHRISTMAS_SLOT_FACES = [
   {
     id: "gift-miss",
@@ -69,19 +85,18 @@ export const CHRISTMAS_SLOT_FACES = [
     icon: "🧦",
     label: "꽝",
     detail: "다음 선물을 노려보세요!",
-    weight: 20,
+    weight: 200,
     effect: { type: "none" },
   },
-  multiplier(2, 10, 35),
-  multiplier(3, 8, 25),
-  multiplier(5, 6, 15),
-  multiplier(10, 5, 5),
+  multiplier(99, 3, 1, { icon: "👑", jackpot: true }),
+  multiplier(2, 10, 330),
+  multiplier(20, 4, 3, { icon: "🌟" }),
+  multiplier(3, 8, 250),
+  multiplier(15, 4, 6),
+  multiplier(5, 6, 150),
+  multiplier(12, 5, 10),
+  multiplier(10, 5, 50),
 ];
-
-export const CHRISTMAS_TOP_MULTIPLIER = CHRISTMAS_SLOT_FACES.reduce(
-  (best, face) => Math.max(best, face.effect.value ?? 1),
-  1,
-);
 
 /** @param {() => number} rng */
 export function spinChristmas(rng = Math.random) {

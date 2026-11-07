@@ -63,7 +63,7 @@ import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
-import { CHRISTMAS_SLOT_FACES, christmasAt, spinChristmas } from "./christmas.js";
+import { BLIZZARD, CHRISTMAS_SLOT_FACES, christmasAt, spinChristmas } from "./christmas.js";
 import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import {
@@ -118,12 +118,22 @@ const BOARD_MAX = 50;
 /** Seconds the whole frame freezes on a heavy impact, for weight. */
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
-/** The gift wheel's beats, in seconds and ms. Short, because it comes often. */
+/** The gift wheel's beats, in seconds and ms. */
 const GIFT_HITSTOP = 0.18;
-const GIFT_SPIN_MS = 1000;
-const GIFT_HOLD_MS = 650;
+const GIFT_SPIN_MS = 3600;
+const GIFT_HOLD_MS = 900;
+/** ×99 gets longer on the wheel. It has earned being looked at. */
+const GIFT_JACKPOT_HOLD_MS = 2800;
+const GIFT_LAPS = 5;
+/**
+ * Most of the distance in the first fifth of the spin, then a long crawl: about
+ * the last face and a half takes nearly half the time, which is the tense part.
+ */
+const GIFT_EASE = "cubic-bezier(0.12, 0.7, 0.05, 1)";
 /** Flakes a second per slot of the quality tier's particle budget. */
 const SNOW_PER_BUDGET = 0.06;
+/** How many times the flakes a blizzard is. */
+const BLIZZARD_SNOW = 7;
 
 /**
  * Metres between two coins in the jetpack's sky trail.
@@ -1139,7 +1149,10 @@ export class Game {
         theme: "christmas",
         title: "🎁 선물 룰렛",
         spinMs: GIFT_SPIN_MS,
-        holdMs: GIFT_HOLD_MS,
+        holdMs: face.jackpot ? GIFT_JACKPOT_HOLD_MS : GIFT_HOLD_MS,
+        laps: GIFT_LAPS,
+        ease: GIFT_EASE,
+        onTick: () => this.audio.tick(),
       };
     } else {
       if (!this.run.takeSpin()) return;
@@ -1222,6 +1235,7 @@ export class Game {
       this.audio.purchase();
       this.fovPunch = Math.max(this.fovPunch, 0.7);
     }
+    if (face.jackpot) this.celebrateJackpot(face);
 
     this.state = "playing";
     this.accumulator = 0;
@@ -1233,6 +1247,27 @@ export class Game {
     // handler could not do this itself: it only pauses a run that is
     // "playing", and for the last few seconds this one was not.
     if (document.hidden) this.pause(true);
+  }
+
+  /**
+   * The one result worth stopping the room for.
+   *
+   * Everything goes off at once as the run comes back, so the three seconds it
+   * pays for start with the screen already on fire. The flash and the toast stay
+   * for anyone who asked for less motion; the shake and the bursts do not.
+   */
+  celebrateJackpot(face) {
+    this.audio.jackpot();
+    vibrate([40, 40, 40, 40, 160]);
+    this.screens.flashRainbow();
+    this.screens.showToast(`👑 대박!!! ${face.label}`);
+    if (reducedMotion()) return;
+    const p = this.player;
+    this.fovPunch = 1;
+    this.shake = Math.max(this.shake, 0.9);
+    this.speedBurst(14);
+    this.particles.rainbow(p.x, p.y + 1.2, p.z + 2);
+    this.particles.burst(p.x, p.y + 1, p.z + 1, { count: 40, colour: 0xffd54f, speed: 10, life: 1.1, size: 0.5, gravity: -4 });
   }
 
   /**
@@ -1476,6 +1511,8 @@ export class Game {
   applyChristmas(on) {
     this.christmas = on;
     setWorldChristmas(this.world, on);
+    this.pool.setChristmas(on);
+    this.interactions.christmas = on;
     this.screens.setChristmas(on);
     this.syncSkin();
   }
@@ -1811,14 +1848,15 @@ export class Game {
     );
     // The world dims by the same reduced amount the overlay does, or 허수아비
     // would be looking at a clear sheet over a pitch-dark track.
-    applyCrowGloom(this.world, veil * (this.crowVeilScale ?? 1));
+    applyCrowGloom(this.world, veil * (this.crowVeilScale ?? 1), this.christmas);
     // Frozen with the rest of the simulation while paused, rather than left
     // flapping over a still frame.
     updateCrow(
       this.crow,
       this.state === "playing" ? frameDt : 0,
       this.player,
-      this.run.crowT,
+      // The same timer runs during the event, as weather. There is no bird in it.
+      this.christmas ? 0 : this.run.crowT,
       this.run.crowSeconds,
     );
     // The perk thins the veil without shortening it separately — crowScale on
@@ -1927,15 +1965,35 @@ export class Game {
   /**
    * A few flakes a second, scaled to the tier's particle budget so the low tier
    * spends a tenth of its pool on them at most. Not indoors, and not at all for
-   * anyone who has asked for less motion.
+   * anyone who has asked for less motion. A blizzard is the same flakes, several
+   * times as many, driven sideways on the wind and close to the lens; budget
+   * scaling keeps that to about a third of the pool on any tier.
    */
   emitSnow(dt) {
     if (!this.christmas || reducedMotion() || this.lookNow().ceiling !== null) return;
-    this.snowDue = (this.snowDue ?? 0) + dt * this.quality.particleBudget * SNOW_PER_BUDGET;
+    const blizzard = this.run.crowT > 0;
+    const rate = this.quality.particleBudget * SNOW_PER_BUDGET * (blizzard ? BLIZZARD_SNOW : 1);
+    this.snowDue = (this.snowDue ?? 0) + dt * rate;
     const count = Math.floor(this.snowDue);
     if (count <= 0) return;
     this.snowDue -= count;
     const p = this.player;
+    if (blizzard) {
+      this.particles.emit(count, () => ({
+        x: p.x + (Math.random() - 0.5) * 16,
+        y: 0.4 + Math.random() * 6,
+        z: p.z + 2 + Math.random() * 18,
+        vx: -9 - Math.random() * 6,
+        vy: -2 - Math.random() * 2,
+        vz: -this.speed * 0.25,
+        life: 0.7,
+        size: 0.3,
+        colour: [0.9, 0.95, 1],
+        gravity: 0,
+        drag: 0,
+      }));
+      return;
+    }
     this.particles.emit(count, () => ({
       x: p.x + (Math.random() - 0.5) * 18,
       y: 3 + Math.random() * 5,
@@ -1980,6 +2038,9 @@ export class Game {
     if (this.state !== "playing") return;
     const p = this.player;
     this.emitRudolph(p);
+    if (this.run.slotT > 0 && this.run.slotFace?.jackpot && !reducedMotion()) {
+      this.particles.trail(p.x, p.y + 0.9, p.z, { count: 2, colour: 0xffd54f, spread: 1.4 });
+    }
 
     if (this.run.powerupActive("jetpack")) {
       this.particles.trail(p.x, p.y + 0.35, p.z, { count: 2, colour: 0xffb74d });
@@ -2200,7 +2261,7 @@ export class Game {
     this.lastDebutScore = score;
     if (score <= before) return;
     for (const debut of debutsBetween(before, score)) {
-      this.screens.showToast(debut.text);
+      this.screens.showToast(this.christmas ? (debut.christmasText ?? debut.text) : debut.text);
       this.audio.mission();
     }
   }
@@ -2488,6 +2549,8 @@ export class Game {
         item.mesh.rotation.z = Math.sin(t * 0.55) * 0.07;
         item.mesh.position.y = item.y + Math.sin(t) * 0.18;
         item.mesh.scale.setScalar(1 + Math.sin(t * 1.35) * 0.07);
+      } else if (item.hazard && this.christmas) {
+        item.mesh.rotation.y += dt * 2.6;
       } else if (item.powerup) {
         item.mesh.rotation.y += dt * 2.4;
         item.mesh.position.y = item.y + Math.sin(this.player.runT * 4 + item.z) * 0.14;
@@ -2532,15 +2595,22 @@ export class Game {
           // thirty seconds dodging eggs they no longer need to.
           this.screens.showToast(
             event.reason === "antidote"
-              ? `💊 해독제 · ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다`
-              : "🕊️ 까마귀가 접근하지 못했다!",
+              ? `💊 해독제 · ${ANTIDOTE_SECONDS}초간 ${this.christmas ? "눈보라가 치지 않습니다" : "까마귀가 붙지 않습니다"}`
+              : this.christmas
+                ? "☀️ 눈보라가 비껴갔다!"
+                : "🕊️ 까마귀가 접근하지 못했다!",
           );
         } else {
-          this.audio.caw();
+          if (this.christmas) this.audio.rumble();
+          else this.audio.caw();
           // Longer than a power-up's nudge and in two beats, so the hand knows
           // something went wrong before the eyes have worked out what.
           vibrate([28, 60, 40]);
-          this.screens.showToast(`${CROW.icon} ${CROW.name}가 달라붙었다!`);
+          this.screens.showToast(
+            this.christmas
+              ? `${BLIZZARD.icon} ${BLIZZARD.name}가 몰아친다!`
+              : `${CROW.icon} ${CROW.name}가 달라붙었다!`,
+          );
           this.shake = Math.max(this.shake, 0.45);
         }
       } else {

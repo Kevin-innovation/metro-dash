@@ -1,9 +1,9 @@
+import * as THREE from "three";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CHRISTMAS_EVENT_FROM,
   CHRISTMAS_EVENT_TO,
   CHRISTMAS_SLOT_FACES,
-  CHRISTMAS_TOP_MULTIPLIER,
   GIFT_FIRST_MAX,
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
@@ -14,10 +14,14 @@ import {
   setChristmasPreview,
   spinChristmas,
 } from "../src/christmas.js";
-import { characterById, wearableCharacter } from "../src/characters.js";
+import { MAX_CHARACTER_SCORE_BONUS, characterById, wearableCharacter } from "../src/characters.js";
+import { applyCrowGloom } from "../src/crow.js";
+import { EntityPool } from "../src/entities.js";
 import { Game } from "../src/game.js";
 import { Interactions } from "../src/interactions.js";
-import { MAX_WHEEL_MULTIPLIER, validateRun } from "../src/leaderboard-rules.js";
+import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
+import { MAX_WHEEL_MULTIPLIER, maxDistanceIn, validateRun } from "../src/leaderboard-rules.js";
+import { JUMP_BONUS, MAX_COMBO_MULTIPLIER, MOUNT_BONUS, SLIDE_BONUS } from "../src/scoring.js";
 import { applyAction, createPlayer, resetPlayer, updatePlayer } from "../src/player.js";
 import { makeRng } from "../src/rng.js";
 import { Run } from "../src/run.js";
@@ -25,7 +29,7 @@ import { setSanta } from "../src/santa.js";
 import { SaveStore, hasProgress, normalizeSave } from "../src/save.js";
 import { purchase, shopView } from "../src/shop.js";
 import { SPEC } from "../src/specs.js";
-import { Spawner } from "../src/spawner.js";
+import { HAZARD_FROM_SCORE, Spawner } from "../src/spawner.js";
 import { renderRunTally } from "../src/ui.js";
 
 const store = () => new SaveStore({ getItem: () => null, setItem: () => {} });
@@ -70,11 +74,22 @@ describe("이벤트 기간", () => {
 });
 
 describe("선물 룰렛 확률표", () => {
-  it("합계 100에 지정한 확률과 시간을 쓴다", () => {
+  it("합계 1000에 지정한 확률과 시간을 쓴다", () => {
     const table = Object.fromEntries(
       CHRISTMAS_SLOT_FACES.map((face) => [face.effect.value ?? 0, [face.weight, face.effect.seconds ?? 0]]),
     );
-    expect(table).toEqual({ 0: [20, 0], 2: [35, 10], 3: [25, 8], 5: [15, 6], 10: [5, 5] });
+    expect(table).toEqual({
+      0: [200, 0],
+      2: [330, 10],
+      3: [250, 8],
+      5: [150, 6],
+      10: [50, 5],
+      12: [10, 5],
+      15: [6, 4],
+      20: [3, 4],
+      99: [1, 3],
+    });
+    expect(CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0)).toBe(1000);
   });
 
   it("모든 칸에 실제 확률대로 멈추고, 돌려준 칸과 번호가 일치한다", () => {
@@ -86,14 +101,32 @@ describe("선물 룰렛 확률표", () => {
       counts.set(face.id, (counts.get(face.id) ?? 0) + 1);
     }
     for (const face of CHRISTMAS_SLOT_FACES) {
-      expect(counts.get(face.id) / draws, face.id).toBeCloseTo(face.weight / 100, 3);
+      expect(counts.get(face.id) / draws, face.id).toBeCloseTo(face.weight / 1000, 3);
     }
   });
 
-  it("서버 기록 검증의 최대 배율 안에 있고 정상 기록을 거절하지 않는다", () => {
-    expect(CHRISTMAS_TOP_MULTIPLIER).toBe(10);
-    expect(MAX_WHEEL_MULTIPLIER).toBeGreaterThanOrEqual(CHRISTMAS_TOP_MULTIPLIER);
-    expect(validateRun({ score: 80000, distance: 3000, coins: 200, seconds: 120 })).toEqual({ ok: true });
+  it("×99가 나와도 서버가 정상 기록을 거절하지 않고, 상한은 늘어나지 않는다", () => {
+    expect(MAX_WHEEL_MULTIPLIER).toBe(30);
+    // The ceilings allow ×30 for the whole run. Each face has to fit in what that
+    // allows by the earliest moment a gift can possibly arrive.
+    for (const face of CHRISTMAS_SLOT_FACES) {
+      const worth = (face.effect.value ?? 0) * (face.effect.seconds ?? 0);
+      expect(worth, face.id).toBeLessThanOrEqual(MAX_WHEEL_MULTIPLIER * GIFT_FIRST_MIN);
+    }
+
+    // The busiest three seconds there can be: first gift, ×99, every multiplier
+    // at its top and a clear on every quarter second.
+    const seconds = GIFT_FIRST_MIN + 3;
+    const multiplier = MAX_COMBO_MULTIPLIER * MAX_EVENT_MULTIPLIER * 99 * MAX_CHARACTER_SCORE_BONUS;
+    const score = 4 * 3 * Math.max(SLIDE_BONUS, JUMP_BONUS, MOUNT_BONUS) * multiplier;
+    expect(validateRun({ score, distance: maxDistanceIn(seconds), coins: 0, seconds })).toEqual({ ok: true });
+  });
+
+  it("×99는 꽝과 ×2 사이에 있어 절반 넘게 포인터 옆에서 멈춘다", () => {
+    const at = CHRISTMAS_SLOT_FACES.findIndex((face) => face.jackpot);
+    expect(CHRISTMAS_SLOT_FACES[at].effect.value).toBe(99);
+    const beside = [CHRISTMAS_SLOT_FACES[at - 1], CHRISTMAS_SLOT_FACES[at + 1]];
+    expect(beside.reduce((sum, face) => sum + face.weight, 0)).toBeGreaterThan(500);
   });
 });
 
@@ -371,6 +404,71 @@ describe("상점과 저장", () => {
     expect(hasProgress(s.data)).toBe(false);
     s.data.characters.push("neon");
     expect(hasProgress(s.data)).toBe(true);
+  });
+});
+
+describe("눈보라와 루돌프 코", () => {
+  const fakeScene = () => ({ meshes: new Set(), add(m) { this.meshes.add(m); }, remove(m) { this.meshes.delete(m); } });
+
+  it("모습만 바뀌고, 이전 모습의 메시는 풀에서 다시 나오지 않는다", () => {
+    const scene = fakeScene();
+    const pool = new EntityPool(scene);
+    const plain = pool.spawn("coin", 0, 10);
+    expect(plain.mesh.geometry.type).toBe("CylinderGeometry");
+    pool.setChristmas(true);
+    expect(pool.live).toHaveLength(0);
+    expect(scene.meshes.has(plain.mesh)).toBe(false);
+
+    const nose = pool.spawn("coin", 0, 10);
+    expect(nose.mesh).not.toBe(plain.mesh);
+    expect(nose.mesh.geometry.attributes.color).toBeTruthy();
+    expect(nose.type).toBe("coin");
+
+    const cloud = pool.spawn("crowEgg", 0, 20, 0.75);
+    expect(cloud.hazard).toBe("crow");
+    expect(cloud.mesh.isGroup).toBe(true);
+
+    pool.setChristmas(false);
+    expect(pool.spawn("coin", 0, 10).mesh.geometry.type).toBe("CylinderGeometry");
+  });
+
+  it("같은 시야를 하얗게 흐리고, 조명은 까마귀보다 덜 어둡게 한다", () => {
+    const world = () => ({
+      scene: { fog: { near: 100, far: 300, color: new THREE.Color(0x8fc6e6) }, background: new THREE.Color(0x8fc6e6) },
+      hemi: { intensity: 1 },
+      sun: { intensity: 1 },
+      ambient: { intensity: 1 },
+    });
+    const dusk = world();
+    const white = world();
+    applyCrowGloom(dusk, 1);
+    applyCrowGloom(white, 1, true);
+    expect(white.scene.fog.near).toBe(dusk.scene.fog.near);
+    expect(white.scene.fog.far).toBe(dusk.scene.fog.far);
+    expect(white.scene.fog.color.getHSL({}).l).toBeGreaterThan(dusk.scene.fog.color.getHSL({}).l);
+    expect(white.sun.intensity).toBeGreaterThan(dusk.sun.intensity);
+  });
+
+  it("이벤트 판에서도 같은 점수부터 같은 함정이 나오고, 문구는 눈보라다", () => {
+    const pool = fakePool();
+    const spawner = new Spawner(pool);
+    spawner.reset(5);
+    for (let i = 0; i < 80; i++) {
+      spawner.place(100 + i * 100, { speed: 40, phaseId: 4, runTime: 1, christmas: true, score: HAZARD_FROM_SCORE });
+    }
+    expect(pool.live.some((item) => item.type === "crowEgg")).toBe(true);
+
+    const s = store();
+    const view = shopView(s.data, { christmas: true });
+    const scarecrow = view.characters.find((c) => c.id === "scarecrow");
+    expect(scarecrow.blurb).toContain("눈보라 -30%");
+    expect(scarecrow.perk.crowTime).toBe(0.7);
+    expect(shopView(s.data).characters.find((c) => c.id === "scarecrow").blurb).toContain("까마귀 -30%");
+
+    const root = { innerHTML: "" };
+    renderRunTally(root, { crows: 2 }, true);
+    expect(root.innerHTML).toContain("눈보라");
+    expect(root.innerHTML).not.toContain("까마귀");
   });
 });
 

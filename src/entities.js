@@ -3,6 +3,7 @@ import { BUS_ROOF, SIGN_BOARD_BOTTOM, SIGN_BOARD_TOP, SIGN_TOP, TRAIN_COLORS } f
 import { laneX } from "./lanes.js";
 import { SPEC } from "./specs.js";
 import { makeContainerSkin } from "./textures.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { chuseokAt } from "./chuseok.js";
 
 const BUS_COLORS = [0xffc107, 0x26c6da, 0xef5350, 0x66bb6a];
@@ -316,6 +317,70 @@ export function makeCoin() {
   );
   mesh.rotation.z = Math.PI / 2;
   return mesh;
+}
+
+let noseParts = null;
+
+/**
+ * The Christmas coin: Rudolph's nose.
+ *
+ * One mesh with its shading in the vertex colours, and one geometry and material
+ * shared by every coin, because a coin line is the thing there are most of on
+ * screen. Self-lit, as a nose that glows should be, so it stays red in a tunnel.
+ */
+export function makeNoseCoin() {
+  if (!noseParts) {
+    const red = new THREE.Color();
+    const body = new THREE.SphereGeometry(0.33, 12, 10).toNonIndexed();
+    const shine = new THREE.SphereGeometry(0.075, 6, 5).toNonIndexed();
+    shine.translate(0.15, 0.2, 0.18);
+    const paint = (geometry, colourAt) => {
+      const normals = geometry.attributes.normal;
+      const colours = new Float32Array(normals.count * 3);
+      for (let i = 0; i < normals.count; i++) colourAt(normals.getY(i)).toArray(colours, i * 3);
+      geometry.setAttribute("color", new THREE.BufferAttribute(colours, 3));
+    };
+    paint(body, (up) => red.setRGB(0.62 + up * 0.38, 0.03 + Math.max(0, up) * 0.1, 0.05));
+    paint(shine, () => red.setRGB(1, 0.86, 0.86));
+    noseParts = {
+      geometry: mergeGeometries([body, shine]),
+      material: new THREE.MeshBasicMaterial({ vertexColors: true }),
+    };
+  }
+  return new THREE.Mesh(noseParts.geometry, noseParts.material);
+}
+
+/**
+ * The Christmas crow egg: a small storm cloud with snow caught in it.
+ *
+ * A trap has to look like one against a white floor, so it is the darkest thing
+ * in the lane, with the flakes saying what it will do if it is taken.
+ */
+export function makeBlizzardCloud() {
+  const g = new THREE.Group();
+  const cloud = new THREE.MeshLambertMaterial({ color: 0x3b4a5e, emissive: 0x1e293b, emissiveIntensity: 0.6 });
+  for (const [x, y, r] of [
+    [0, 0.12, 0.38],
+    [-0.3, 0, 0.27],
+    [0.3, 0.02, 0.29],
+  ]) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), cloud);
+    puff.position.set(x, y, 0);
+    g.add(puff);
+  }
+  const snow = new THREE.MeshBasicMaterial({ color: 0xf2f8ff });
+  for (const [x, y, z] of [
+    [-0.42, -0.34, 0.1],
+    [0, -0.42, -0.14],
+    [0.38, -0.32, 0.12],
+    [0.5, 0.26, -0.1],
+    [-0.5, 0.28, 0.08],
+  ]) {
+    const flake = new THREE.Mesh(new THREE.OctahedronGeometry(0.07), snow);
+    flake.position.set(x, y, z);
+    g.add(flake);
+  }
+  return g;
 }
 
 const eventTextures = new Map();
@@ -679,6 +744,12 @@ const FACTORIES = {
   chuseokMoon: makeChuseokMoon,
 };
 
+/** Same entity and same rules, drawn differently while the event is on. */
+const CHRISTMAS_FACTORIES = {
+  coin: makeNoseCoin,
+  crowEgg: makeBlizzardCloud,
+};
+
 export { SPEC };
 
 export class EntityPool {
@@ -686,7 +757,19 @@ export class EntityPool {
     this.scene = scene;
     this.live = [];
     this.free = {};
+    this.christmas = false;
     for (const type of Object.keys(FACTORIES)) this.free[type] = [];
+  }
+
+  /** Change look between runs. Parked meshes in the old look must not come back. */
+  setChristmas(on) {
+    if (this.christmas === on) return;
+    this.clear();
+    for (const type of Object.keys(CHRISTMAS_FACTORIES)) {
+      for (const mesh of this.free[type]) this.scene.remove(mesh);
+      this.free[type] = [];
+    }
+    this.christmas = on;
   }
 
   spawn(type, lane, z, y = 0.55) {
@@ -694,7 +777,7 @@ export class EntityPool {
     const pile = this.free[type];
     let mesh = pile.pop();
     if (!mesh) {
-      mesh = FACTORIES[type]();
+      mesh = ((this.christmas && CHRISTMAS_FACTORIES[type]) || FACTORIES[type])();
       // Only solid obstacles cast; coins and pickups would just add noise.
       if (spec.lethal) {
         mesh.traverse((child) => {

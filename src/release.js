@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.10";
+export const VERSION = "5.20";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,19 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.20",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "까마귀 대신 눈보라, 코인은 루돌프 코, 더 쫄리는 룰렛",
+    notes: [
+      "선물 룰렛이 더 오래 돌고, 마지막엔 아주 천천히 멈춥니다. 칸이 지날 때마다 소리도 납니다.",
+      "룰렛에 점수 ×12·×15·×20·×99가 추가됐습니다. 거의 안 나옵니다. ×20은 1000번에 3번, ×99는 1000번에 1번입니다. ×99가 터지면 화면이 난리가 납니다.",
+      "크리스마스 에디션에서는 까마귀가 쉽니다. 까마귀 알 자리에 눈보라 구름이 나오고, 먹으면 눈보라가 몰아쳐 화면이 하얗게 흐려집니다.",
+      "나오는 시점과 지속 시간은 까마귀와 같고, 해독제와 허수아비의 효과도 눈보라에 그대로 적용됩니다.",
+      "코인이 빨갛게 빛나는 루돌프 코로 바뀌었습니다. 값과 자석·미션·상점 규칙은 그대로입니다.",
+    ],
+  },
   {
     version: "5.10",
     date: "2026-11-07",

@@ -62,6 +62,18 @@ export class AudioBus {
     this.beep(180, 0.16, "triangle", 0.35);
   }
 
+  /** ×99. Longer and higher than anything else the game plays. */
+  jackpot() {
+    [523, 659, 784, 1047, 1319, 1568, 2093].forEach((hz, i) => {
+      setTimeout(() => this.beep(hz, i === 6 ? 0.5 : 0.12, "square", 0.5), i * 80);
+    });
+  }
+
+  /** A wheel face going past the pointer. */
+  tick() {
+    this.beep(1500, 0.025, "square", 0.16);
+  }
+
   magnet() {
     this.beep(520, 0.12, "square", 0.5);
     setTimeout(() => this.beep(740, 0.16, "square", 0.4), 70);

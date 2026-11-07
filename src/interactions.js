@@ -64,6 +64,8 @@ export class Interactions {
     this.particles = particles;
     /** Character perk: multiplier on how far the magnet reaches. */
     this.magnetScale = 1;
+    /** Only recolours the bursts below; the rules are the same either way. */
+    this.christmas = false;
   }
 
   /** Player capsule at the start / end of the current simulation step. */
@@ -143,7 +145,7 @@ export class Interactions {
       if (item.type === "coin") {
         this.particles.burst(itemX, itemY, item.z, {
           count: 7,
-          colour: 0xffd24a,
+          colour: this.christmas ? 0xff5252 : 0xffd24a,
           speed: 3.2,
           life: 0.34,
           size: 0.26,
@@ -155,7 +157,7 @@ export class Interactions {
         // a mistake and not as a reward.
         this.particles.burst(itemX, itemY, item.z, {
           count: 22,
-          colour: 0x1b2029,
+          colour: this.christmas ? 0xe8f4ff : 0x1b2029,
           speed: 5.4,
           life: 0.8,
           size: 0.4,

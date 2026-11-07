@@ -12,7 +12,7 @@ import { weekRemainingLabel } from "./week.js";
 import { purchase, shopView } from "./shop.js";
 import { VERSION, previousSeason, seasonAt } from "./release.js";
 import { CHUSEOK_EVENT_NAME, chuseokAt } from "./chuseok.js";
-import { CHRISTMAS_TITLE } from "./christmas.js";
+import { BLIZZARD, CHRISTMAS_TITLE } from "./christmas.js";
 
 /** How long a 「지붕 ×1.5 +310」 stays up. Long enough to read all three. */
 const TRICK_FLASH_MS = 950;
@@ -72,6 +72,7 @@ export class Screens {
     this.christmas = on;
     document.documentElement.classList.toggle("christmas-event", on);
     document.title = on ? CHRISTMAS_TITLE : "MetDash";
+    $("antidote-chip")?.setAttribute("aria-label", on ? "눈보라 해독제" : "까마귀 해독제");
   }
 
   /**
@@ -876,16 +877,20 @@ export class Screens {
 
     clearTimeout(this.slotLandTimer);
     clearTimeout(this.slotDoneTimer);
+    cancelAnimationFrame(this.slotTickFrame);
 
+    delete screen.dataset.jackpot;
     screen.dataset.theme = options.theme ?? "diamond";
     const title = screen.querySelector(".slots-title");
     if (title) title.textContent = options.title ?? "💎 다이아몬드 3개";
 
-    const strip = [...faces, ...faces, ...faces];
+    // One more copy either side of the laps, so the reel never shows a gap.
+    const laps = options.laps ?? 1;
+    const strip = Array.from({ length: laps + 2 }, () => faces).flat();
     reel.innerHTML = strip
       .map(
         (item) => `
-        <div class="slot-face slot-${item.tone}">
+        <div class="slot-face slot-${item.tone}${item.jackpot ? " slot-jackpot" : ""}">
           <span class="slot-icon" aria-hidden="true">${item.icon}</span>
           <span class="slot-label">${escapeHtml(item.label)}</span>
           <span class="slot-detail">${escapeHtml(item.detail)}</span>
@@ -901,7 +906,7 @@ export class Screens {
     // a hardcoded pixel figure here would put the pointer between two faces on
     // any device whose root font size is not the one this was written on.
     const step = reel.firstElementChild?.getBoundingClientRect().height || 0;
-    const landing = faces.length + index;
+    const landing = faces.length * laps + index;
     const settled = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const spinMs = settled ? 0 : (options.spinMs ?? 1900);
 
@@ -912,13 +917,31 @@ export class Screens {
     // simply appears at its destination.
     void reel.offsetHeight;
     reel.style.transition = spinMs
-      ? `transform ${spinMs}ms cubic-bezier(0.16, 0.85, 0.2, 1)`
+      ? `transform ${spinMs}ms ${options.ease ?? "cubic-bezier(0.16, 0.85, 0.2, 1)"}`
       : "none";
     reel.style.transform = `translateY(${-landing * step}px)`;
 
+    // Read from where the reel actually is, so the ticks slow down exactly as
+    // much as the reel does.
+    if (spinMs && options.onTick && step > 0) {
+      let passed = 0;
+      const watch = () => {
+        const matrix = getComputedStyle(reel).transform.match(/-?[\d.]+/g);
+        const at = matrix ? Math.round(-Number(matrix[5]) / step) : passed;
+        if (at !== passed) {
+          passed = at;
+          options.onTick();
+        }
+        this.slotTickFrame = requestAnimationFrame(watch);
+      };
+      this.slotTickFrame = requestAnimationFrame(watch);
+    }
+
     const land = () => {
+      cancelAnimationFrame(this.slotTickFrame);
       result.textContent = `${face.icon} ${face.label}${face.detail ? ` · ${face.detail}` : ""}`;
       result.className = `slots-result on slot-${face.tone}`;
+      if (face.jackpot) screen.dataset.jackpot = "on";
       this.slotDoneTimer = setTimeout(() => {
         screen.classList.add("hidden");
         onDone?.();
@@ -932,6 +955,7 @@ export class Screens {
   hideSlots() {
     clearTimeout(this.slotLandTimer);
     clearTimeout(this.slotDoneTimer);
+    cancelAnimationFrame(this.slotTickFrame);
     $("slots-screen")?.classList.add("hidden");
   }
 
@@ -1131,7 +1155,14 @@ export class Screens {
       step: speedStepAt(game.runTime),
       stepProgress: 1 - nextStepIn(game.runTime) / SPEED_STEP_SECONDS,
       sprinting: game.run.powerupActive("focus"),
-      crow: game.run.crowT > 0 ? { remaining: game.run.crowT, seconds: game.run.crowSeconds } : null,
+      crow:
+        game.run.crowT > 0
+          ? {
+              remaining: game.run.crowT,
+              seconds: game.run.crowSeconds,
+              spec: this.christmas ? BLIZZARD : null,
+            }
+          : null,
       diamonds: game.run.diamonds,
       slot:
         game.run.slotT > 0

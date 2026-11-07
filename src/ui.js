@@ -8,6 +8,7 @@ import {
   missionLabel,
   missionPay,
 } from "./missions.js";
+import { BLIZZARD } from "./christmas.js";
 import { CROW } from "./crow.js";
 import { CHANGELOG } from "./release.js";
 import { POWERUPS, POWERUP_IDS, POWERUP_METRIC } from "./powerups.js";
@@ -104,7 +105,7 @@ export function renderPowerupHud(el, timers, durations, crow = null, slot = null
   // The wheel first: it is the largest number on the screen while it runs, and
   // a ×10 that appears below three power-up chips is a ×10 nobody sees.
   const chips = [...(slot ? [SLOT_CHIP] : []), ...active, ...(crow ? [CROW.id] : [])];
-  const signature = `${chips.join(",")}|${slot?.face?.theme ?? "diamond"}`;
+  const signature = `${chips.join(",")}|${slot?.face?.theme ?? "diamond"}|${slot?.face?.icon ?? ""}|${crow?.spec?.name ?? ""}`;
 
   if (el.dataset.signature !== signature) {
     el.dataset.signature = signature;
@@ -112,7 +113,7 @@ export function renderPowerupHud(el, timers, durations, crow = null, slot = null
       .map((id) => {
         const spec =
           id === CROW.id
-            ? CROW
+            ? (crow.spec ?? CROW)
             : id === SLOT_CHIP
               ? slotChipSpec(slot)
               : POWERUPS[id];
@@ -171,8 +172,8 @@ function slotChipSpec(slot) {
   const gift = theme === "christmas";
   return {
     name: `점수 ×${slot.multiplier}`,
-    icon: down ? "💧" : moon ? "🌕" : gift ? "🎁" : "💎",
-    colour: down ? "#64748b" : moon ? "#ffe59a" : gift ? "#ff8a80" : "#7dd3fc",
+    icon: down ? "💧" : moon ? "🌕" : gift ? (slot.face.icon ?? "🎁") : "💎",
+    colour: down ? "#64748b" : moon ? "#ffe59a" : slot?.face?.jackpot ? "#ffd54f" : gift ? "#ff8a80" : "#7dd3fc",
   };
 }
 
@@ -474,7 +475,8 @@ const TALLY_ROWS = [
     always: true,
   })),
   { key: "nearMisses", icon: "💨", label: "아슬아슬", always: true },
-  { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true },
+  { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true, christmas: false },
+  { key: "crows", icon: BLIZZARD.icon, label: BLIZZARD.name, always: true, christmas: true },
   { key: "gates", icon: "🚧", label: "게이트", always: true },
   { key: "boards", icon: "🛹", label: "호버보드", always: false },
   { key: "antidotes", icon: "💊", label: "해독제", always: false },
@@ -601,9 +603,13 @@ export function renderShop(root, view) {
     <div class="shop-item" style="--accent:#14d4b8">
       <div class="shop-icon">💊</div>
       <div class="shop-body">
-        <div class="shop-title">까마귀 해독제 <em>${antidote.owned}/${antidote.max}</em></div>
-        <div class="shop-blurb">까마귀 알을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다</div>
-        <div class="shop-meta">까마귀는 10만 점부터 나옵니다</div>
+        <div class="shop-title">${view.christmas ? "눈보라" : "까마귀"} 해독제 <em>${antidote.owned}/${antidote.max}</em></div>
+        <div class="shop-blurb">${
+          view.christmas
+            ? `눈보라 구름을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 눈보라가 치지 않습니다`
+            : `까마귀 알을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다`
+        }</div>
+        <div class="shop-meta">${view.christmas ? "눈보라 구름은 15만 점부터 나옵니다" : "까마귀는 10만 점부터 나옵니다"}</div>
       </div>
       <button type="button" class="shop-buy" data-buy="antidote" data-id="antidote"
         ${antidote.affordable ? "" : "disabled"}>${

@@ -5,7 +5,6 @@ import { speedAt } from "./pace.js";
 
 import { SLOT_TOP_MULTIPLIER } from "./slots.js";
 import { CHUSEOK_TOP_MULTIPLIER } from "./chuseok.js";
-import { CHRISTMAS_TOP_MULTIPLIER } from "./christmas.js";
 import {
   COIN_BASE,
   COIN_COMBO_CAP,
@@ -92,12 +91,14 @@ export function maxDistanceIn(seconds) {
  *
  * Derived from the pieces rather than written as a number, so a multiplier
  * added to the game cannot fail to be added here.
+ *
+ * The Christmas wheel is left out on purpose. These ceilings assume the top
+ * multiplier could run for a whole run, and its ×99 lasts three seconds and
+ * cannot arrive in the first twenty-five, so it fits under the ×30 already here
+ * (tests/christmas.test.js holds it to that). Folding it in would let a console
+ * edit claim over three times the score.
  */
-export const MAX_WHEEL_MULTIPLIER = Math.max(
-  SLOT_TOP_MULTIPLIER,
-  CHUSEOK_TOP_MULTIPLIER,
-  CHRISTMAS_TOP_MULTIPLIER,
-);
+export const MAX_WHEEL_MULTIPLIER = Math.max(SLOT_TOP_MULTIPLIER, CHUSEOK_TOP_MULTIPLIER);
 
 export const MAX_MULTIPLIER =
   MAX_COMBO_MULTIPLIER *
