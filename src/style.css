@@ -2679,9 +2679,37 @@ kbd {
   word-break: keep-all;
 }
 
-/* Every event card is the same height whichever has more to say. */
+/* Swatch, name and button share the top row and are centred on one line; the
+   chips run the full width under them, so nothing sits half-beside the button.
+   Every event card is the same height, whichever has more to say. */
 .shop-item.with-fx {
-  min-height: 112px;
+  grid-template-areas:
+    "swatch title buy"
+    "chips chips chips";
+  align-content: center;
+  row-gap: 9px;
+  min-height: 134px;
+}
+
+.with-fx .shop-swatch {
+  grid-area: swatch;
+}
+
+.with-fx .shop-body {
+  display: contents;
+}
+
+.with-fx .shop-title {
+  grid-area: title;
+}
+
+.with-fx .shop-buy {
+  grid-area: buy;
+}
+
+.with-fx .fx-chips {
+  grid-area: chips;
+  margin-top: 0;
 }
 
 /* Two even columns, so chips line up from one card to the next. */
@@ -2689,7 +2717,6 @@ kbd {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
-  margin-top: 6px;
 }
 
 .fx-chip {
@@ -2712,12 +2739,6 @@ kbd {
   border-color: rgba(74, 222, 128, 0.42);
   background: rgba(34, 197, 94, 0.13);
   color: #bbf7d0;
-}
-
-@media (max-width: 560px) {
-  .fx-chips {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .fx-rule {
@@ -2771,7 +2792,9 @@ kbd {
   grid-template-columns: 34px minmax(0, 1fr) 116px;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  /* Two less on the left, where the accent border is two wider, so the content
+     sits the same distance from both edges. */
+  padding: 10px 12px 10px 10px;
   margin-bottom: 8px;
   border-radius: 16px;
   background: rgba(7, 16, 24, 0.55);
