@@ -121,13 +121,13 @@ describe("선물 룰렛 확률표", () => {
       2: [19, 8],
       3: [19, 8],
       5: [15, 8],
-      10: [14, 8],
+      10: [15.6, 8],
       12: [10, 8],
       15: [7, 8],
       20: [6, 8],
-      99: [2, 8],
+      99: [0.4, 8],
     });
-    expect(CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0)).toBe(100);
+    expect(CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0)).toBeCloseTo(100, 8);
   });
 
   it("모든 칸에 실제 확률대로 멈추고, 돌려준 칸과 번호가 일치한다", () => {
@@ -532,7 +532,7 @@ describe("크리스마스 캐릭터 5종", () => {
     const tickets = (face) => christmasTickets(face, risk);
     const sum = CHRISTMAS_SLOT_FACES.reduce((total, face) => total + tickets(face), 0);
     expect(sum).toBeCloseTo(100, 8);
-    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.jackpot))).toBe(4);
+    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.jackpot))).toBeCloseTo(0.8, 8);
     expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.effect.type === "none"))).toBe(16);
 
     const draws = 10000;
@@ -540,8 +540,8 @@ describe("크리스마스 캐릭터 5종", () => {
     for (let i = 0; i < draws; i++) {
       if (spinChristmas(() => (i + 0.5) / draws, risk).face.jackpot) jackpots += 1;
     }
-    expect(jackpots / draws).toBeCloseTo(0.04, 3);
-    expect(christmasTickets(CHRISTMAS_SLOT_FACES[1])).toBe(CHRISTMAS_SLOT_FACES[1].weight);
+    expect(jackpots / draws).toBeCloseTo(0.008, 3);
+    expect(christmasTickets(CHRISTMAS_SLOT_FACES[1])).toBeCloseTo(CHRISTMAS_SLOT_FACES[1].weight, 8);
   });
 
   it("엘프는 선물이 20% 빨리 온다", () => {

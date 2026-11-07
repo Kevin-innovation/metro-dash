@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.30";
+export const VERSION = "6.31";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,15 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.31",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "×99 확률 조정",
+    notes: [
+      "×99가 2%에서 0.4%로 내려갔습니다. ×10은 15.6%로 올라 ×10 이상 합계는 39% 그대로입니다.",
+    ],
+  },
   {
     version: "6.30",
     date: "2026-11-07",

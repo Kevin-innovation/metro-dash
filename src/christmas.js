@@ -171,12 +171,12 @@ export const CHRISTMAS_SLOT_FACES = [
   },
   multiplier(12, GIFT_SECONDS, 10),
   multiplier(3, GIFT_SECONDS, 19),
-  multiplier(99, GIFT_SECONDS, 2, { icon: "👑", jackpot: true }),
+  multiplier(99, GIFT_SECONDS, 0.4, { icon: "👑", jackpot: true }),
   multiplier(2, GIFT_SECONDS, 19),
   multiplier(20, GIFT_SECONDS, 6, { icon: "🌟" }),
   multiplier(5, GIFT_SECONDS, 15),
   multiplier(15, GIFT_SECONDS, 7),
-  multiplier(10, GIFT_SECONDS, 14),
+  multiplier(10, GIFT_SECONDS, 15.6),
 ];
 
 const isExtreme = (face) => face.jackpot || face.effect.type === "none";
