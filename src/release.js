@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.30";
+export const VERSION = "5.40";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,20 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.40",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "크리스마스 캐릭터 5종",
+    notes: [
+      "상점에 크리스마스 한정 캐릭터가 나왔습니다. 12월 31일까지만 팔고, 산 캐릭터는 이벤트가 끝나도 계속 쓸 수 있습니다.",
+      "엘프 60,000: 선물이 20% 더 자주 나옵니다. 코인 +15%.",
+      "눈사람 90,000: 눈보라 시야 흐림 -85%. 코인 +25%.",
+      "루돌프 120,000: 슈퍼 스니커즈 +50%. 점수 +10%.",
+      "블랙 산타 180,000: 룰렛 꽝이 2배, ×99도 2배입니다. 점수 +12%.",
+      "슈퍼 산타 300,000: 룰렛이 꽝이면 판마다 한 번 다시 돌립니다. 스니커즈를 먹으면 루돌프 3마리가 끕니다. 코인 +30%, 점수 +22%.",
+    ],
+  },
   {
     version: "5.30",
     date: "2026-11-07",

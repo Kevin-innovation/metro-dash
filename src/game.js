@@ -37,7 +37,7 @@ import { RunSchedule } from "./schedule.js";
 import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier, runSpeedFactor } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
-import { setSanta } from "./santa.js";
+import { setCostume } from "./costumes.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import {
@@ -1142,12 +1142,13 @@ export class Game {
       ({ face, index } = spinChuseok(() => Math.random()));
       options = { theme: "chuseok", title: "🌕 보름달 룰렛" };
     } else if (wheel.kind === "gift") {
-      this.run.countSpin();
+      // A retry is the same spin taken again, not a second one earned.
+      if (!wheel.retry) this.run.countSpin();
       faces = CHRISTMAS_SLOT_FACES;
-      ({ face, index } = spinChristmas(() => Math.random()));
+      ({ face, index } = spinChristmas(() => Math.random(), this.wheelRisk));
       options = {
         theme: "christmas",
-        title: "🎁 선물 룰렛",
+        title: wheel.retry ? "👑 슈퍼 산타의 재도전!" : "🎁 선물 룰렛",
         spinMs: GIFT_SPIN_MS,
         holdMs: face.jackpot ? GIFT_JACKPOT_HOLD_MS : GIFT_HOLD_MS,
         laps: GIFT_LAPS,
@@ -1236,6 +1237,11 @@ export class Game {
       this.fovPunch = Math.max(this.fovPunch, 0.7);
     }
     if (face.jackpot) this.celebrateJackpot(face);
+    if (effect.type === "none" && face.theme === "christmas" && this.wheelRetries > 0) {
+      this.wheelRetries -= 1;
+      this.audio.powerup();
+      this.wheelQueue.unshift({ kind: "gift", retry: true });
+    }
 
     this.state = "playing";
     this.accumulator = 0;
@@ -1521,13 +1527,14 @@ export class Game {
   syncSkin() {
     const id = wearableCharacter(this.store.data.character, this.christmas);
     applySkin(this.player, characterById(id).palette);
-    setSanta(this.player, id === "santa");
+    setCostume(this.player, id);
   }
 
   resetRunState() {
     this.run.reset();
     this.wheelQueue = [];
     this.rudolph = false;
+    this.wheelRetries = 0;
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
@@ -1618,9 +1625,14 @@ export class Game {
     this.run.scoreScale = perk.scoreBonus ?? 1;
     this.run.roofScale = perk.roofPay ?? 1;
     this.run.jetpackScale = perk.jetpackTime ?? 1;
+    this.run.sneakerScale = perk.sneakerTime ?? 1;
+    this.giftGap = perk.giftGap ?? 1;
+    this.wheelRisk = perk.wheelRisk ?? 1;
+    this.wheelRetries = perk.wheelRetry ?? 0;
     this.run.grantStartCombo(perk.startCombo);
     this.boardScale = perk.boardTime ?? 1;
-    this.crowVeilScale = perk.crowVeil ?? 1;
+    // The snowman's perk is about snow, and has nothing to say to a crow.
+    this.crowVeilScale = (this.christmas ? perk.blizzardVeil : null) ?? perk.crowVeil ?? 1;
     this.cam = { x: 0, y: 3.6, z: -7.4 };
     this.pool.clear();
     this.particles.clear();
@@ -2011,7 +2023,7 @@ export class Game {
 
   /** The poof when the reindeer arrives and when it goes, and its snow dust. */
   emitRudolph(p) {
-    const pulling = Boolean(p.santa?.on && p.santa.pulling);
+    const pulling = Boolean(p.costume?.on && p.costume.pulling);
     if (pulling !== this.rudolph) {
       this.rudolph = pulling;
       if (pulling) this.screens.showToast("🦌 루돌프 등장!");
@@ -2027,7 +2039,7 @@ export class Game {
       }
     }
     if (pulling && !reducedMotion() && Math.random() < this.quality.particleBudget / 200) {
-      this.particles.trail(p.x, p.y + 0.15, p.z + 1.6, { count: 1, colour: 0xdff3ff, spread: 0.6, back: 0.2 });
+      this.particles.trail(p.x, p.y + 0.15, p.z + 1.6, { count: 1, colour: p.costume.style.dust, spread: 0.6, back: 0.2 });
     }
   }
 
@@ -2472,6 +2484,7 @@ export class Game {
       chuseok: playing && chuseokAt(),
       // Not gated on `playing`: the title preview must not deal diamonds either.
       christmas: this.christmas,
+      giftGap: this.giftGap,
       // A due moon waits until it can be reached by the jump it was designed
       // for instead of passing underneath an active jetpack.
       flying: playing && this.run.powerupActive("jetpack"),

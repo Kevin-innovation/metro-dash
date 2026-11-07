@@ -101,12 +101,28 @@ export const CHRISTMAS_SLOT_FACES = [
   multiplier(10, GIFT_SECONDS, 10),
 ];
 
-/** @param {() => number} rng */
-export function spinChristmas(rng = Math.random) {
-  const total = CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0);
-  let ticket = rng() * total;
+const isExtreme = (face) => face.jackpot || face.effect.type === "none";
+const EXTREME_TICKETS = CHRISTMAS_SLOT_FACES.filter(isExtreme).reduce((sum, face) => sum + face.weight, 0);
+
+/**
+ * A face's tickets out of one hundred.
+ *
+ * `risk` is the 블랙 산타's perk: it multiplies the odds of both a miss and ×99,
+ * and the faces in between shrink to make room, so "double" is exactly double.
+ */
+export function christmasTickets(face, risk = 1) {
+  if (isExtreme(face)) return face.weight * risk;
+  return (face.weight * (100 - EXTREME_TICKETS * risk)) / (100 - EXTREME_TICKETS);
+}
+
+/**
+ * @param {() => number} rng
+ * @param {number} [risk] see christmasTickets
+ */
+export function spinChristmas(rng = Math.random, risk = 1) {
+  let ticket = rng() * 100;
   for (let index = 0; index < CHRISTMAS_SLOT_FACES.length; index++) {
-    ticket -= CHRISTMAS_SLOT_FACES[index].weight;
+    ticket -= christmasTickets(CHRISTMAS_SLOT_FACES[index], risk);
     if (ticket < 0) return { face: CHRISTMAS_SLOT_FACES[index], index };
   }
   const index = CHRISTMAS_SLOT_FACES.length - 1;

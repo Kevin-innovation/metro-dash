@@ -265,7 +265,8 @@ describe("characters — the plain half of the perk", () => {
   });
 
   it("prices the score bonus in the order the shop draws the runners that have one", () => {
-    const paid = CHARACTERS.filter((character) => (character.perk?.scoreBonus ?? 1) > 1);
+    // Event runners sit together at the top of the shop, apart from the ladder.
+    const paid = CHARACTERS.filter((character) => (character.perk?.scoreBonus ?? 1) > 1 && !character.event);
     for (let i = 1; i < paid.length; i++) {
       expect(paid[i].cost).toBeGreaterThan(paid[i - 1].cost);
       expect(paid[i].perk.scoreBonus).toBeGreaterThanOrEqual(paid[i - 1].perk.scoreBonus);

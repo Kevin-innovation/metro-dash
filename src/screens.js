@@ -1127,6 +1127,7 @@ export class Screens {
   syncHud(game) {
     const durations = {};
     for (const id of POWERUP_IDS) durations[id] = powerupDuration(id, game.store.upgradeLevel(id));
+    durations.sneakers *= game.run.sneakerScale ?? 1;
 
     renderHud({
       score: game.run.score,

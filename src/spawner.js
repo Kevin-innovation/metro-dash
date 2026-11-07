@@ -509,6 +509,7 @@ export class Spawner {
     runTime = null,
     chuseok = false,
     christmas = false,
+    giftGap = 1,
     flying = false,
   }) {
     const context = patternContext({ z, speed, pressure, rng: this.rng, lanes });
@@ -576,12 +577,12 @@ export class Spawner {
     // draw, so a due gift waits one layout instead of costing a power-up; and it
     // waits out a jetpack, whose altitude it could not be reached from.
     const diamondDue = !christmas && this.patternCount >= DIAMOND_AFTER && --this.diamondIn <= 0;
-    if (christmas && runTime !== null && this.giftAt === null) this.giftAt = firstGiftAt(this.rng);
+    if (christmas && runTime !== null && this.giftAt === null) this.giftAt = firstGiftAt(this.rng) * giftGap;
     const giftDue = christmas && runTime !== null && runTime >= this.giftAt && !flying;
     const hazardDue = --this.hazardIn <= 0;
 
     if (giftDue) {
-      this.giftAt = runTime + nextGiftGap(this.rng);
+      this.giftAt = runTime + nextGiftGap(this.rng) * giftGap;
       if (hazardDue) this.hazardIn = 1;
       return diamondPattern(z, context, "gift");
     }

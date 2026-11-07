@@ -140,7 +140,12 @@ export function shopView(save, { christmas = false } = {}) {
   });
 
   const worn = wearableCharacter(save.character, christmas);
-  const characters = CHARACTERS.filter((character) => !character.event || christmas).map((character) => {
+  // Outside the event, an event skin shows only for someone who paid for it.
+  const offered = (character) =>
+    !character.event ||
+    christmas ||
+    (character.cost > 0 && save.characters.includes(character.id));
+  const characters = CHARACTERS.filter(offered).map((character) => {
     const owned = save.characters.includes(character.id);
     return {
       ...character,
@@ -208,7 +213,10 @@ export function purchase(store, kind, id, { christmas = false } = {}) {
 
   if (kind === "character") {
     const character = CHARACTERS.find((c) => c.id === id);
-    if (!character || (character.event && !christmas)) return { ok: false, reason: "unknown" };
+    const keptAfterEvent = character?.cost > 0 && store.ownsCharacter(id);
+    if (!character || (character.event && !christmas && !keptAfterEvent)) {
+      return { ok: false, reason: "unknown" };
+    }
     if (store.ownsCharacter(character.id)) {
       store.equipCharacter(character.id);
       return { ok: true };

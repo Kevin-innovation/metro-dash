@@ -53,6 +53,7 @@ export class Run {
     this.roofScale = 1;
     /** Character perk: jetpack duration multiplier. */
     this.jetpackScale = 1;
+    this.sneakerScale = 1;
     this.reset();
   }
 
@@ -341,6 +342,9 @@ export class Run {
     activatePowerup(this.powerups, id, level);
     if (id === "jetpack" && (this.jetpackScale ?? 1) > 1) {
       this.powerups.jetpack *= this.jetpackScale;
+    }
+    if (id === "sneakers" && (this.sneakerScale ?? 1) > 1) {
+      this.powerups.sneakers *= this.sneakerScale;
     }
     this.metrics.powerups += 1;
     // Per-power-up tallies as well as the total, so missions can single one out

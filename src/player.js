@@ -15,7 +15,7 @@ import {
 } from "./config.js";
 import { ALL_LANES } from "./patterns.js";
 import { laneX } from "./lanes.js";
-import { resetSanta, updateSanta } from "./santa.js";
+import { resetCostume, updateCostume } from "./costumes.js";
 
 function box(w, h, d, color, extra = {}) {
   const mesh = new THREE.Mesh(
@@ -207,8 +207,9 @@ export function createPlayer(palette = DEFAULT_PALETTE) {
     laneScale: 1,
     /** Hoverboard deployed — absorbs the next crash. */
     boarding: false,
-    /** The Santa skin's models, once it has been worn. See santa.js. */
-    santa: null,
+    /** The skin's 3D costume, and every one built so far. See costumes.js. */
+    costume: null,
+    costumes: {},
   };
 }
 
@@ -257,7 +258,7 @@ export function resetPlayer(p, z = 0) {
   p.shadow.visible = true;
   p.shadow.scale.setScalar(1);
   p.shadow.material.opacity = 0.3;
-  resetSanta(p);
+  resetCostume(p);
 }
 
 export function applyAction(p, action, audio, opts = {}) {
@@ -500,7 +501,7 @@ export function updatePlayer(p, dt, speed, ctx = {}) {
   p.shadow.visible = p.alive;
 
   animatePlayer(p, speed);
-  updateSanta(p, dt, speed, ctx);
+  updateCostume(p, dt, speed, ctx);
 }
 
 function enterFlight(p) {

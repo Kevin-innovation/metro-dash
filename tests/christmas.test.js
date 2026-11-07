@@ -5,6 +5,7 @@ import {
   CHRISTMAS_EVENT_TO,
   CHRISTMAS_SLOT_FACES,
   GIFT_FIRST_MAX,
+  christmasTickets,
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
   GIFT_GAP_MIN,
@@ -25,7 +26,7 @@ import { JUMP_BONUS, MAX_COMBO_MULTIPLIER, MOUNT_BONUS, SLIDE_BONUS } from "../s
 import { applyAction, createPlayer, resetPlayer, updatePlayer } from "../src/player.js";
 import { makeRng } from "../src/rng.js";
 import { Run } from "../src/run.js";
-import { setSanta } from "../src/santa.js";
+import { setCostume } from "../src/costumes.js";
 import { SaveStore, hasProgress, normalizeSave } from "../src/save.js";
 import { purchase, shopView } from "../src/shop.js";
 import { SPEC } from "../src/specs.js";
@@ -119,11 +120,13 @@ describe("선물 룰렛 확률표", () => {
     // second of it: nothing can be luckier, and it still has to be accepted. The
     // run ends right after the second window, where the most has been paid for
     // the least time.
+    // Timed for 엘프, who sees gifts soonest.
     const multiplier = MAX_COMBO_MULTIPLIER * MAX_EVENT_MULTIPLIER * 99 * MAX_CHARACTER_SCORE_BONUS;
     const perWindow = 4 * 8 * Math.max(SLIDE_BONUS, JUMP_BONUS, MOUNT_BONUS) * multiplier;
+    const soonest = characterById("elf").perk.giftGap;
     for (const [windows, seconds] of [
-      [1, GIFT_FIRST_MIN + 8],
-      [2, GIFT_FIRST_MIN + GIFT_GAP_MIN + 8],
+      [1, GIFT_FIRST_MIN * soonest + 8],
+      [2, (GIFT_FIRST_MIN + GIFT_GAP_MIN) * soonest + 8],
     ]) {
       expect(
         validateRun({ score: windows * perWindow, distance: maxDistanceIn(seconds), coins: 0, seconds }),
@@ -311,7 +314,7 @@ describe("선물 하나에 룰렛 한 번", () => {
 describe("산타와 루돌프", () => {
   const santaPlayer = () => {
     const p = createPlayer(characterById("santa").palette);
-    setSanta(p, true);
+    setCostume(p, "santa");
     return p;
   };
   const step = (p, ctx = {}, seconds = 0.2) => {
@@ -321,17 +324,17 @@ describe("산타와 루돌프", () => {
   it("스니커즈 중에만 루돌프가 나타나고, 끝나면 고삐까지 사라진다", () => {
     const p = santaPlayer();
     step(p);
-    expect(p.santa.sled.visible).toBe(true);
-    expect(p.santa.reindeer.visible).toBe(false);
+    expect(p.costume.sled.visible).toBe(true);
+    expect(p.costume.reindeer.visible).toBe(false);
 
     step(p, { reindeer: true });
-    expect(p.santa.reindeer.visible).toBe(true);
-    expect(p.santa.reins.every((rein) => rein.visible)).toBe(true);
+    expect(p.costume.reindeer.visible).toBe(true);
+    expect(p.costume.reins.every((rein) => rein.mesh.visible)).toBe(true);
 
     step(p, { reindeer: false });
-    expect(p.santa.reindeer.visible).toBe(false);
-    expect(p.santa.reins.some((rein) => rein.visible)).toBe(false);
-    expect(p.santa.sled.visible).toBe(true);
+    expect(p.costume.reindeer.visible).toBe(false);
+    expect(p.costume.reins.some((rein) => rein.mesh.visible)).toBe(false);
+    expect(p.costume.sled.visible).toBe(true);
   });
 
   it("죽거나 재시작하면 변신이 풀리고, 스킨을 바꾸면 모델이 모두 사라진다", () => {
@@ -339,19 +342,19 @@ describe("산타와 루돌프", () => {
     step(p, { reindeer: true });
     p.alive = false;
     updatePlayer(p, 1 / 120, 0, { reindeer: true });
-    expect(p.santa.reindeer.visible).toBe(false);
+    expect(p.costume.reindeer.visible).toBe(false);
 
     p.alive = true;
     step(p, { reindeer: true });
     resetPlayer(p, 0);
-    expect(p.santa.reindeer.visible).toBe(false);
-    expect(p.santa.pulling).toBe(false);
+    expect(p.costume.reindeer.visible).toBe(false);
+    expect(p.costume.pulling).toBe(false);
 
     step(p, { reindeer: true });
-    setSanta(p, false);
-    expect(p.santa.outfit.visible).toBe(false);
-    expect(p.santa.sled.visible).toBe(false);
-    expect(p.santa.reindeer.visible).toBe(false);
+    setCostume(p, "runner");
+    expect(p.costume.outfit.visible).toBe(false);
+    expect(p.costume.sled.visible).toBe(false);
+    expect(p.costume.reindeer.visible).toBe(false);
     expect(p.parts.pack[0].visible).toBe(true);
     expect(p.board.scale.x).toBe(1);
     expect(p.jets.position.z).toBe(0);
@@ -359,9 +362,9 @@ describe("산타와 루돌프", () => {
 
   it("다른 스킨은 산타 모델을 만들지 않는다", () => {
     const p = createPlayer();
-    setSanta(p, false);
+    setCostume(p, "runner");
     step(p, { reindeer: true });
-    expect(p.santa).toBe(null);
+    expect(p.costume).toBe(null);
   });
 
   it("점프 궤적·슬라이드·이동이 일반 스킨과 프레임 단위로 같다", () => {
@@ -381,9 +384,158 @@ describe("산타와 루돌프", () => {
     const p = santaPlayer();
     p.boarding = true;
     step(p);
-    expect(p.santa.sled.position.y).toBeGreaterThan(0);
+    expect(p.costume.sled.position.y).toBeGreaterThan(0);
     expect(p.board.scale.x).toBeGreaterThan(1);
     expect(p.jets.position.z).toBeLessThan(0);
+  });
+});
+
+describe("크리스마스 캐릭터 5종", () => {
+  const IDS = ["elf", "snowman", "rudolph", "blacksanta", "supersanta"];
+  const COSTS = [60000, 90000, 120000, 180000, 300000];
+
+  it("가격순으로 있고, 점수 보너스는 서버 상한을 올리지 않는다", () => {
+    expect(IDS.map((id) => characterById(id).cost)).toEqual(COSTS);
+    expect(MAX_CHARACTER_SCORE_BONUS).toBe(characterById("principal").perk.scoreBonus);
+    expect(characterById("supersanta").perk.scoreBonus).toBe(MAX_CHARACTER_SCORE_BONUS);
+  });
+
+  it("이벤트에만 팔고, 산 캐릭터는 이벤트가 끝나도 입을 수 있다", () => {
+    const s = store();
+    s.data.coins = 100000;
+    expect(purchase(s, "character", "elf").ok).toBe(false);
+    expect(shopView(s.data).characters.some((c) => c.id === "elf")).toBe(false);
+
+    expect(purchase(s, "character", "elf", { christmas: true }).ok).toBe(true);
+    expect(s.data.coins).toBe(40000);
+    expect(purchase(s, "character", "snowman", { christmas: true }).ok).toBe(false);
+
+    // Over: still on sale to nobody, still the owner's.
+    expect(wearableCharacter("elf", false)).toBe("elf");
+    expect(shopView(s.data).characters.find((c) => c.id === "elf").equipped).toBe(true);
+    expect(shopView(s.data).characters.some((c) => c.id === "rudolph")).toBe(false);
+    expect(purchase(s, "character", "runner").ok).toBe(true);
+    expect(purchase(s, "character", "elf").ok).toBe(true);
+    expect(s.data.character).toBe("elf");
+    expect(hasProgress(s.data)).toBe(true);
+  });
+
+  it("어떤 코스튬도 판정과 물리를 바꾸지 않고, 벗으면 흔적이 남지 않는다", () => {
+    for (const id of ["santa", ...IDS]) {
+      const plain = createPlayer();
+      const worn = createPlayer(characterById(id).palette);
+      setCostume(worn, id);
+      const actions = { 12: "jump", 150: "slide", 260: "left", 400: "jump" };
+      for (let frame = 0; frame < 520; frame++) {
+        for (const p of [plain, worn]) {
+          if (actions[frame]) applyAction(p, actions[frame], null, { jumpMultiplier: 1.4 });
+          updatePlayer(p, 1 / 120, 30, { reindeer: p === worn });
+        }
+        expect([worn.x, worn.y, worn.z, worn.height], id).toEqual([plain.x, plain.y, plain.z, plain.height]);
+      }
+      resetPlayer(worn, 0);
+
+      setCostume(worn, "runner");
+      expect(worn.costume.on, id).toBe(false);
+      expect(worn.costume.parts.some((part) => part.visible), id).toBe(false);
+      expect(worn.head.visible, id).toBe(true);
+      expect(worn.parts.pack[0].visible, id).toBe(true);
+      expect(worn.board.scale.x, id).toBe(1);
+      expect(worn.jets.position.z, id).toBe(0);
+    }
+  });
+
+  it("마스코트는 러너를 가리고, 스킨을 바꿔 입어도 이전 모델이 남지 않는다", () => {
+    const p = createPlayer();
+    setCostume(p, "snowman");
+    expect(p.head.visible).toBe(false);
+    expect(p.jets.visible).toBe(false);
+    const snowman = p.costume;
+    updatePlayer(p, 1 / 120, 30, {});
+
+    setCostume(p, "supersanta");
+    expect(snowman.model.visible).toBe(false);
+    expect(p.head.visible).toBe(true);
+    expect(p.costume.herd).toHaveLength(3);
+    for (let i = 0; i < 40; i++) updatePlayer(p, 1 / 120, 30, { reindeer: true });
+    expect(p.costume.reins.filter((rein) => rein.mesh.visible)).toHaveLength(6);
+
+    setCostume(p, "elf");
+    expect(p.costumes.supersanta.reindeer.visible).toBe(false);
+    expect(p.costumes.supersanta.sled.visible).toBe(false);
+    expect(p.costume.reindeer).toBe(undefined);
+    updatePlayer(p, 1 / 120, 30, { reindeer: true });
+  });
+
+  it("블랙 산타는 꽝과 ×99가 정확히 2배이고 합은 그대로 100이다", () => {
+    const risk = characterById("blacksanta").perk.wheelRisk;
+    const tickets = (face) => christmasTickets(face, risk);
+    const sum = CHRISTMAS_SLOT_FACES.reduce((total, face) => total + tickets(face), 0);
+    expect(sum).toBeCloseTo(100, 8);
+    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.jackpot))).toBe(2);
+    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.effect.type === "none"))).toBe(20);
+
+    const draws = 10000;
+    let jackpots = 0;
+    for (let i = 0; i < draws; i++) {
+      if (spinChristmas(() => (i + 0.5) / draws, risk).face.jackpot) jackpots += 1;
+    }
+    expect(jackpots / draws).toBeCloseTo(0.02, 3);
+    expect(christmasTickets(CHRISTMAS_SLOT_FACES[1])).toBe(CHRISTMAS_SLOT_FACES[1].weight);
+  });
+
+  it("엘프는 선물이 20% 빨리 온다", () => {
+    const first = (giftGap) => {
+      const spawner = new Spawner(fakePool());
+      spawner.reset(29);
+      spawner.place(100, { speed: 40, phaseId: 4, runTime: 1, christmas: true, giftGap });
+      return spawner.giftAt;
+    };
+    expect(first(0.8)).toBeCloseTo(first(1) * 0.8, 8);
+  });
+
+  it("루돌프는 슈퍼 스니커즈가 50% 길다", () => {
+    const plain = new Run(store());
+    const rudolph = new Run(store());
+    rudolph.sneakerScale = characterById("rudolph").perk.sneakerTime;
+    plain.addPowerup("sneakers", 1);
+    rudolph.addPowerup("sneakers", 1);
+    expect(rudolph.powerups.sneakers).toBeCloseTo(plain.powerups.sneakers * 1.5, 8);
+  });
+
+  it("슈퍼 산타는 꽝에 판마다 한 번만 재도전하고, 룰렛 횟수는 늘지 않는다", () => {
+    vi.stubGlobal("document", { hidden: false });
+    const run = new Run(store());
+    const shown = [];
+    const game = {
+      run,
+      state: "playing",
+      wheelQueue: [{ kind: "gift" }],
+      wheelRetries: 1,
+      audio: { powerup() {}, resume() {}, purchase() {} },
+      store: store(),
+      screens: {
+        showSlots: (faces, index, face, onDone, options) => shown.push(options.title),
+        refreshProfile() {},
+        syncHud() {},
+      },
+      pause() {},
+    };
+    const miss = CHRISTMAS_SLOT_FACES.find((face) => face.effect.type === "none");
+
+    Game.prototype.spinWheel.call(game);
+    Game.prototype.settleWheel.call(game, miss);
+    expect(game.wheelQueue).toEqual([{ kind: "gift", retry: true }]);
+    expect(game.wheelRetries).toBe(0);
+
+    Game.prototype.spinWheel.call(game);
+    expect(shown[1]).toContain("재도전");
+    expect(run.metrics.spins).toBe(1);
+
+    Game.prototype.settleWheel.call(game, miss);
+    expect(game.wheelQueue).toEqual([]);
+    expect(game.state).toBe("playing");
+    vi.unstubAllGlobals();
   });
 });
 

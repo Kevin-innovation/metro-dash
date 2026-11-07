@@ -68,6 +68,79 @@ export const CHARACTERS = [
       shoes: 0x1c1917,
     },
   },
+  // Sold only during the event, and kept for good once bought. What they do with
+  // gifts and blizzards rests until the event returns; the coin and score bonuses
+  // do not. None goes above the top score bonus, so the server's ceiling is not
+  // raised by them.
+  {
+    id: "elf",
+    name: "엘프",
+    cost: 60000,
+    event: "christmas",
+    blurb: "크리스마스 한정 · 선물이 20% 더 자주 나옴 · 코인 +15%",
+    perk: { giftGap: 0.8, coinBonus: 1.15 },
+    palette: {
+      shirt: 0x16a34a,
+      trim: 0xdc2626,
+      pack: 0xa16207,
+      hair: 0xfbbf24,
+      streak: 0xfacc15,
+      pants: 0x166534,
+      shoes: 0xb91c1c,
+    },
+  },
+  {
+    id: "snowman",
+    name: "눈사람",
+    cost: 90000,
+    event: "christmas",
+    blurb: "크리스마스 한정 · 눈보라 시야 흐림 -85% · 코인 +25%",
+    perk: { blizzardVeil: 0.15, coinBonus: 1.25 },
+    palette: { shirt: 0xf1f5f9, trim: 0xdc2626, pack: 0xf97316, hair: 0x475569, streak: 0xf8fafc },
+  },
+  {
+    id: "rudolph",
+    name: "루돌프",
+    cost: 120000,
+    event: "christmas",
+    blurb: "크리스마스 한정 · 슈퍼 스니커즈 +50% · 점수 +10%",
+    perk: { sneakerTime: 1.5, scoreBonus: 1.1 },
+    palette: { shirt: 0x8d5a2b, trim: 0x4e342e, pack: 0xff1744, hair: 0x4e342e, streak: 0xfacc15 },
+  },
+  {
+    id: "blacksanta",
+    name: "블랙 산타",
+    cost: 180000,
+    event: "christmas",
+    blurb: "크리스마스 한정 · 룰렛 꽝 2배, ×99도 2배 · 점수 +12%",
+    perk: { wheelRisk: 2, scoreBonus: 1.12 },
+    palette: {
+      shirt: 0x18181b,
+      trim: 0xdc2626,
+      pack: 0x7f1d1d,
+      hair: 0xd4d4d8,
+      streak: 0xef4444,
+      pants: 0x18181b,
+      shoes: 0x7f1d1d,
+    },
+  },
+  {
+    id: "supersanta",
+    name: "슈퍼 산타",
+    cost: 300000,
+    event: "christmas",
+    blurb: "크리스마스 한정 · 룰렛이 꽝이면 판마다 한 번 재도전 · 코인 +30% · 점수 +22%",
+    perk: { wheelRetry: 1, coinBonus: 1.3, scoreBonus: 1.22 },
+    palette: {
+      shirt: 0xf59e0b,
+      trim: 0xfffbeb,
+      pack: 0xb45309,
+      hair: 0xfffbeb,
+      streak: 0xfff1b8,
+      pants: 0xd97706,
+      shoes: 0x7c2d12,
+    },
+  },
   {
     id: "neon",
     name: "네온",
@@ -256,13 +329,13 @@ export function characterById(id) {
 }
 
 /**
- * The runner actually worn. An event skin stays in the save when its event is
- * off and simply is not put on, so whatever is decided about keeping it later
- * has lost nothing.
+ * The runner actually worn. The free event skin stays in the save when its event
+ * is off and simply is not put on, so whatever is decided about keeping it later
+ * has lost nothing. One that was paid for is the player's for good.
  */
 export function wearableCharacter(id, christmas = false) {
   const character = characterById(id);
-  return character.event && !christmas ? DEFAULT_CHARACTER : character.id;
+  return character.event && character.cost === 0 && !christmas ? DEFAULT_CHARACTER : character.id;
 }
 
 /** The perks of the equipped character, safe to read for any id. */
