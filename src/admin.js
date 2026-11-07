@@ -342,6 +342,9 @@ async function mergeSchool(fromKey, toKey) {
 $("admin-recompute").addEventListener("click", async () => {
   try {
     const result = await call("mutation", "admin:recomputeSchools");
+    // The rebuild deletes rows it folded together, and their weekly figures with
+    // them, so this week's totals are rebuilt from this week's runs straight after.
+    await call("mutation", "admin:backfillWeek");
     toast(`학교 ${result.schools}곳 재계산 · ${result.removed}곳 정리`);
     await refresh();
   } catch (error) {
