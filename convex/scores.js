@@ -11,7 +11,7 @@ import { adjustSchool, adjustSchoolWeek } from "./schools.js";
 import { requirePlayer } from "./session.js";
 import { bestOf, coinsOf, levelOf, xpOf } from "./players.js";
 import { previousSeason, seasonAt, seasonRange } from "../src/release.js";
-import { schoolLabel } from "../src/school.js";
+import { TEACHER, TEACHER_DISPLAY, schoolLabel } from "../src/school.js";
 
 /**
  * The leaderboard.
@@ -292,7 +292,7 @@ export const seasonBoard = query({
           playerId: run.playerId,
           handle: run.handle,
           score: run.score,
-          school: run.school ?? "",
+          school: run.school === TEACHER.label ? TEACHER_DISPLAY : (run.school ?? ""),
         });
       }
     }

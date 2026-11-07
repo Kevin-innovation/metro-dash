@@ -41,6 +41,13 @@ export const LEVELS = [
 export const GENERAL_LEVEL = "일";
 export const GENERAL = { region: "일반", level: GENERAL_LEVEL, name: "일반부", label: "일반부" };
 export const TEACHER = { region: "일반", level: GENERAL_LEVEL, name: "선생님", label: "선생님" };
+/**
+ * What the teachers' affiliation is called on the boards.
+ *
+ * Only the display: rows and runs keep 「선생님」 as written, so nothing stored
+ * has to be rewritten and old runs still meet new ones under one name.
+ */
+export const TEACHER_DISPLAY = "DLAB 선생님";
 
 /**
  * Daegu International School is a K–12 affiliation, so it must be findable
@@ -80,6 +87,11 @@ export function isGeneral(school) {
 }
 
 /** @returns {boolean} true for the staff affiliation that is not a school. */
+/** Teachers rank as an affiliation of their own; 일반부 is not one. */
+export function ranksAsSchool(school) {
+  return !isGeneral(school) || isTeacher(school);
+}
+
 export function isTeacher(school) {
   return school?.level === GENERAL_LEVEL && school?.name === TEACHER.name;
 }
@@ -318,6 +330,7 @@ function composeLabel(region, level, name, whole) {
 }
 
 function schoolDisplayLabel(region, level, name, fallback) {
+  if (isTeacher({ level, name })) return TEACHER_DISPLAY;
   return isDISSchool(region, level, normalizeKnownSchoolName(region, name)) ? DIS_DISPLAY_LABEL : fallback;
 }
 

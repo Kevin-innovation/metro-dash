@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { isGeneral, schoolKey, schoolLabel } from "../src/school.js";
+import { ranksAsSchool, schoolKey, schoolLabel } from "../src/school.js";
 import { weekKey } from "../src/week.js";
 import { requirePlayer } from "./session.js";
 import { seasonAt } from "../src/release.js";
@@ -143,7 +143,7 @@ function groupedRows(rows, weekly, week) {
   const grouped = new Map();
   for (const row of rows) {
     const figures = weekly ? weekOf(row, week) : { total: row.total, members: row.members };
-    if (isGeneral(row)) continue;
+    if (!ranksAsSchool(row)) continue;
 
     const key = schoolKey(row);
     const held = grouped.get(key) ?? { key, label: schoolLabel(row), total: 0, members: 0 };
@@ -187,7 +187,7 @@ export const standing = query({
   handler: async (ctx, { token, range }) => {
     const player = await requirePlayer(ctx, token);
     // Nothing to stand in for 일반부, which the board above leaves out.
-    if (!player.schoolKey || isGeneral(player.school)) return null;
+    if (!player.schoolKey || !ranksAsSchool(player.school)) return null;
 
     const weekly = range === "week";
     const week = weekKey(Date.now());

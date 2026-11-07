@@ -715,7 +715,7 @@ export class Screens {
     if (!list) return;
 
     if (!rows?.length) {
-      list.innerHTML = `<li class="leaderboard-empty">아직 학교 기록이 없어요.</li>`;
+      list.innerHTML = `<li class="leaderboard-empty">아직 소속 기록이 없어요.</li>`;
     } else {
       const mineKey = standing?.rank != null ? rows.find((row) => row.label === standing.label)?.key : null;
       list.innerHTML = rows

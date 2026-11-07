@@ -4,7 +4,7 @@ import { ConvexClient } from "convex/browser";
 // it guards are both on screen at once.
 import "./style.css";
 import { escapeHtml } from "./ui.js";
-import { GENERAL_LEVEL, LEVELS, REGIONS, TEACHER, validateSchool } from "./school.js";
+import { GENERAL_LEVEL, LEVELS, REGIONS, TEACHER, validateSchool, TEACHER_DISPLAY } from "./school.js";
 
 /**
  * Teacher tools, as a page rather than a set of CLI commands.
@@ -218,7 +218,7 @@ function askSchool(handle) {
 
   const check =
     level === GENERAL_LEVEL && name === TEACHER.name
-      ? { ok: true, school: { ...TEACHER }, label: TEACHER.label }
+      ? { ok: true, school: { ...TEACHER }, label: TEACHER_DISPLAY }
       : validateSchool({ region, level, name });
   if (!check.ok) {
     toast(check.message, "bad");

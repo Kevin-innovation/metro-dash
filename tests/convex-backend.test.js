@@ -1240,12 +1240,18 @@ describe("admin 학교 도구", () => {
       level: "일",
       name: "선생님",
     });
-    expect(result.schoolLabel).toBe("선생님");
-    expect(await t.query(api.players.load, { token })).toMatchObject({ schoolLabel: "선생님" });
+    expect(result.schoolLabel).toBe("DLAB 선생님");
+    expect(await t.query(api.players.load, { token })).toMatchObject({ schoolLabel: "DLAB 선생님" });
 
     await t.mutation(api.scores.submit, { token, ...plausibleRun({ score: 1200 }) });
-    expect(await t.query(api.scores.top, {})).toMatchObject([{ handle: "Kevin", school: "선생님" }]);
-    expect(await t.query(api.schools.top, {})).toHaveLength(0);
+    expect(await t.query(api.scores.top, {})).toMatchObject([{ handle: "Kevin", school: "DLAB 선생님" }]);
+    // Teachers rank as an affiliation of their own, on both boards.
+    for (const range of [undefined, "week"]) {
+      expect(await t.query(api.schools.top, { range })).toMatchObject([
+        { rank: 1, label: "DLAB 선생님", total: 1200, members: 1 },
+      ]);
+      expect(await t.query(api.schools.standing, { token, range })).toMatchObject({ rank: 1, label: "DLAB 선생님" });
+    }
   });
 });
 

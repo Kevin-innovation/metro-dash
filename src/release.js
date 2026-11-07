@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.54";
+export const VERSION = "6.55";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.55",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "소속 랭킹",
+    notes: [
+      "🏫 리더보드의 학교 랭킹이 「소속」 랭킹이 되었습니다.",
+      "👩‍🏫 선생님들도 「DLAB 선생님」 소속으로 순위에 오릅니다. 학생들, 선생님을 이겨 보세요!",
+    ],
+  },
   {
     version: "6.54",
     date: "2026-11-08",
