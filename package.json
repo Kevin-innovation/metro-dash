@@ -17,6 +17,7 @@
     "check": "node scripts/check-names.mjs"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "convex": "^1.44.0",
     "three": "^0.170.0"
   },

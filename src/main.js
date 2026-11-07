@@ -1,6 +1,10 @@
+import { inject } from '@vercel/analytics';
 import { setChristmasPreview } from "./christmas.js";
 import { Game } from "./game.js";
 import "./style.css";
+
+// Initialize Vercel Analytics
+inject();
 
 // `npm run dev` + `?christmas`. Compiled out of a production build.
 if (import.meta.env.DEV && new URLSearchParams(location.search).has("christmas")) {
