@@ -2566,11 +2566,22 @@ kbd {
 }
 
 .howto-wrap summary {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(7, 16, 24, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  color: #9ec2d8;
+  color: #cfe2ef;
   font-size: 14px;
   letter-spacing: 0.06em;
   list-style: none;
+  text-align: center;
+}
+
+.howto-wrap summary:hover,
+.howto-wrap summary:focus-visible {
+  border-color: var(--gold);
+  color: #fff;
 }
 
 .howto-wrap summary::marker,

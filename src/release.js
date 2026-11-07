@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.00";
+export const VERSION = "6.10";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.10",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "크리스마스 미션 50종",
+    notes: [
+      "크리스마스 미션이 50종으로 늘었습니다. 매일 쉬움·보통·어려움이 하나씩 나오고, 같은 종류는 겹치지 않습니다.",
+      "하루에 모두 깨면 코인 약 12,000을 받습니다.",
+      "타이틀 화면의 조작 방법이 기본으로 접혀 있습니다. 누르면 펼쳐져요. 덕분에 이번 시즌 최고 점수와 미션이 첫 화면에 바로 보입니다.",
+    ],
+  },
   {
     version: "6.00",
     date: "2026-11-07",

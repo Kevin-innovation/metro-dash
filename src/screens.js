@@ -111,21 +111,6 @@ export class Screens {
     howto.textContent = `${how} — 충돌을 한 번 막아 줍니다`;
   }
 
-  /**
-   * Whether the control list starts open.
-   *
-   * A phone gets a disclosure, because vertical space is the scarce thing
-   * there. A wide screen gets it open: the column beside the buttons had room
-   * going spare — the whole bottom-right corner of the card was empty — and
-   * opening it used to grow the card and shift everything that was already on
-   * screen. Something that only ever moves the layout on a click is better off
-   * not being a click.
-   */
-  openHowto(wide) {
-    const el = $("howto-wrap");
-    if (el) el.open = wide;
-  }
-
   bind() {
     const a = this.actions;
     $("btn-play").onclick = () => a.startRun();
@@ -134,6 +119,10 @@ export class Screens {
     $("btn-quit").onclick = () => a.toTitle();
     $("btn-resume").onclick = () => a.resume();
     $("btn-pause").onclick = () => a.pause();
+    // Opening it runs past the bottom of the card on most screens.
+    $("howto-wrap").ontoggle = (event) => {
+      if (event.target.open) event.target.scrollIntoView({ block: "nearest" });
+    };
 
     const shopBtn = $("btn-shop");
     if (shopBtn) shopBtn.onclick = () => a.openShop();

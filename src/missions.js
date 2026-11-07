@@ -187,26 +187,83 @@ export const MISSION_DEFS = AUTHORED_DEFS.map((def) => {
   return { ...def, targets: fitToCeiling(extendTargets(def.targets), ceiling) };
 });
 
+/** One Christmas mission. `coins` also sets how hard it counts as; see rollChristmas. */
+const xmas = (id, metric, scope, target, label, coins) => ({
+  id,
+  metric,
+  scope,
+  targets: [target],
+  label,
+  coins,
+  xp: 300,
+});
+
 /**
  * The Christmas set, dealt instead of the usual table while the event runs.
  *
  * One target and one payout for everybody, on purpose. The ordinary table climbs
  * with rank, which at this point hands a high level 890,000 points to find and a
  * newcomer a few hundred coins; the event's characters are priced for coins a
- * student can actually earn before it ends. A cleared day is worth about 10,000,
- * so a month of them buys the 300,000 runner by itself, and raids shorten that.
+ * student can actually earn before it ends. A cleared day is worth about 12,000,
+ * so under a month of them buys the 300,000 runner by itself, and raids shorten
+ * that. Nothing here needs anything bought from the shop.
  */
 export const CHRISTMAS_MISSION_DEFS = [
-  { id: "xmas-gifts", metric: "gifts", scope: "total", targets: [3], label: "선물 상자 {t}개 먹기", coins: 2000, xp: 300 },
-  { id: "xmas-spins", metric: "spins", scope: "total", targets: [5], label: "선물 룰렛 {t}번 돌리기", coins: 2500, xp: 300 },
-  { id: "xmas-santa", metric: "santaDrops", scope: "total", targets: [2], label: "산타 습격 선물 {t}개 잡기", coins: 3000, xp: 300 },
-  { id: "xmas-blizzard", metric: "blizzardClears", scope: "total", targets: [3], label: "눈보라 속에서 장애물 {t}개 넘기", coins: 3000, xp: 300 },
-  { id: "xmas-rudolph", metric: "sneakers", scope: "total", targets: [3], label: "슈퍼 스니커즈 {t}번 먹기", coins: 1500, xp: 300 },
-  { id: "xmas-nose", metric: "coinsTotal", scope: "total", targets: [300], label: "루돌프 코 {t}개 모으기", coins: 1500, xp: 300 },
-  { id: "xmas-gates", metric: "gates", scope: "total", targets: [15], label: "게이트 {t}개 슬라이드로 통과", coins: 1500, xp: 300 },
-  { id: "xmas-canes", metric: "barriers", scope: "total", targets: [10], label: "지팡이 사탕 {t}개 뛰어넘기", coins: 1500, xp: 300 },
-  { id: "xmas-survive", metric: "seconds", scope: "run", targets: [90], label: "한 판에 {t}초 버티기", coins: 2000, xp: 300 },
-  { id: "xmas-score", metric: "score", scope: "run", targets: [300_000], label: "한 판에 {t}점 얻기", coins: 2000, xp: 300 },
+  // --- 크리스마스 ---------------------------------------------------------
+  xmas("xmas-gifts", "gifts", "total", 3, "선물 상자 {t}개 먹기", 2000),
+  xmas("xmas-gifts-5", "gifts", "total", 5, "선물 상자 {t}개 먹기", 3000),
+  xmas("xmas-gifts-8", "gifts", "total", 8, "선물 상자 {t}개 먹기", 4000),
+  xmas("xmas-spins-3", "spins", "total", 3, "선물 룰렛 {t}번 돌리기", 1500),
+  xmas("xmas-spins", "spins", "total", 5, "선물 룰렛 {t}번 돌리기", 2500),
+  xmas("xmas-santa-1", "santaDrops", "total", 1, "산타 습격 선물 {t}개 잡기", 1500),
+  xmas("xmas-santa", "santaDrops", "total", 2, "산타 습격 선물 {t}개 잡기", 3000),
+  xmas("xmas-santa-4", "santaDrops", "total", 4, "산타 습격 선물 {t}개 잡기", 4000),
+  xmas("xmas-blizzard-1", "blizzardClears", "total", 1, "눈보라 속에서 장애물 {t}개 넘기", 1500),
+  xmas("xmas-blizzard", "blizzardClears", "total", 3, "눈보라 속에서 장애물 {t}개 넘기", 3000),
+  xmas("xmas-blizzard-6", "blizzardClears", "total", 6, "눈보라 속에서 장애물 {t}개 넘기", 4000),
+  xmas("xmas-snowball", "crows", "total", 1, "눈덩이 {t}개 먹고 눈보라 맞기", 1500),
+  xmas("xmas-nose", "coinsTotal", "total", 300, "루돌프 코 {t}개 모으기", 1500),
+  xmas("xmas-nose-600", "coinsTotal", "total", 600, "루돌프 코 {t}개 모으기", 2500),
+  xmas("xmas-nose-1000", "coinsTotal", "total", 1000, "루돌프 코 {t}개 모으기", 3500),
+  xmas("xmas-nose-run-25", "coins", "run", 25, "한 판에 루돌프 코 {t}개 모으기", 1500),
+  xmas("xmas-nose-run-50", "coins", "run", 50, "한 판에 루돌프 코 {t}개 모으기", 2500),
+  xmas("xmas-nose-run-90", "coins", "run", 90, "한 판에 루돌프 코 {t}개 모으기", 3500),
+  xmas("xmas-canes", "barriers", "total", 10, "지팡이 사탕 {t}개 뛰어넘기", 1500),
+  xmas("xmas-gates", "gates", "total", 15, "게이트 {t}개 슬라이드로 통과", 1500),
+  xmas("xmas-gates-run-4", "gatesRun", "run", 4, "한 판에 게이트 {t}개 통과", 1500),
+  xmas("xmas-gates-run-8", "gatesRun", "run", 8, "한 판에 게이트 {t}개 통과", 2500),
+
+  // --- 파워업 -------------------------------------------------------------
+  xmas("xmas-rudolph", "sneakers", "total", 3, "슈퍼 스니커즈 {t}번 먹기", 1500),
+  xmas("xmas-rudolph-5", "sneakers", "total", 5, "슈퍼 스니커즈 {t}번 먹기", 2500),
+  xmas("xmas-jetpack-2", "jetpacks", "total", 2, "제트팩 {t}번 타기", 1500),
+  xmas("xmas-jetpack-4", "jetpacks", "total", 4, "제트팩 {t}번 타기", 2500),
+  xmas("xmas-magnet", "magnets", "total", 3, "자석 {t}번 쓰기", 1500),
+  xmas("xmas-focus", "focuses", "total", 3, "질주 {t}번 쓰기", 1500),
+  xmas("xmas-powerups", "powerups", "total", 10, "파워업 {t}개 먹기", 2500),
+  xmas("xmas-powerups-run-2", "powerupsRun", "run", 2, "한 판에 파워업 {t}개 먹기", 1500),
+  xmas("xmas-powerups-run-4", "powerupsRun", "run", 4, "한 판에 파워업 {t}개 먹기", 2500),
+
+  // --- 달리기 -------------------------------------------------------------
+  xmas("xmas-roofs", "mounts", "total", 5, "버스·열차 지붕에 {t}번 올라타기", 1500),
+  xmas("xmas-roofs-run-3", "mountsRun", "run", 3, "한 판에 지붕 {t}번 올라타기", 1500),
+  xmas("xmas-roofs-run-6", "mountsRun", "run", 6, "한 판에 지붕 {t}번 올라타기", 2500),
+  xmas("xmas-roof-60", "roofDistance", "run", 60, "한 판에 지붕 위로 {t}m 달리기", 1500),
+  xmas("xmas-roof-200", "roofDistance", "run", 200, "한 판에 지붕 위로 {t}m 달리기", 3000),
+  xmas("xmas-graze-5", "nearMisses", "total", 5, "아슬아슬 {t}번 피하기", 1500),
+  xmas("xmas-graze-15", "nearMisses", "total", 15, "아슬아슬 {t}번 피하기", 2500),
+  xmas("xmas-graze-run", "nearMissesRun", "run", 3, "한 판에 아슬아슬 {t}번 피하기", 1500),
+  xmas("xmas-combo-8", "comboMax", "run", 8, "콤보 {t} 달성하기", 1500),
+  xmas("xmas-combo-15", "comboMax", "run", 15, "콤보 {t} 달성하기", 2500),
+  xmas("xmas-combo-30", "comboMax", "run", 30, "콤보 {t} 달성하기", 3500),
+  xmas("xmas-survive-45", "seconds", "run", 45, "한 판에 {t}초 버티기", 1500),
+  xmas("xmas-survive", "seconds", "run", 90, "한 판에 {t}초 버티기", 2500),
+  xmas("xmas-survive-150", "seconds", "run", 150, "한 판에 {t}초 버티기", 3500),
+  xmas("xmas-distance-1000", "distance", "run", 1000, "한 판에 {t}m 달리기", 1500),
+  xmas("xmas-distance-2500", "distance", "run", 2500, "한 판에 {t}m 달리기", 2500),
+  xmas("xmas-score-100", "score", "run", 100_000, "한 판에 {t}점 얻기", 1500),
+  xmas("xmas-score", "score", "run", 300_000, "한 판에 {t}점 얻기", 2500),
+  xmas("xmas-score-500", "score", "run", 500_000, "한 판에 {t}점 얻기", 3500),
 ];
 
 /** Paid for clearing all three of the Christmas set in a day. */
@@ -219,10 +276,12 @@ export const MISSION_SLOTS = 3;
  * server's daily allowance has to clear this or it would drop what it owes.
  */
 export const CHRISTMAS_DAILY_MAX_COINS =
-  [...CHRISTMAS_MISSION_DEFS]
-    .sort((a, b) => b.coins - a.coins)
-    .slice(0, MISSION_SLOTS)
-    .reduce((sum, def) => sum + def.coins, 0) + CHRISTMAS_DAILY_BONUS.coins;
+  [0, 1, 2].reduce(
+    (sum, level) =>
+      sum +
+      Math.max(...CHRISTMAS_MISSION_DEFS.filter((def) => christmasDifficulty(def) === level).map((def) => def.coins)),
+    0,
+  ) + CHRISTMAS_DAILY_BONUS.coins;
 
 /**
  * Paid for clearing all three in a day, before the difficulty step is applied.
@@ -301,17 +360,55 @@ function makeMission(def, tier) {
  * tests get deterministic rolls.
  */
 export function rollMissions(exclude = [], count = MISSION_SLOTS, tier = 0, random = Math.random, christmas = false) {
+  if (christmas) return rollChristmas(exclude, count, random);
   const taken = new Set(exclude);
-  const table = christmas ? CHRISTMAS_MISSION_DEFS : MISSION_DEFS;
-  const pool = table.filter((def) => !taken.has(def.id));
+  const pool = MISSION_DEFS.filter((def) => !taken.has(def.id));
   const chosen = [];
 
   // Fall back to repeats only if the pool genuinely runs dry.
-  const source = pool.length >= count ? pool.slice() : table.slice();
+  const source = pool.length >= count ? pool.slice() : MISSION_DEFS.slice();
   while (chosen.length < count && source.length > 0) {
     const index = Math.floor(random() * source.length) % source.length;
     const [def] = source.splice(index, 1);
     chosen.push(makeMission(def, tier));
+  }
+  return chosen;
+}
+
+/** How hard a Christmas mission counts as, read off what it pays: 0, 1 or 2. */
+export function christmasDifficulty(def) {
+  return def.coins <= 2000 ? 0 : def.coins <= 3000 ? 1 : 2;
+}
+
+/**
+ * Which missions finish on the same play. 「게이트 15개」 and 「한 판에 게이트 4개」
+ * count one thing, and so do a gift and the wheel it spins.
+ */
+export function christmasFamily(def) {
+  return def.metric.replace(/(Run|Total)$/, "").replace("spins", "gifts");
+}
+
+/**
+ * Deal the Christmas set: one easy, one middling and one hard, each counting
+ * something different.
+ *
+ * With fifty to draw from, an open draw would hand someone three hard ones on one
+ * day, or 「선물 3개」 beside 「선물 5개」 which finish on the same gifts. The easy
+ * one means every student gets paid something; the hard one is why they come back.
+ */
+function rollChristmas(exclude, count, random) {
+  const held = exclude.map(missionDef).filter(Boolean);
+  const families = new Set(held.map(christmasFamily));
+  const open = [0, 1, 2].filter((level) => !held.some((def) => christmasDifficulty(def) === level));
+  const chosen = [];
+  for (let i = 0; i < count; i++) {
+    const level = open[i] ?? i % 3;
+    const pool = CHRISTMAS_MISSION_DEFS.filter(
+      (def) => christmasDifficulty(def) === level && !families.has(christmasFamily(def)),
+    );
+    const def = pool[Math.floor(random() * pool.length) % pool.length];
+    families.add(christmasFamily(def));
+    chosen.push(makeMission(def, 0));
   }
   return chosen;
 }

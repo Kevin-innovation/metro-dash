@@ -38,6 +38,8 @@ import { applyAction, createPlayer, resetPlayer, updatePlayer } from "../src/pla
 import {
   CHRISTMAS_DAILY_MAX_COINS,
   CHRISTMAS_MISSION_DEFS,
+  christmasDifficulty,
+  christmasFamily,
   ensureMissions,
   isChristmasMission,
   missionReward,
@@ -796,29 +798,60 @@ describe("크리스마스 미션", () => {
     }
     expect(setBonus(rollMissions([], 3, 8, () => 0, true), 8).coins).toBe(4000);
     expect(setBonus(rollMissions([], 3, 8, () => 0), 8).coins).toBeLessThan(4000);
-    // About a month of cleared days, at the cheapest set the table can deal.
-    const cheapest = [...CHRISTMAS_MISSION_DEFS].sort((a, b) => a.coins - b.coins).slice(0, 3);
-    const day = cheapest.reduce((sum, def) => sum + def.coins, 0) + 4000;
-    expect(characterById("supersanta").cost / day).toBeLessThan(40);
+    // About a month of cleared days, at the cheapest set the deal can hand out.
+    const cheapest = [0, 1, 2].map((level) =>
+      Math.min(...CHRISTMAS_MISSION_DEFS.filter((def) => christmasDifficulty(def) === level).map((def) => def.coins)),
+    );
+    const day = cheapest.reduce((sum, coins) => sum + coins, 0) + 4000;
+    expect(characterById("supersanta").cost / day).toBeLessThan(30);
   });
 
-  it("모든 미션이 실제 집계에 걸리고, 깨면 코인이 들어온다", () => {
-    const seen = new Set();
+  it("50종이고, 모두 실제 집계에 걸리며, 깨면 적힌 코인이 들어온다", () => {
+    expect(CHRISTMAS_MISSION_DEFS).toHaveLength(50);
+    expect(new Set(CHRISTMAS_MISSION_DEFS.map((def) => def.id)).size).toBe(50);
     for (const def of CHRISTMAS_MISSION_DEFS) {
       const s = store();
       s.data.missions = [{ id: def.id, target: def.targets[0], progress: def.targets[0] - 1 }];
       const run = new Run(s);
       const before = s.data.coins;
-      Object.assign(run.metrics, { gifts: 1, spins: 1, santaDrops: 1, blizzardClears: 1, sneakers: 1, gates: 1, barriers: 1 });
+      for (const key of Object.keys(run.metrics)) run.metrics[key] = 999;
       for (let i = 0; i < 300; i++) run.addCoin();
-      run.seconds = 95;
-      run.scoreBonus = 400_000;
+      Object.assign(run, { seconds: 999, distance: 50_000, comboMax: 999, roofDistance: 999, scoreBonus: 900_000 });
       const { completed } = run.bank(false);
       expect(completed.map((entry) => entry.id), def.id).toEqual([def.id]);
       expect(s.data.coins - before, def.id).toBe(300 + def.coins);
-      seen.add(def.id);
     }
-    expect(seen.size).toBe(CHRISTMAS_MISSION_DEFS.length);
+  });
+
+  it("상점에서 사야만 깰 수 있는 미션이 없고, 한 판 목표는 한 판에 가능한 범위다", () => {
+    for (const def of CHRISTMAS_MISSION_DEFS) {
+      expect(["boards", "antidotes"], def.id).not.toContain(def.metric);
+      if (def.metric === "seconds") expect(def.targets[0]).toBeLessThanOrEqual(180);
+      if (def.metric === "distance") expect(def.targets[0]).toBeLessThanOrEqual(maxDistanceIn(150));
+    }
+  });
+
+  it("매일 쉬움·보통·어려움이 하나씩, 같은 종류 없이 나온다", () => {
+    let seed = 7;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const difficultyOf = (mission) => christmasDifficulty(CHRISTMAS_MISSION_DEFS.find((def) => def.id === mission.id));
+    const familyOf = (mission) => christmasFamily(CHRISTMAS_MISSION_DEFS.find((def) => def.id === mission.id));
+    const seen = new Set();
+    for (let day = 0; day < 2000; day++) {
+      const set = rollMissions([], 3, 0, random, true);
+      expect(set.map(difficultyOf).sort()).toEqual([0, 1, 2]);
+      expect(new Set(set.map(familyOf)).size).toBe(3);
+      for (const mission of set) seen.add(mission.id);
+    }
+    // Over enough days every one of them does come up.
+    expect(seen.size).toBe(50);
+
+    // A set already partly dealt is topped up without doubling a level or a kind.
+    const [first] = rollMissions([], 1, 0, random, true);
+    const topped = ensureMissions([first], 0, random, true);
+    expect(topped[0]).toBe(first);
+    expect(topped.map(difficultyOf).sort()).toEqual([0, 1, 2]);
+    expect(new Set(topped.map(familyOf)).size).toBe(3);
   });
 
   it("서버 하루 한도는 이벤트 때만 늘고, 하루 최대치를 넉넉히 덮는다", () => {
