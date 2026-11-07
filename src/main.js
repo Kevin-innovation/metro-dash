@@ -19,14 +19,15 @@ game.start();
 
 /**
  * Lift the loading screen once the title is really ready: the first frame drawn,
- * the fonts in, and for a signed-in browser its save brought down. A guest does
- * not wait on the server at all, and nobody waits longer than BOOT_WAIT_MS.
+ * the fonts in, and the server connected — a guest's title grows its ranking
+ * cells on connecting, and a signed-in browser brings its save down. Nobody
+ * waits longer than BOOT_WAIT_MS.
  */
 const BOOT_WAIT_MS = 3000;
 const boot = document.getElementById("boot");
 const painted = new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 Promise.race([
-  painted.then(() => Promise.all([document.fonts?.ready, game.cloud.signedIn && game.cloudReady])),
+  painted.then(() => Promise.all([document.fonts?.ready, game.cloudReady])),
   new Promise((resolve) => setTimeout(resolve, BOOT_WAIT_MS)),
 ])
   .catch(() => {})
