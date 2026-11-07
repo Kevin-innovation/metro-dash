@@ -12,7 +12,7 @@ import { weekRemainingLabel } from "./week.js";
 import { hasNewCharacters, purchase, shopView } from "./shop.js";
 import { VERSION, previousSeason, seasonAt } from "./release.js";
 import { CHUSEOK_EVENT_NAME, chuseokAt } from "./chuseok.js";
-import { BLIZZARD, CHRISTMAS_TITLE } from "./christmas.js";
+import { BLIZZARD, CHRISTMAS_TITLE, teasePath } from "./christmas.js";
 
 /** How long a 「지붕 ×1.5 +310」 stays up. Long enough to read all three. */
 const TRICK_FLASH_MS = 950;
@@ -879,11 +879,10 @@ export class Screens {
       return;
     }
 
-    clearTimeout(this.slotLandTimer);
-    clearTimeout(this.slotDoneTimer);
-    cancelAnimationFrame(this.slotTickFrame);
+    this.stopSlotTimers();
 
     delete screen.dataset.jackpot;
+    delete screen.dataset.tease;
     screen.dataset.theme = options.theme ?? "diamond";
     const title = screen.querySelector(".slots-title");
     if (title) title.textContent = options.title ?? "💎 다이아몬드 3개";
@@ -891,6 +890,12 @@ export class Screens {
     // One more copy either side of the laps, so the reel never shows a gap.
     const laps = options.laps ?? 1;
     const strip = Array.from({ length: laps + 2 }, () => faces).flat();
+    const landing = faces.length * laps + index;
+    const settled = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const teasing = Boolean(options.tease) && !settled;
+    // The one the reel will crawl past goes right before where it stops. Only what
+    // this strip shows is rearranged: the result was drawn before it was built.
+    if (teasing && !face.jackpot) strip[landing - 1] = faces.find((item) => item.jackpot);
     reel.innerHTML = strip
       .map(
         (item) => `
@@ -910,9 +915,8 @@ export class Screens {
     // a hardcoded pixel figure here would put the pointer between two faces on
     // any device whose root font size is not the one this was written on.
     const step = reel.firstElementChild?.getBoundingClientRect().height || 0;
-    const landing = faces.length * laps + index;
-    const settled = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const spinMs = settled ? 0 : (options.spinMs ?? 1900);
+    const path = teasing ? teasePath(landing, Boolean(face.jackpot)) : null;
+    const spinMs = settled ? 0 : (path?.ms ?? options.spinMs ?? 1900);
 
     reel.style.transition = "none";
     reel.style.transform = "translateY(0px)";
@@ -920,10 +924,20 @@ export class Screens {
     // transition is attached; without it the two writes coalesce and the reel
     // simply appears at its destination.
     void reel.offsetHeight;
-    reel.style.transition = spinMs
-      ? `transform ${spinMs}ms ${options.ease ?? "cubic-bezier(0.16, 0.85, 0.2, 1)"}`
-      : "none";
+    reel.style.transition =
+      spinMs && !path ? `transform ${spinMs}ms ${options.ease ?? "cubic-bezier(0.16, 0.85, 0.2, 1)"}` : "none";
     reel.style.transform = `translateY(${-landing * step}px)`;
+    if (path) {
+      this.slotSpin = reel.animate(
+        path.frames.map(({ at, offset, easing }) => ({ transform: `translateY(${-at * step}px)`, offset, easing })),
+        path.ms,
+      );
+      this.slotTeaseTimer = setTimeout(() => {
+        screen.dataset.tease = "on";
+        if (title) title.textContent = "👑 ×99 ...?!";
+        options.onTease?.();
+      }, path.crawlAt);
+    }
 
     // Read from where the reel actually is, so the ticks slow down exactly as
     // much as the reel does.
@@ -943,7 +957,9 @@ export class Screens {
 
     const land = () => {
       cancelAnimationFrame(this.slotTickFrame);
-      result.textContent = `${face.icon} ${face.label}${face.detail ? ` · ${face.detail}` : ""}`;
+      delete screen.dataset.tease;
+      const nearly = teasing && !face.jackpot ? "😱 ×99 아깝다! " : "";
+      result.textContent = `${nearly}${face.icon} ${face.label}${face.detail ? ` · ${face.detail}` : ""}`;
       result.className = `slots-result on slot-${face.tone}`;
       if (face.jackpot) screen.dataset.jackpot = "on";
       this.slotDoneTimer = setTimeout(() => {
@@ -957,10 +973,16 @@ export class Screens {
 
   /** Take the wheel off screen without paying it out. See Game.startRun. */
   hideSlots() {
+    this.stopSlotTimers();
+    $("slots-screen")?.classList.add("hidden");
+  }
+
+  stopSlotTimers() {
     clearTimeout(this.slotLandTimer);
     clearTimeout(this.slotDoneTimer);
+    clearTimeout(this.slotTeaseTimer);
     cancelAnimationFrame(this.slotTickFrame);
-    $("slots-screen")?.classList.add("hidden");
+    this.slotSpin?.cancel();
   }
 
   /**

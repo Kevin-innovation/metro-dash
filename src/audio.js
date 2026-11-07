@@ -78,6 +78,13 @@ export class AudioBus {
     });
   }
 
+  /** The wheel has slowed to a crawl with ×99 in reach. */
+  heartbeat() {
+    [0, 190, 800, 990].forEach((ms) => {
+      setTimeout(() => this.beep(170, 0.16, "triangle", 0.75), ms);
+    });
+  }
+
   /** A wheel face going past the pointer. */
   tick() {
     this.beep(1500, 0.025, "square", 0.16);

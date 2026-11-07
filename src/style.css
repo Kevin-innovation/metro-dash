@@ -4413,6 +4413,22 @@ body.admin {
   box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.8), 0 0 34px rgba(46, 125, 50, 0.32);
 }
 
+/* The crawl. The whole window breathes while ×99 is in reach. */
+.slots-screen[data-tease="on"] .slots-window {
+  border-color: #ffd54f;
+  animation: wheelTease 0.42s ease-in-out infinite alternate;
+}
+
+.slots-screen[data-tease="on"] .slots-title {
+  color: #ffd54f;
+}
+
+@keyframes wheelTease {
+  to {
+    transform: scale(1.035);
+  }
+}
+
 /* ×99 is always on the reel and always the loudest thing on it, so it is plainly
    there to be missed. */
 .slot-jackpot .slot-label {

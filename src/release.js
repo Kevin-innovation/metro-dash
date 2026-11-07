@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.22";
+export const VERSION = "6.30";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.30",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "더 쫄리는 선물 룰렛",
+    notes: [
+      "룰렛이 ×99 바로 앞에서 슬로우로 기어갑니다. 걸릴 듯 말 듯 하다가 넘어가기도, 진짜 걸리기도 해요.",
+      "높은 배율이 더 잘 나옵니다. ×10 이상이 23%에서 39%로 올랐어요. ×2 19%, ×3 19%, ×5 15%, ×10 14%, ×12 10%, ×15 7%, ×20 6%, ×99 2%, 꽝 8%입니다.",
+    ],
+  },
   {
     version: "6.22",
     date: "2026-11-07",

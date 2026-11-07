@@ -63,7 +63,7 @@ import { Spawner } from "./spawner.js";
 import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from "./shop.js";
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
-import { BLIZZARD, CHRISTMAS_SLOT_FACES, SantaRaid, christmasAt, spinChristmas } from "./christmas.js";
+import { BLIZZARD, CHRISTMAS_SLOT_FACES, SantaRaid, christmasAt, spinChristmas, wheelTeases } from "./christmas.js";
 import { TrackEventStage } from "./trackevents.js";
 import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
@@ -1264,6 +1264,11 @@ export class Game {
         holdMs: face.jackpot ? GIFT_JACKPOT_HOLD_MS : GIFT_HOLD_MS,
         laps: GIFT_LAPS,
         ease: GIFT_EASE,
+        tease: wheelTeases(face),
+        onTease: () => {
+          this.audio.heartbeat();
+          vibrate([30, 150, 30]);
+        },
         onTick: () => this.audio.tick(),
       };
     } else {

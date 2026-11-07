@@ -154,11 +154,9 @@ const GIFT_SECONDS = 8;
  * One hundred tickets, and every result that pays lasts the same eight seconds,
  * so the number on the face is the whole of what was won.
  *
- * In reel order, which has no effect on the odds. ×99 sits between the two most
- * common outcomes on purpose: about half of all spins come to rest with it right
- * beside the pointer, or crawl past it on the way, and that near thing is the
- * whole of the tease. The other big faces are spaced between small ones so a
- * slowing reel is always creeping up on something.
+ * In reel order, which has no effect on the odds. The big faces are spaced between
+ * small ones so a slowing reel is always creeping up on something. Better than one
+ * spin in three pays ×10 or more: this is what a gift is worth finding.
  */
 export const CHRISTMAS_SLOT_FACES = [
   {
@@ -168,17 +166,17 @@ export const CHRISTMAS_SLOT_FACES = [
     icon: "🧦",
     label: "꽝",
     detail: "다음 선물을 노려보세요!",
-    weight: 10,
+    weight: 8,
     effect: { type: "none" },
   },
-  multiplier(12, GIFT_SECONDS, 5),
-  multiplier(3, GIFT_SECONDS, 22),
-  multiplier(99, GIFT_SECONDS, 1, { icon: "👑", jackpot: true }),
-  multiplier(2, GIFT_SECONDS, 30),
-  multiplier(20, GIFT_SECONDS, 3, { icon: "🌟" }),
+  multiplier(12, GIFT_SECONDS, 10),
+  multiplier(3, GIFT_SECONDS, 19),
+  multiplier(99, GIFT_SECONDS, 2, { icon: "👑", jackpot: true }),
+  multiplier(2, GIFT_SECONDS, 19),
+  multiplier(20, GIFT_SECONDS, 6, { icon: "🌟" }),
   multiplier(5, GIFT_SECONDS, 15),
-  multiplier(15, GIFT_SECONDS, 4),
-  multiplier(10, GIFT_SECONDS, 10),
+  multiplier(15, GIFT_SECONDS, 7),
+  multiplier(10, GIFT_SECONDS, 14),
 ];
 
 const isExtreme = (face) => face.jackpot || face.effect.type === "none";
@@ -207,6 +205,50 @@ export function spinChristmas(rng = Math.random, risk = 1) {
   }
   const index = CHRISTMAS_SLOT_FACES.length - 1;
   return { face: CHRISTMAS_SLOT_FACES[index], index };
+}
+
+/** How often a spin that is not ×99 is made to crawl past it first. */
+export const WHEEL_TEASE_CHANCE = 0.5;
+
+/** ×99 always gets the slow walk, or the slow walk would give away that it missed. */
+export function wheelTeases(face, rng = Math.random) {
+  return Boolean(face.jackpot) || rng() < WHEEL_TEASE_CHANCE;
+}
+
+/**
+ * The reel's route when it teases, in faces from the top of the strip.
+ *
+ * A near miss stops ×99 dead under the pointer, drags it to the very edge, and
+ * drops into the next face. The real thing hangs on the line just before ×99 and
+ * falls in. Both take the same time and start the same way, so until the last half
+ * second nobody can tell which they are watching. The winner was drawn before the
+ * reel moved; this only decides how it arrives.
+ *
+ * @param {number} landing the face the reel stops on
+ * @param {boolean} jackpot whether that face is ×99
+ */
+export function teasePath(landing, jackpot) {
+  const legs = jackpot
+    ? [
+        [landing - 1.35, 3000, "cubic-bezier(0.12, 0.7, 0.2, 1)"],
+        [landing - 0.62, 1100, "ease-out"],
+        [landing - 0.52, 1000, "ease-in-out"],
+        [landing, 420, "ease-in"],
+      ]
+    : [
+        [landing - 1.35, 3000, "cubic-bezier(0.12, 0.7, 0.2, 1)"],
+        [landing - 1, 1100, "ease-out"],
+        [landing - 0.54, 1000, "ease-in-out"],
+        [landing, 420, "ease-in"],
+      ];
+  const ms = legs.reduce((sum, [, duration]) => sum + duration, 0);
+  let elapsed = 0;
+  const frames = [{ at: 0, offset: 0, easing: legs[0][2] }];
+  legs.forEach(([at, duration], i) => {
+    elapsed += duration;
+    frames.push({ at, offset: elapsed / ms, easing: legs[i + 1]?.[2] ?? "linear" });
+  });
+  return { ms, crawlAt: legs[0][1], frames };
 }
 
 /**

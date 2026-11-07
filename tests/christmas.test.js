@@ -11,6 +11,9 @@ import {
   RAID_GAP_MIN,
   RAID_MAX_PER_RUN,
   SANTA_DROP_COINS,
+  WHEEL_TEASE_CHANCE,
+  teasePath,
+  wheelTeases,
   AURORA_COMBO,
   AURORA_COOLDOWN,
   AURORA_SECONDS,
@@ -114,15 +117,15 @@ describe("선물 룰렛 확률표", () => {
       CHRISTMAS_SLOT_FACES.map((face) => [face.effect.value ?? 0, [face.weight, face.effect.seconds ?? 0]]),
     );
     expect(table).toEqual({
-      0: [10, 0],
-      2: [30, 8],
-      3: [22, 8],
+      0: [8, 0],
+      2: [19, 8],
+      3: [19, 8],
       5: [15, 8],
-      10: [10, 8],
-      12: [5, 8],
-      15: [4, 8],
-      20: [3, 8],
-      99: [1, 8],
+      10: [14, 8],
+      12: [10, 8],
+      15: [7, 8],
+      20: [6, 8],
+      99: [2, 8],
     });
     expect(CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0)).toBe(100);
   });
@@ -168,11 +171,34 @@ describe("선물 룰렛 확률표", () => {
     }
   });
 
-  it("×99는 흔한 칸 사이에 있어 절반 넘게 포인터 옆에서 멈춘다", () => {
-    const at = CHRISTMAS_SLOT_FACES.findIndex((face) => face.jackpot);
-    expect(CHRISTMAS_SLOT_FACES[at].effect.value).toBe(99);
-    const beside = [CHRISTMAS_SLOT_FACES[at - 1], CHRISTMAS_SLOT_FACES[at + 1]];
-    expect(beside.reduce((sum, face) => sum + face.weight, 0)).toBeGreaterThan(50);
+  it("슬로우는 ×99를 포인터 아래로 끌고 왔다 넘기고, 진짜 ×99와 길이가 같다", () => {
+    const miss = teasePath(40, false);
+    const hit = teasePath(40, true);
+    expect(miss.ms).toBe(hit.ms);
+    for (const { frames } of [miss, hit]) {
+      expect(frames[0]).toMatchObject({ at: 0, offset: 0 });
+      expect(frames.at(-1)).toMatchObject({ at: 40, offset: 1 });
+      for (let i = 1; i < frames.length; i++) {
+        expect(frames[i].at).toBeGreaterThan(frames[i - 1].at);
+        expect(frames[i].offset).toBeGreaterThan(frames[i - 1].offset);
+      }
+    }
+    // ×99 is the face before the landing on a miss: dead centre, then up to the
+    // line without crossing it, and only the last leg goes over.
+    expect(miss.frames[2].at).toBe(39);
+    expect(miss.frames[3].at).toBeLessThan(39.5 + 0.1);
+    expect(miss.frames[3].at).toBeGreaterThan(39.4);
+    // The real one hangs short of the line it will fall across.
+    expect(hit.frames[3].at).toBeLessThan(39.5);
+    expect(hit.frames[3].at).toBeGreaterThan(39.4);
+  });
+
+  it("×99는 언제나 슬로우를 거쳐 들어오고, 나머지는 절반만 그렇다", () => {
+    const jackpot = CHRISTMAS_SLOT_FACES.find((face) => face.jackpot);
+    const plain = CHRISTMAS_SLOT_FACES.find((face) => face.effect.value === 2);
+    expect(wheelTeases(jackpot, () => 0.999)).toBe(true);
+    expect(wheelTeases(plain, () => WHEEL_TEASE_CHANCE - 0.01)).toBe(true);
+    expect(wheelTeases(plain, () => WHEEL_TEASE_CHANCE + 0.01)).toBe(false);
   });
 });
 
@@ -506,15 +532,15 @@ describe("크리스마스 캐릭터 5종", () => {
     const tickets = (face) => christmasTickets(face, risk);
     const sum = CHRISTMAS_SLOT_FACES.reduce((total, face) => total + tickets(face), 0);
     expect(sum).toBeCloseTo(100, 8);
-    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.jackpot))).toBe(2);
-    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.effect.type === "none"))).toBe(20);
+    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.jackpot))).toBe(4);
+    expect(tickets(CHRISTMAS_SLOT_FACES.find((face) => face.effect.type === "none"))).toBe(16);
 
     const draws = 10000;
     let jackpots = 0;
     for (let i = 0; i < draws; i++) {
       if (spinChristmas(() => (i + 0.5) / draws, risk).face.jackpot) jackpots += 1;
     }
-    expect(jackpots / draws).toBeCloseTo(0.02, 3);
+    expect(jackpots / draws).toBeCloseTo(0.04, 3);
     expect(christmasTickets(CHRISTMAS_SLOT_FACES[1])).toBe(CHRISTMAS_SLOT_FACES[1].weight);
   });
 
