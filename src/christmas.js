@@ -10,7 +10,7 @@
  * build.
  */
 
-export const CHRISTMAS_TITLE = "메트로 대시 · 크리스마스 에디션";
+export const CHRISTMAS_TITLE = "MetDash · Christmas Edition";
 export const CHRISTMAS_EVENT_FROM = Date.UTC(2026, 10, 6, 15, 0, 0);
 export const CHRISTMAS_EVENT_TO = Date.UTC(2026, 11, 31, 15, 0, 0);
 

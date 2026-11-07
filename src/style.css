@@ -1339,46 +1339,89 @@ html.christmas-event .not-christmas {
   display: none !important;
 }
 
-/* Both wordmark layouts keep the title block's own place on the card. The long
-   edition name needs the whole line, so the tags drop underneath it. */
+/* The same wordmark in Christmas colours: snow white and a hard red, with the
+   edition in gold under it. Stacked, so the tags drop to their own row. */
 html.christmas-event h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: min(clamp(19px, 5.5vw, 46px), 7vh);
-  letter-spacing: 0.01em;
-  white-space: nowrap;
 }
 
 html.christmas-event h1 .title-tags {
   flex-direction: row;
   align-items: center;
-  margin: 6px 0 0;
-  gap: 8px;
+  margin: 8px 0 0;
+  gap: 10px;
   transform: none;
+}
+
+html.christmas-event .season-badge {
+  border: 1px solid #fcd34d;
+  background: linear-gradient(180deg, #16a34a, #14532d);
+  color: #fff7d6;
+  letter-spacing: 0.1em;
+  box-shadow:
+    0 2px 0 #052e16,
+    0 5px 16px rgba(34, 197, 94, 0.4);
 }
 
 .xmas-wordmark {
   position: relative;
   display: block;
+  /* Room for the antlers, which sit on the letters rather than taking a row. */
+  padding-top: 0.42em;
 }
 
-h1 .xmas-wordmark {
+h1 .xmas-logo {
+  display: block;
   color: #f8fafc;
+  line-height: 1;
+  text-shadow:
+    0 3px 0 #0b1220,
+    0 10px 20px rgba(0, 0, 0, 0.4);
 }
 
-.xmas-wordmark > span {
-  color: #ff6b6b;
+.xmas-logo b {
+  color: #ff3341;
+  font-weight: inherit;
+  text-shadow:
+    0 3px 0 #6f0d15,
+    0 0 22px rgba(255, 51, 65, 0.55);
+}
+
+h1 .xmas-edition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  margin-top: 0.34em;
+  color: #fcd34d;
+  font-size: 0.3em;
+  line-height: 1;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 #4a2c05;
+  white-space: nowrap;
+}
+
+.xmas-edition i {
+  color: #bfe6ff;
+  font-style: normal;
+  letter-spacing: 0;
+  text-indent: 0;
 }
 
 .xmas-antlers {
-  display: block;
-  width: min(30vw, 150px, 22vh);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1.75em;
   height: auto;
-  margin: 0 auto -2px;
+  transform: translateX(-50%);
   fill: none;
   stroke: #d9a066;
-  stroke-width: 5;
+  stroke-width: 6;
   stroke-linecap: round;
   stroke-linejoin: round;
   filter: drop-shadow(0 2px 0 #4e2f13);

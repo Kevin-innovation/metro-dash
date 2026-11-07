@@ -72,6 +72,9 @@ export class Screens {
     this.christmas = on;
     document.documentElement.classList.toggle("christmas-event", on);
     document.title = on ? CHRISTMAS_TITLE : "MetDash";
+    // Only what the badge says. The board keeps the season it was already on.
+    const season = $("season-badge");
+    if (season) season.textContent = on ? "CHRISTMAS SEASON" : `SEASON ${seasonAt()}`;
     $("antidote-chip")?.setAttribute("aria-label", on ? "눈보라 해독제" : "까마귀 해독제");
   }
 
