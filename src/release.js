@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.21";
+export const VERSION = "6.22";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.22",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "더 매끄럽게, 음악은 더 크게",
+    notes: [
+      "콤보가 오르거나 이벤트가 시작될 때 살짝 끊기던 원인들을 없앴습니다. 이벤트에 쓰는 모델은 게임을 열 때 미리 준비합니다.",
+      "게임 도중에는 그래픽 품질이 바뀌지 않습니다. 자동 조절은 판이 끝난 뒤에 적용돼요.",
+      "음악을 두 배로 키우고 코인 소리를 줄였습니다.",
+    ],
+  },
   {
     version: "6.21",
     date: "2026-11-07",

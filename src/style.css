@@ -343,7 +343,6 @@ html.christmas-event .crow-veil::after {
   padding: 6px 14px 6px 8px;
   font-size: 22px;
   letter-spacing: 0.04em;
-  backdrop-filter: blur(8px);
 }
 
 .coin-orb {
@@ -470,14 +469,12 @@ html.christmas-event .coin-orb.inline {
 
 /* The step marker. Rides the same track at 45% opacity so it reads as a hint
    over the fill rather than as a second bar competing with it. */
+/* A box as wide as the track with the tick on its left edge, moved by a transform
+   as a percent of its own width. See renderSpeedGauge. */
 .speed-step {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
-  transform: translateX(-1px);
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.75) 2px, transparent 2px);
   opacity: 0.45;
 }
 
@@ -512,15 +509,12 @@ html.christmas-event .coin-orb.inline {
 @keyframes speed-step-pop {
   0% {
     transform: scaleY(1);
-    box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.16);
   }
   35% {
     transform: scaleY(1.9);
-    box-shadow: inset 0 0 0 1px var(--speed-hue);
   }
   100% {
     transform: scaleY(1);
-    box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.16);
   }
 }
 
@@ -651,7 +645,6 @@ html.christmas-event .coin-orb.inline {
   font: 700 16px/1 var(--font-numeric);
   letter-spacing: 0.08em;
   cursor: pointer;
-  backdrop-filter: blur(8px);
 }
 
 /* --- power-up chips ------------------------------------------------------ */
@@ -692,7 +685,6 @@ html.christmas-event .coin-orb.inline {
   background: rgba(7, 16, 24, 0.72);
   border-bottom: var(--chip-edge) solid var(--pw, var(--gold));
   box-shadow: inset 0 0 0 1px rgba(226, 242, 255, 0.1);
-  backdrop-filter: blur(8px);
   animation: chipIn 0.28s ease-out;
 }
 
@@ -931,10 +923,10 @@ html.christmas-event .coin-orb.inline {
   border-radius: 16px;
   border-width: 2px;
   border-style: solid;
-  /* Nearly opaque. The blur behind it is what keeps it from reading as a
-     sticker; the ground is what keeps the number readable. */
+  /* Nearly opaque, so the number stays readable. No blur on anything shown during
+     a run: blurring a canvas that redraws every frame is the most expensive thing
+     a phone can be asked to do, and it spikes each time one of these appears. */
   background: rgba(4, 10, 16, 0.86);
-  backdrop-filter: blur(10px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   color: #fff;
   font: 800 20px/1 "Jua", sans-serif;
@@ -3667,7 +3659,6 @@ button.report-flag:disabled {
   font-size: 13px;
   letter-spacing: 0.03em;
   white-space: nowrap;
-  backdrop-filter: blur(8px);
   box-shadow: 0 0 12px color-mix(in srgb, var(--event, #ffd24a) 35%, transparent);
   /* The pulse was a second thing moving on an already moving screen. The
      draining bar is what carries「끝나간다」; the banner just has to be read. */

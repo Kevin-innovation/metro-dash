@@ -38,8 +38,10 @@ export class AudioBus {
   }
 
   coin() {
-    this.beep(980, 0.08, "square", 0.55);
-    setTimeout(() => this.beep(1320, 0.1, "square", 0.45), 40);
+    // Under the music. A coin comes several times a second, and at more than this
+    // the two square waves sat on top of the carol and buried it.
+    this.beep(980, 0.08, "square", 0.17);
+    setTimeout(() => this.beep(1320, 0.1, "square", 0.14), 40);
   }
 
   jump() {

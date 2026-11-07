@@ -19,6 +19,7 @@ const TRICK_FLASH_MS = 950;
 import {
   escapeHtml,
   renderHud,
+  replayAnimation,
   renderMissions,
   renderNotes,
   renderRank,
@@ -979,9 +980,7 @@ export class Screens {
   flashDiamond() {
     const chip = $("diamond-chip");
     if (!chip) return;
-    chip.classList.remove("pop");
-    void chip.offsetWidth;
-    chip.classList.add("pop");
+    replayAnimation(chip, "pop");
   }
 
   /**
@@ -994,9 +993,8 @@ export class Screens {
     if (!el) return;
     el.textContent = text;
     el.classList.toggle("big", big);
-    el.classList.remove("hidden", "pop");
-    void el.offsetWidth;
-    el.classList.add("pop");
+    el.classList.remove("hidden");
+    replayAnimation(el, "pop");
     clearTimeout(this.raidTimer);
     this.raidTimer = setTimeout(() => el.classList.add("hidden"), big ? 1000 : 2000);
   }
@@ -1272,34 +1270,25 @@ export class Screens {
   showToast(text) {
     const el = $("speed-toast");
     el.textContent = text;
-    el.classList.remove("hidden", "pop");
-    void el.offsetWidth;
-    el.classList.add("pop");
+    el.classList.remove("hidden");
+    replayAnimation(el, "pop");
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => {
-      el.classList.add("hidden");
-      el.classList.remove("pop");
-    }, 1200);
+    this.toastTimer = setTimeout(() => el.classList.add("hidden"), 1200);
   }
 
   flashCoinGain(gain) {
     const gainEl = $("coin-gain");
     gainEl.textContent = `+${gain}`;
-    gainEl.classList.remove("hidden", "pop");
-    void gainEl.offsetWidth;
-    gainEl.classList.add("pop");
+    gainEl.classList.remove("hidden");
+    replayAnimation(gainEl, "pop");
     clearTimeout(this.gainTimer);
     this.gainTimer = setTimeout(() => gainEl.classList.add("hidden"), 520);
 
     const scoreEl = $("score");
-    scoreEl.classList.remove("score-punch");
-    void scoreEl.offsetWidth;
-    scoreEl.classList.add("score-punch");
+    replayAnimation(scoreEl, "score-punch");
 
     const chip = $("coin-count").parentElement;
-    chip.classList.remove("coin-punch");
-    void chip.offsetWidth;
-    chip.classList.add("coin-punch");
+    replayAnimation(chip, "coin-punch");
   }
 
   /**
@@ -1326,9 +1315,8 @@ export class Screens {
     const times = multiplier > 1.005 ? `<em>×${multiplier.toFixed(2).replace(/\.?0+$/, "")}</em> ` : "";
     const label = escapeHtml(labels[kind] ?? "NICE!");
     el.innerHTML = `${label} ${times}${points > 0 ? `+${points.toLocaleString()}` : ""}`;
-    el.classList.remove("hidden", "pop");
-    void el.offsetWidth;
-    el.classList.add("pop");
+    el.classList.remove("hidden");
+    replayAnimation(el, "pop");
     clearTimeout(this.nearMissTimer);
     // 520ms was written when this said one word. It says a word, a multiplier
     // and a number now, and at a tenth of a second a syllable there was no

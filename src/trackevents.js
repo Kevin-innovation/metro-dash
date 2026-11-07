@@ -274,6 +274,16 @@ export class TrackEventStage {
     return this.meshes[name];
   }
 
+  /** Everything an event can show, built. See Game#prepareChristmas. */
+  prepare() {
+    return [
+      this.mesh("elf", makeThiefElf),
+      this.mesh("wave", makeAvalanche),
+      this.mesh("ice", makeIceSheet),
+      this.mesh("aurora", makeAurora),
+    ];
+  }
+
   canStart() {
     const g = this.game;
     return (

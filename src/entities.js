@@ -1126,6 +1126,16 @@ export class EntityPool {
     return item;
   }
 
+  /** Have one of each ready, so the first to appear in a run is not built mid-run. */
+  prepare(types) {
+    return types.map((type) => {
+      const item = this.spawn(type, 0, 0);
+      this.live.splice(this.live.indexOf(item), 1);
+      this.release(item);
+      return item.mesh;
+    });
+  }
+
   release(item) {
     item.moving = false;
     item.vz = 0;

@@ -1139,11 +1139,6 @@ export class Game {
       this.audio.bells();
       this.screens.showRaid("🎅 호호호! 산타가 선물을 들고 왔어요!");
       if (!reducedMotion()) {
-        if (!this.flyer) {
-          this.flyer = makeFlyingSanta();
-          this.flyer.scale.setScalar(3.2);
-          this.scene.add(this.flyer);
-        }
         this.flyerAhead = -10;
         this.flyerLeaving = false;
         this.flyer.visible = true;
@@ -1641,6 +1636,40 @@ export class Game {
     this.interactions.christmas = on;
     this.screens.setChristmas(on);
     this.syncSkin();
+    if (on) this.prepareChristmas();
+  }
+
+  /**
+   * Build everything the event only shows now and then, while nobody is running.
+   *
+   * Made the first time it was needed, each of these cost a stall at the worst
+   * moment: the avalanche alone took 50ms to build on a CPU slowed to phone speed,
+   * and the first draw of a new material compiles a shader on top of that.
+   */
+  prepareChristmas() {
+    if (this.flyer) return;
+    this.flyer = makeFlyingSanta();
+    this.flyer.scale.setScalar(3.2);
+    this.scene.add(this.flyer);
+    const parked = [
+      this.flyer,
+      ...this.trackEvents.prepare(),
+      ...this.pool.prepare(["gift", "santaDrop", "elfGift", "elfSack", "crowEgg"]),
+    ];
+
+    // Drawn once and wiped before anyone can see it. Compiling alone would still
+    // leave the geometry and textures to go up to the GPU on their first real frame.
+    const setCulled = (object, culled) => object.traverse((child) => (child.frustumCulled = culled));
+    for (const object of parked) {
+      object.visible = true;
+      setCulled(object, false);
+    }
+    this.renderer.render(this.scene, this.camera);
+    this.renderer.clear();
+    for (const object of parked) {
+      object.visible = false;
+      setCulled(object, true);
+    }
   }
 
   /** Put on whatever is equipped, and take the last skin's models off. */
@@ -2025,9 +2054,16 @@ export class Game {
 
   /** Let the auto quality governor react to the measured frame rate. */
   governQuality(frameDt) {
-    if (this.settings.quality !== "auto" || this.state !== "playing") return;
-    const changed = this.governor.sample(frameDt);
-    if (changed) this.applyQuality(changed);
+    if (this.settings.quality !== "auto") return;
+    // Decided during the run but only applied once it stops. Changing tier swaps
+    // the shadows, which recompiles every material in the scene and reallocates
+    // the screen: a freeze of a noticeable fraction of a second, mid-dodge.
+    if (this.state !== "playing") {
+      if (this.pendingTier) this.applyQuality(this.pendingTier);
+      this.pendingTier = null;
+      return;
+    }
+    this.pendingTier = this.governor.sample(frameDt) ?? this.pendingTier;
   }
 
   /**

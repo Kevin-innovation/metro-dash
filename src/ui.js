@@ -216,6 +216,26 @@ function slotFullSeconds(slot) {
 }
 
 /**
+ * Run a one-shot CSS animation again from the top.
+ *
+ * Without the usual remove, read offsetWidth, add: that read forces the whole page
+ * to lay out on the spot, and this runs on every coin and every combo. A running
+ * animation is rewound instead, and a finished one has already had its class taken
+ * off, so adding it starts it.
+ */
+export function replayAnimation(el, className) {
+  if (el.classList.contains(className)) {
+    const running = el.getAnimations().find((animation) => animation.animationName);
+    if (running) {
+      running.currentTime = 0;
+      return;
+    }
+  }
+  el.classList.add(className);
+  el.onanimationend = el.onanimationcancel = () => el.classList.remove(className);
+}
+
+/**
  * Per-frame HUD sync. Everything here is cheap string/transform work; anything
  * that rebuilds DOM guards on a change first.
  */
@@ -294,7 +314,10 @@ function renderSpeedGauge(el, state) {
   // How far through the current ten-second step, as a position on the same
   // track. It keeps sweeping after the speed has topped out, which is right:
   // by then it is the only thing on screen still counting the run's rhythm.
-  if (el.speedStep) el.speedStep.style.left = `${(state.stepProgress * 100).toFixed(2)}%`;
+  // A transform, because `left` redid the page's layout on every single frame.
+  // The tick is drawn at the left edge of a box as wide as the track, so a percent
+  // of its own width is a percent of the track.
+  if (el.speedStep) el.speedStep.style.transform = `translateX(${(state.stepProgress * 100).toFixed(2)}%)`;
 
   const shown = Math.round(state.speed);
   if (shown !== last.speed) {
@@ -308,14 +331,9 @@ function renderSpeedGauge(el, state) {
     last.speedMode = sprinting;
   }
 
-  // The tick when a step lands. Restarted by taking the class off and forcing
-  // a reflow, the same way every other one-shot in this file is.
+  // The tick when a step lands.
   if (state.step !== last.speedStep) {
-    if (last.speedStep !== null) {
-      el.speedGauge.classList.remove("stepped");
-      void el.speedGauge.offsetWidth;
-      el.speedGauge.classList.add("stepped");
-    }
+    if (last.speedStep !== null) replayAnimation(el.speedGauge, "stepped");
     last.speedStep = state.step;
   }
 }

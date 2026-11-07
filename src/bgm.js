@@ -51,6 +51,9 @@ export function layerFor(phaseId, layers = LAYERS) {
 const LOOKAHEAD = 0.18;
 const TICK_MS = 40;
 
+/** Where the music sits against the sound effects, under the same master. */
+const BGM_LEVEL = 1;
+
 export class Bgm {
   /** @param {AudioBus} bus shares the AudioContext with the sound effects */
   constructor(bus) {
@@ -98,7 +101,7 @@ export class Bgm {
     this.phaseId = phaseId;
     if (!this.christmas) this.step = 0;
     this.nextNoteAt = this.ctx.currentTime + 0.08;
-    this.fade(0.5, 1.2);
+    this.fade(BGM_LEVEL, 1.2);
     this.timer = setInterval(() => this.pump(), TICK_MS);
   }
 
@@ -126,7 +129,7 @@ export class Bgm {
     this.gain.gain.cancelScheduledValues(now);
     this.gain.gain.setValueAtTime(this.gain.gain.value, now);
     this.gain.gain.linearRampToValueAtTime(0.12, now + 0.06);
-    this.gain.gain.linearRampToValueAtTime(0.5, now + seconds);
+    this.gain.gain.linearRampToValueAtTime(BGM_LEVEL, now + seconds);
   }
 
   fade(target, seconds) {
