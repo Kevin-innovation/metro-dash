@@ -1860,13 +1860,12 @@ kbd {
 }
 
 /**
- * The results split.
+ * The results card: one column at every width.
  *
- * One column on a phone — byte for byte the old card. Once the screen is wide
- * enough for two readable columns, the score breakdown and the run's figures
- * take one side and what the run earned plus where to go next take the other.
- * This card is the one every run ends at, and as a single column it was
- * 660px of content on laptops with 620 to give.
+ * It used to split in two on a laptop, because as one column it ran off a
+ * 13-inch screen. Made dense (see the block at the end of this file) it fits
+ * a phone, so it fits a laptop too — and two columns left a hole on whichever
+ * side had less to say that run.
  */
 .over-body {
   display: flex;
@@ -1905,55 +1904,6 @@ kbd {
    buttons sits on it. Written in the same number that draws it. */
 .over-cta.over-cta > #btn-retry {
   margin-bottom: var(--btn-lip);
-}
-
-@media (min-width: 820px) {
-  /* Wider than the 440px every other dialog gets, because it is now carrying
-     two columns rather than one. */
-  .dialog.crash {
-    width: min(720px, 100%);
-  }
-
-  .over-body {
-    flex-direction: row;
-    align-items: stretch;
-    gap: clamp(14px, 2vw, 24px);
-    text-align: left;
-  }
-
-  .over-main,
-  .over-side {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-
-  /**
-   * What the run earned rides the top, what to do next rides the bottom.
-   *
-   * Centring the whole column left a band of nothing above it the height of
-   * the score breakdown; top-aligning it left the same band below the buttons
-   * instead. Neither is a column — one is a column that has slipped and the
-   * other is a column that stops early. Pushed apart, both ends of this half
-   * meet both ends of the half beside it and there is no dead space at either.
-   */
-  .over-side {
-    justify-content: space-between;
-    text-align: center;
-  }
-
-  /* The last margin in each column would otherwise push the card taller than
-     either column actually needs. */
-  .over-main > :last-child,
-  .over-side > :last-child {
-    margin-bottom: 0;
-  }
-
-  /* Two across rather than three: half the width, so the cells would otherwise
-     drop to one per row and the column would grow instead of shrinking. */
-  .over-main .stat-grid div {
-    flex: 1 1 calc(50% - 10px);
-    max-width: none;
-  }
 }
 
 .dialog {
@@ -3819,15 +3769,26 @@ kbd {
   display: contents;
 }
 
-/* Sized by content, so a seven-digit best takes the room a 「5위」 does not. */
+/* Sized by content, so a seven-digit best takes the room a 「5위」 does not.
+   Never narrower than its own label and number: only a sentence — the reason
+   there is no rank — is allowed to wrap. */
 .over-facts .over-rank {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: min-content;
+}
+
+.over-facts .over-rank-label,
+.over-facts .over-rank-value {
+  white-space: nowrap;
 }
 
 .over-facts .over-rank-value {
   font-size: 15px;
-  white-space: nowrap;
+}
+
+.over-facts .over-rank-value.quiet {
+  white-space: normal;
+  line-height: 1.25;
 }
 
 .over-rank {
@@ -4819,7 +4780,7 @@ body.admin {
 }
 
 /**
- * The results card on a phone: everything on one screen, no scrolling.
+ * The results card, dense enough for one phone screen with no scrolling.
  *
  * A run ends here every minute or so, and a card taller than the screen hid
  * either the score or the button that starts the next run. So every block is
@@ -4831,198 +4792,231 @@ body.admin {
  * Last in the file on purpose: these override the components' own rules, which
  * are spread through the sheet, at the same specificity.
  */
-@media (max-width: 819px) {
+.dialog.crash {
+  width: min(480px, 100%);
+  padding: 12px 12px 10px;
+}
+
+.dialog.crash .eyebrow {
+  display: none;
+}
+
+#gameover-title {
+  margin: 0 0 6px;
+  font-size: clamp(24px, 4vh, 32px);
+}
+
+.over-body,
+.over-main,
+.over-side,
+.over-outcome,
+.over-tally {
+  gap: clamp(5px, 0.9vh, 8px);
+}
+
+.breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  text-align: center;
+}
+
+.breakdown div {
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 4px;
+}
+
+.breakdown span {
+  font-size: 11px;
+}
+
+.breakdown strong {
+  font-size: 16px;
+}
+
+.breakdown .total {
+  grid-column: 1 / -1;
+  order: -1;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding: 3px 12px;
+}
+
+.breakdown .total span {
+  font-size: 14px;
+}
+
+.breakdown .total strong {
+  font-size: clamp(24px, 4vh, 30px);
+}
+
+.stat-grid {
+  gap: 5px;
+}
+
+.stat-grid div {
+  flex: 1 1 calc(25% - 5px);
+  max-width: none;
+  padding: 3px 2px;
+  border-radius: 10px;
+}
+
+.stat-grid span {
+  font-size: 11px;
+}
+
+.stat-grid strong {
+  font-size: 16px;
+}
+
+.over-goal {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.mission-cleared {
+  padding: 5px 10px;
+  border-radius: 12px;
+}
+
+.mission-cleared-title,
+.mission-cleared-row {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.mission-cleared-reward {
+  margin: 1px 0 0;
+  font-size: 12.5px;
+}
+
+.rank-up {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding: 5px 10px;
+}
+
+.rank-up p {
+  margin: 0;
+}
+
+.rank-up-name {
+  font-size: 17px;
+}
+
+.over-rank {
+  padding: 3px 4px;
+  border-radius: 10px;
+}
+
+.over-rank-label {
+  font-size: 11px;
+}
+
+.over-facts .over-rank-value {
+  margin-top: 0;
+  font-size: 14px;
+}
+
+.over-facts .over-rank-value.quiet {
+  font-size: 12px;
+}
+
+.tally-title {
+  display: none;
+}
+
+.run-tally {
+  gap: 4px;
+}
+
+.tally {
+  flex: 0 0 auto;
+  max-width: none;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 8px;
+}
+
+.tally-icon {
+  font-size: 11px;
+}
+
+.tally-label {
+  font-size: 11px;
+}
+
+.tally-value {
+  font-size: 12px;
+}
+
+.over-cta {
+  flex-direction: row;
+  gap: 6px;
+}
+
+.over-cta.over-cta > #btn-retry {
+  flex: 1.25 1 0;
+  min-width: 0;
+  padding: 10px 6px;
+  font-size: 20px;
+}
+
+.over-cta.over-cta > .title-actions {
+  flex: 2 1 0;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: var(--btn-lip);
+}
+
+.over-cta .ghost {
+  padding: 8px 4px;
+}
+
+/* A laptop has the height a phone does not, so the same card reads a size up. */
+@media (min-width: 820px) and (min-height: 700px) {
   .dialog.crash {
-    padding: 12px 12px 10px;
+    width: min(520px, 100%);
+    padding: 16px 16px 14px;
   }
 
-  .dialog.crash .eyebrow {
-    display: none;
-  }
-
-  #gameover-title {
-    margin: 0 0 6px;
-    font-size: clamp(24px, 4vh, 32px);
-  }
-
-  .over-body,
-  .over-main,
-  .over-side,
-  .over-outcome,
-  .over-tally {
-    gap: clamp(5px, 0.9vh, 8px);
-  }
-
-  .breakdown {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    text-align: center;
-  }
-
-  .breakdown div {
-    flex-direction: column;
-    align-items: center;
-    padding: 3px 4px;
-  }
-
-  .breakdown span {
-    font-size: 11px;
-  }
-
-  .breakdown strong {
-    font-size: 16px;
-  }
-
-  .breakdown .total {
-    grid-column: 1 / -1;
-    order: -1;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin: 0;
-    padding: 3px 12px;
-  }
-
-  .breakdown .total span {
-    font-size: 14px;
-  }
-
-  .breakdown .total strong {
-    font-size: clamp(24px, 4vh, 30px);
-  }
-
-  .stat-grid {
-    gap: 5px;
-  }
-
-  .stat-grid div {
-    flex: 1 1 calc(25% - 5px);
-    max-width: none;
-    padding: 3px 2px;
-    border-radius: 10px;
-  }
-
-  .stat-grid span {
-    font-size: 11px;
-  }
-
-  .stat-grid strong {
-    font-size: 16px;
-  }
-
-  .over-goal {
-    padding: 5px 10px;
-    font-size: 13px;
-  }
-
-  .mission-cleared {
-    padding: 5px 10px;
-    border-radius: 12px;
-  }
-
-  .mission-cleared-title,
-  .mission-cleared-row {
-    margin: 0;
-    font-size: 12.5px;
-  }
-
-  .mission-cleared-reward {
-    margin: 1px 0 0;
-    font-size: 12.5px;
-  }
-
-  .rank-up {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 2px 8px;
-    padding: 5px 10px;
-  }
-
-  .rank-up p {
-    margin: 0;
-  }
-
-  .rank-up-name {
-    font-size: 17px;
-  }
-
-  .over-rank {
-    padding: 3px 4px;
-    border-radius: 10px;
-  }
-
+  .breakdown span,
+  .stat-grid span,
   .over-rank-label {
-    font-size: 11px;
+    font-size: 12.5px;
+  }
+
+  .breakdown strong,
+  .stat-grid strong {
+    font-size: 18px;
   }
 
   .over-facts .over-rank-value {
-    margin-top: 0;
-    font-size: 14px;
+    font-size: 16px;
   }
 
   .over-facts .over-rank-value.quiet {
-    font-size: 12px;
+    font-size: 12.5px;
   }
 
-  .tally-title {
-    display: none;
-  }
-
-  .run-tally {
-    gap: 4px;
-  }
-
-  .tally {
-    flex: 0 0 auto;
-    max-width: none;
-    gap: 3px;
-    padding: 1px 7px;
-    border-radius: 8px;
-  }
-
-  .tally-icon {
-    font-size: 11px;
-  }
-
-  .tally-label {
-    font-size: 11px;
-  }
-
-  .tally-value {
-    font-size: 12px;
-  }
-
-  .over-cta {
-    flex-direction: row;
-    gap: 6px;
-  }
-
-  .over-cta.over-cta > #btn-retry {
-    flex: 1.25 1 0;
-    min-width: 0;
-    padding: 10px 6px;
-    font-size: 20px;
-  }
-
-  .over-cta.over-cta > .title-actions {
-    flex: 2 1 0;
-    min-width: 0;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 6px;
-    margin-bottom: var(--btn-lip);
-  }
-
-  .over-cta .ghost {
-    padding: 8px 4px;
+  .over-goal,
+  .mission-cleared-title,
+  .mission-cleared-row,
+  .mission-cleared-reward {
+    font-size: 14px;
   }
 }
 
 /* An iPhone SE with the browser bars showing has about 550px. The chips are the
    one block the stat cards above already summarise, so they give way first. */
-@media (max-width: 819px) and (max-height: 620px) {
+@media (max-height: 620px) {
   .over-tally {
     display: none;
   }

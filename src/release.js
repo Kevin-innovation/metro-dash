@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.52";
+export const VERSION = "6.53";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.53",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "결과 화면 다듬기",
+    notes: [
+      "🖥️ 컴퓨터에서도 결과 화면이 빈칸 없이 한 장의 카드로 보입니다.",
+      "🔢 순위 · 최고 점수 · 코인 칸의 숫자가 더 이상 칸 밖으로 넘치지 않습니다.",
+    ],
+  },
   {
     version: "6.52",
     date: "2026-11-08",
