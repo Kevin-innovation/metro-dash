@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.70";
+export const VERSION = "5.80";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.80",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "크리스마스 캐럴",
+    notes: [
+      "크리스마스 에디션의 배경음악이 캐럴 메들리로 바뀌었습니다. Jingle Bells, Deck the Halls, Joy to the World가 이어서 나옵니다.",
+      "썰매 방울 소리가 함께 울리고, 판이 뜨거워질수록 빨라지고 악기가 늘어납니다.",
+    ],
+  },
   {
     version: "5.70",
     date: "2026-11-07",

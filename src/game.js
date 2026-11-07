@@ -1568,6 +1568,7 @@ export class Game {
     this.christmas = on;
     setWorldChristmas(this.world, on);
     this.pool.setChristmas(on);
+    this.bgm.setChristmas(on);
     this.interactions.christmas = on;
     this.screens.setChristmas(on);
     this.syncSkin();
@@ -1694,6 +1695,7 @@ export class Game {
       tutorial: true,
       nextSpawn: 155,
     });
+    this.bgm.rewind();
     this.bgm.start(0);
 
     this.screens.setOverlay("hud");

@@ -4,7 +4,12 @@
  * There is no audio file to load: a lookahead scheduler queues short oscillator
  * notes a beat ahead of the clock, and layers switch on as the run's phase
  * climbs, so the music thickens with the difficulty instead of looping flat.
+ *
+ * During the Christmas event the same scheduler plays a medley of carols. See
+ * carols.js for the tune; the arrangement is here.
  */
+
+import { CHORDS, MEDLEY_STEPS, carolStep } from "./carols.js";
 
 /** Semitone offsets of a natural-minor scale, used for the arpeggio. */
 const SCALE = [0, 2, 3, 5, 7, 8, 10, 12];
@@ -23,9 +28,22 @@ const LAYERS = [
   { phase: 4, bpm: 150, bass: true, arp: true, hat: true, lead: true },
 ];
 
-export function layerFor(phaseId) {
-  let current = LAYERS[0];
-  for (const layer of LAYERS) if (phaseId >= layer.phase) current = layer;
+/**
+ * The carols keep to the same idea. The tune and the oom of the bass are there
+ * from the first bar, because a carol nobody can hear yet is not a carol; the
+ * rest arrives as the run heats up, and so does the pace.
+ */
+const CAROL_LAYERS = [
+  { phase: 0, bpm: 116, pah: false, fullBells: false, octave: false },
+  { phase: 1, bpm: 124, pah: true, fullBells: false, octave: false },
+  { phase: 2, bpm: 134, pah: true, fullBells: true, octave: false },
+  { phase: 3, bpm: 146, pah: true, fullBells: true, octave: true },
+  { phase: 4, bpm: 158, pah: true, fullBells: true, octave: true },
+];
+
+export function layerFor(phaseId, layers = LAYERS) {
+  let current = layers[0];
+  for (const layer of layers) if (phaseId >= layer.phase) current = layer;
   return current;
 }
 
@@ -44,6 +62,19 @@ export class Bgm {
     this.phaseId = 0;
     this.timer = 0;
     this.gain = null;
+    this.christmas = false;
+  }
+
+  /** Which music this run gets. Starts the medley over whenever it changes. */
+  setChristmas(on) {
+    if (this.christmas === on) return;
+    this.christmas = on;
+    this.step = 0;
+  }
+
+  /** Back to the top, for a new run. A pause carries on from where it was. */
+  rewind() {
+    this.step = 0;
   }
 
   get ctx() {
@@ -65,7 +96,7 @@ export class Bgm {
     this.ensureGain();
     this.playing = true;
     this.phaseId = phaseId;
-    this.step = 0;
+    if (!this.christmas) this.step = 0;
     this.nextNoteAt = this.ctx.currentTime + 0.08;
     this.fade(0.5, 1.2);
     this.timer = setInterval(() => this.pump(), TICK_MS);
@@ -109,14 +140,55 @@ export class Bgm {
   /** Queue every note that falls inside the lookahead window. */
   pump() {
     if (!this.playing || !this.ctx) return;
-    const layer = layerFor(this.phaseId);
+    const layer = layerFor(this.phaseId, this.christmas ? CAROL_LAYERS : LAYERS);
     const stepSeconds = 60 / layer.bpm / 2; // eighth notes
+    const cycle = this.christmas ? MEDLEY_STEPS : 16;
 
     while (this.nextNoteAt < this.ctx.currentTime + LOOKAHEAD) {
-      this.scheduleStep(this.step, this.nextNoteAt, layer);
+      if (this.christmas) this.scheduleCarolStep(this.step, this.nextNoteAt, layer, stepSeconds);
+      else this.scheduleStep(this.step, this.nextNoteAt, layer);
       this.nextNoteAt += stepSeconds;
-      this.step = (this.step + 1) % 16;
+      this.step = (this.step + 1) % cycle;
     }
+  }
+
+  /** One eighth note of carol: bell tune, oom-pah, and sleigh bells over it all. */
+  scheduleCarolStep(step, when, layer, stepSeconds) {
+    const { chord, offset, midi, length } = carolStep(step);
+    const { root, triad } = CHORDS[chord];
+
+    if (midi !== null) {
+      // Rings past the note a little, the way a struck bell does.
+      const duration = Math.max(0.22, length * stepSeconds * 1.15);
+      this.bell(midi, when, duration, 0.17);
+      if (layer.octave) this.bell(midi + 12, when, duration, 0.05);
+    }
+
+    // Oom on one and three, the root and then its fifth.
+    if (offset === 0 || offset === 4) {
+      const hz = midiToHz(offset === 0 ? root : root + 7);
+      this.note({ hz, when, duration: 0.2, type: "triangle", gain: 0.3 });
+    }
+    // Pah on two and four.
+    if (layer.pah && (offset === 2 || offset === 6)) {
+      for (const tone of triad) {
+        this.note({ hz: midiToHz(tone), when, duration: 0.13, type: "triangle", gain: 0.055 });
+      }
+    }
+
+    // Sleigh bells: two high partials, on the beat and then on every eighth.
+    if (layer.fullBells || offset % 2 === 0) {
+      const accent = offset % 2 === 0 ? 1 : 0.55;
+      this.note({ hz: 5400, when, duration: 0.05, type: "square", gain: 0.022 * accent });
+      this.note({ hz: 7600, when, duration: 0.07, type: "square", gain: 0.016 * accent });
+    }
+  }
+
+  /** A glockenspiel: the note, and a quick bright partial that dies first. */
+  bell(midi, when, duration, gain) {
+    const hz = midiToHz(midi);
+    this.note({ hz, when, duration, type: "sine", gain });
+    this.note({ hz: hz * 3, when, duration: Math.min(0.14, duration), type: "sine", gain: gain * 0.28 });
   }
 
   scheduleStep(step, when, layer) {

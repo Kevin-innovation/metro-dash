@@ -21,6 +21,8 @@ import {
   setChristmasPreview,
   spinChristmas,
 } from "../src/christmas.js";
+import { Bgm, layerFor } from "../src/bgm.js";
+import { CHORDS, EIGHTHS_PER_BAR, MEDLEY, MEDLEY_STEPS, carolStep } from "../src/carols.js";
 import { MAX_CHARACTER_SCORE_BONUS, characterById, wearableCharacter } from "../src/characters.js";
 import { applyCrowGloom } from "../src/crow.js";
 import { EntityPool, makeOncoming } from "../src/entities.js";
@@ -542,6 +544,65 @@ describe("크리스마스 캐릭터 5종", () => {
     expect(game.wheelQueue).toEqual([]);
     expect(game.state).toBe("playing");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("캐럴 배경음악", () => {
+  /** A Bgm with no audio device: it records the notes it would have played. */
+  const recording = () => {
+    const bgm = new Bgm({ ctx: null });
+    bgm.notes = [];
+    bgm.note = ({ hz, type }) => bgm.notes.push({ hz: Math.round(hz), type });
+    return bgm;
+  };
+  const midiHz = (midi) => Math.round(440 * 2 ** ((midi - 69) / 12));
+
+  it("모든 마디가 정확히 4박이고 박자가 밀리지 않는다", () => {
+    for (const [index, [chord, melody]] of MEDLEY.entries()) {
+      const eighths = melody.split(" ").reduce((sum, token) => sum + Number(token.split(":")[1]), 0);
+      expect(eighths, `bar ${index}: ${melody}`).toBe(EIGHTHS_PER_BAR);
+      expect(CHORDS[chord], `bar ${index}`).toBeTruthy();
+    }
+    expect(MEDLEY_STEPS).toBe(MEDLEY.length * EIGHTHS_PER_BAR);
+  });
+
+  it("Jingle Bells 후렴으로 시작하고, 끝까지 가면 다시 처음으로 돌아온다", () => {
+    const E5 = 76;
+    const G5 = 79;
+    const C5 = 72;
+    const D5 = 74;
+    const tune = [];
+    for (let step = 0; step < 32; step++) {
+      const { midi } = carolStep(step);
+      if (midi !== null) tune.push(midi);
+    }
+    expect(tune.slice(0, 10)).toEqual([E5, E5, E5, E5, E5, E5, E5, G5, C5, D5]);
+    expect(carolStep(MEDLEY_STEPS)).toBe(carolStep(0));
+  });
+
+  it("이벤트일 때만 캐럴을 연주하고, 일반 음악은 그대로다", () => {
+    const carol = recording();
+    carol.setChristmas(true);
+    carol.scheduleCarolStep(0, 0, { pah: false, fullBells: false, octave: false }, 0.25);
+    expect(carol.notes.map((note) => note.hz)).toContain(midiHz(76));
+
+    const plain = recording();
+    plain.scheduleStep(0, 0, layerFor(0));
+    expect(plain.notes).toEqual([{ hz: midiHz(55), type: "square" }]);
+    expect(layerFor(4).bpm).toBe(150);
+  });
+
+  it("일시정지 뒤에는 이어서, 새 판과 모드 변경 때는 처음부터 나온다", () => {
+    const bgm = recording();
+    bgm.setChristmas(true);
+    bgm.step = 40;
+    bgm.setChristmas(true);
+    expect(bgm.step).toBe(40);
+    bgm.rewind();
+    expect(bgm.step).toBe(0);
+    bgm.step = 40;
+    bgm.setChristmas(false);
+    expect(bgm.step).toBe(0);
   });
 });
 
