@@ -16,3 +16,21 @@ window.addEventListener("contextmenu", (e) => e.preventDefault());
 const game = new Game(app);
 window.__metroDash = game;
 game.start();
+
+/**
+ * Lift the loading screen once the title is really ready: the first frame drawn,
+ * the fonts in, and for a signed-in browser its save brought down. A guest does
+ * not wait on the server at all, and nobody waits longer than BOOT_WAIT_MS.
+ */
+const BOOT_WAIT_MS = 3000;
+const boot = document.getElementById("boot");
+const painted = new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+Promise.race([
+  painted.then(() => Promise.all([document.fonts?.ready, game.cloud.signedIn && game.cloudReady])),
+  new Promise((resolve) => setTimeout(resolve, BOOT_WAIT_MS)),
+])
+  .catch(() => {})
+  .finally(() => {
+    boot?.classList.add("gone");
+    setTimeout(() => boot?.remove(), 400);
+  });

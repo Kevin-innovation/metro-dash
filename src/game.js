@@ -325,7 +325,8 @@ export class Game {
     this.screens.showAccountBar(this.cloud);
     // Reconnects an existing session in the background; guests never wait.
     // The sync that follows is what brings down a balance changed elsewhere.
-    this.cloud.connect().then(() => this.restoreFromCloud());
+    // Kept so the loading screen can wait for a signed-in save before lifting.
+    this.cloudReady = this.cloud.connect().then(() => this.restoreFromCloud());
 
     // Offered rather than forced, and only where a reload costs nothing: a
     // player mid-run would lose the run to a banner they did not ask for.

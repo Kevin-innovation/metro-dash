@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.51";
+export const VERSION = "6.52";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,13 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.52",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "깔끔한 시작 화면",
+    notes: ["⏳ 새로고침하면 화면 틀이 먼저 보이지 않고, 준비될 때까지 로딩 표시만 보이다가 완성된 화면이 한 번에 나타납니다."],
+  },
   {
     version: "6.51",
     date: "2026-11-08",
