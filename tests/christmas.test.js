@@ -11,6 +11,17 @@ import {
   RAID_GAP_MIN,
   RAID_MAX_PER_RUN,
   SANTA_DROP_COINS,
+  AURORA_COMBO,
+  AURORA_COOLDOWN,
+  AURORA_SECONDS,
+  AVALANCHE_COINS,
+  Aurora,
+  ELF_GIFTS,
+  ICE_CLEAR_COINS,
+  TRACK_EVENT_CLEAR_SECONDS,
+  TRACK_EVENT_KINDS,
+  TRACK_EVENT_SECONDS,
+  TrackEvents,
   SantaRaid,
   christmasTickets,
   GIFT_FIRST_MIN,
@@ -745,6 +756,7 @@ describe("산타 습격", () => {
     const run = new Run(s);
     const interactions = new Interactions(pool, run, { burst() {} });
     const score = run.score;
+    run.distance = 5000;
     expect(interactions.collectPickups(runner(1), { upgradeLevel: () => 1 })).toEqual([
       { type: "token", id: "santaDrop", gain: 1500 },
     ]);
@@ -770,6 +782,87 @@ describe("산타 습격", () => {
       const coins = caught * SANTA_DROP_COINS + Math.floor(distance * 0.25);
       expect(validateRun({ score: 0, distance, coins, seconds }), `catch ${caught}`).toEqual({ ok: true });
     }
+  });
+});
+
+describe("트랙 이벤트", () => {
+  const play = (events, seconds, canStart = () => true) => {
+    const log = [];
+    for (let t = 0; t < seconds; t += 0.05) {
+      const event = events.update(0.05, t, canStart(t));
+      if (event) log.push({ ...event, t });
+    }
+    return log;
+  };
+
+  it("멘트와 3·2·1 뒤에 시작하고, 끝난 뒤에야 다음이 오며, 셋을 다 돌기 전엔 겹치지 않는다", () => {
+    const log = play(new TrackEvents(() => 0.4), 400);
+    const starts = log.filter((event) => event.type === "start");
+    expect(starts.length).toBeGreaterThan(6);
+    expect(new Set(starts.slice(0, 3).map((event) => event.kind))).toEqual(new Set(TRACK_EVENT_KINDS));
+
+    let open = null;
+    for (const event of log) {
+      if (event.type === "announce") {
+        expect(open).toBe(null);
+        open = event.kind;
+      } else if (event.type === "end") {
+        expect(event.kind).toBe(open);
+        open = null;
+      }
+    }
+    const first = log.findIndex((event) => event.type === "announce");
+    expect(log.slice(first + 1, first + 5).map((event) => event.value ?? event.type)).toEqual([3, 2, 1, "start"]);
+  });
+
+  it("막혀 있으면 시작하지 않고, 이미 세는 중이면 멈추지 않는다", () => {
+    expect(play(new TrackEvents(() => 0.4), 200, () => false)).toEqual([]);
+    const log = play(new TrackEvents(() => 0.4), 60, (t) => t < 41);
+    expect(log.filter((event) => event.type === "end")).toHaveLength(1);
+  });
+
+  it("요정 선물은 시간 안에 모두 떨어지고, 이벤트 시간은 빈 하늘 요구치 안에 든다", () => {
+    expect(0.3 + (ELF_GIFTS - 1) * 1.15 + 1.2).toBeLessThan(TRACK_EVENT_SECONDS.elf);
+    for (const seconds of Object.values(TRACK_EVENT_SECONDS)) {
+      expect(seconds + RAID_ANNOUNCE_SECONDS + RAID_COUNT_FROM).toBeLessThanOrEqual(TRACK_EVENT_CLEAR_SECONDS);
+    }
+  });
+
+  it("오로라는 콤보에서 켜지고, 콤보가 끊기면 꺼지며, 식을 때까지 다시 켜지지 않는다", () => {
+    const aurora = new Aurora();
+    expect(aurora.update(0.1, AURORA_COMBO - 1, true)).toBe(null);
+    expect(aurora.update(0.1, AURORA_COMBO, false)).toBe(null);
+    expect(aurora.update(0.1, AURORA_COMBO, true)).toBe("start");
+    expect(aurora.update(0.1, AURORA_COMBO + 3, true)).toBe(null);
+    expect(aurora.update(0.1, 0, true)).toBe("broken");
+    expect(aurora.update(AURORA_COOLDOWN - 1, AURORA_COMBO, true)).toBe(null);
+    expect(aurora.update(2, AURORA_COMBO, true)).toBe("start");
+    expect(aurora.update(AURORA_SECONDS + 1, AURORA_COMBO, true)).toBe("end");
+  });
+
+  it("이벤트 코인을 아무리 많이 받아도 서버가 기록을 거절하지 않는다", () => {
+    const run = new Run(store());
+    for (const seconds of [20, 45, 60, 90, 120, 180]) {
+      run.distance = maxDistanceIn(seconds) * 0.6;
+      for (let i = 0; i < 10; i++) {
+        run.addSantaDrop(SANTA_DROP_COINS);
+        run.addEventCoins(AVALANCHE_COINS);
+        run.addIceClear(ICE_CLEAR_COINS);
+      }
+      const coins = run.coins;
+      expect(coins).toBeGreaterThan(0);
+      expect(
+        validateRun({ score: 0, distance: Math.floor(run.distance), coins, seconds }),
+        `${seconds}s`,
+      ).toEqual({ ok: true });
+    }
+    // 낸 만큼만 알려 주고, 코인 미션에는 들어가지 않는다.
+    const empty = new Run(store());
+    expect(empty.addEventCoins(500)).toBe(0);
+    expect(empty.coins).toBe(0);
+    empty.distance = 5000;
+    expect(empty.addEventCoins(500)).toBe(500);
+    expect(empty.santaCoins).toBe(500);
   });
 });
 

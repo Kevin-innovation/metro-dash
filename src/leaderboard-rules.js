@@ -142,6 +142,11 @@ const MAX_COINS_PER_METRE = 1 / 1.2;
 /** Slack so ordinary rounding never rejects an honest run. */
 const SLACK = 1.25;
 
+/** The most coins the server will accept for a run of this length. */
+export function maxCoinsFor(distance) {
+  return Math.floor(distance * MAX_COINS_PER_METRE * SLACK);
+}
+
 export const REJECT_RUN = {
   SHAPE: "shape",
   DURATION: "duration",

@@ -4,7 +4,7 @@ import {
   MAGNET_RANGE,
   PICKUP_DEPTH,
 } from "./config.js";
-import { SANTA_DROP_COINS } from "./christmas.js";
+import { ELF_GIFT_COINS, ELF_SACK_COINS, ICE_CLEAR_COINS, SANTA_DROP_COINS } from "./christmas.js";
 import { POWERUPS } from "./powerups.js";
 import { LATE_DODGE_SECONDS, NEAR_MISS_RANGE } from "./scoring.js";
 
@@ -184,8 +184,22 @@ export class Interactions {
           size: 0.46,
           gravity: -4,
         });
-        this.run.addSantaDrop(SANTA_DROP_COINS);
-        events.push({ type: "token", id: "santaDrop", gain: SANTA_DROP_COINS });
+        events.push({ type: "token", id: "santaDrop", gain: this.run.addSantaDrop(SANTA_DROP_COINS) });
+      } else if (item.token === "elfGift" || item.token === "elfSack") {
+        const sack = item.token === "elfSack";
+        this.particles.burst(itemX, itemY, item.z, {
+          count: sack ? 34 : 14,
+          colour: sack ? 0xffd54f : 0xff5a5f,
+          speed: sack ? 7.5 : 5,
+          life: 0.7,
+          size: sack ? 0.46 : 0.3,
+          gravity: -4,
+        });
+        events.push({
+          type: "token",
+          id: item.token,
+          gain: this.run.addEventCoins(sack ? ELF_SACK_COINS : ELF_GIFT_COINS),
+        });
       } else if (item.token === "gift") {
         this.particles.burst(itemX, itemY, item.z, {
           count: 24,
@@ -245,7 +259,7 @@ export class Interactions {
    *   gates: number, barriers: number }}
    */
   scoreClears(player) {
-    const tally = { tricks: [], gates: 0, barriers: 0 };
+    const tally = { tricks: [], gates: 0, barriers: 0, iceCoins: 0 };
     if (player.flying) return tally;
 
     for (const item of this.pool.live) {
@@ -298,6 +312,7 @@ export class Interactions {
           gain: this.run.addClear(clear),
         });
         if (blizzard) this.run.addBlizzardClear();
+        if (this.run.onIce) tally.iceCoins += this.run.addIceClear(ICE_CLEAR_COINS);
       }
     }
 

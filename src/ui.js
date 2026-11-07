@@ -16,6 +16,15 @@ import {
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
   GIFT_GAP_MIN,
+  AURORA_COIN_BONUS,
+  AURORA_COMBO,
+  AURORA_SECONDS,
+  AVALANCHE_COINS,
+  ELF_GIFT_COINS,
+  ELF_GIFTS,
+  ELF_SACK_COINS,
+  ICE_CLEAR_COINS,
+  TRACK_EVENT_SECONDS,
 } from "./christmas.js";
 import { CROW_TIME } from "./config.js";
 import { HAZARD_FROM_SCORE } from "./spawner.js";
@@ -754,6 +763,10 @@ function christmasRules() {
         "산타 습격",
         `판 도중 산타가 나타나 3초를 세고 황금 선물을 떨어뜨립니다. 달리던 레인으로 떨어지니, "지금 점프!"가 뜨면 뛰어서 낚아채세요. 코인 +${SANTA_DROP_COINS.toLocaleString()}입니다.`,
       )}
+      ${row("🧝", "도둑 요정 추격", `요정이 레인을 바꾸며 달아나면서 선물 ${ELF_GIFTS}개를 흘립니다. 하나에 코인 +${ELF_GIFT_COINS}, 모두 주우면 자루를 떨어뜨려 코인 +${ELF_SACK_COINS.toLocaleString()}.`)}
+      ${row("🏔️", "눈사태 탈출", `뒤에서 눈사태가 밀려오고 ${TRACK_EVENT_SECONDS.avalanche}초 동안 빨라집니다. 끝까지 버티면 코인 +${AVALANCHE_COINS.toLocaleString()}.`)}
+      ${row("🧊", "빙판 구간", `${TRACK_EVENT_SECONDS.ice}초 동안 레인을 바꿀 때 미끄럽습니다. 빙판에서 장애물을 넘을 때마다 코인 +${ICE_CLEAR_COINS}.`)}
+      ${row("🌌", "오로라 타임", `콤보 ${AURORA_COMBO}을 넘기면 오로라가 뜨고 ${AURORA_SECONDS}초 동안 코인이 ${1 + AURORA_COIN_BONUS}배가 됩니다. 콤보가 끊기면 바로 끝납니다.`)}
       ${row("🔴", "루돌프 코", "코인이 루돌프 코로 보입니다. 값과 자석·미션·상점 규칙은 그대로입니다.")}
       ${row(
         "🍪",

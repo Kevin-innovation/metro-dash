@@ -88,6 +88,8 @@ export const SPEC = {
   // it is placed by the same rules and read by the same collision test.
   diamond: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "diamond" },
   gift: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "gift" },
+  elfGift: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "elfGift" },
+  elfSack: { length: 0.8, depth: 0.4, minY: 0, maxY: 3.2, lethal: false, token: "elfSack" },
   // Up where the moon was, for the same reason: a jump has to go and get it.
   santaDrop: {
     length: 0.9,

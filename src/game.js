@@ -64,6 +64,7 @@ import { ANTIDOTE_MAX, ANTIDOTE_SECONDS, HOVERBOARD_MAX, characterById } from ".
 import { DIAMOND_GOAL, SLOT_FACES, spinSlots } from "./slots.js";
 import { CHUSEOK_SLOT_FACES, chuseokAt, spinChuseok } from "./chuseok.js";
 import { BLIZZARD, CHRISTMAS_SLOT_FACES, SantaRaid, christmasAt, spinChristmas } from "./christmas.js";
+import { TrackEventStage } from "./trackevents.js";
 import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
 import {
@@ -1108,17 +1109,21 @@ export class Game {
     this.wheelQueue.push({ kind: "gift" });
   }
 
-  /** Open sky now and for long enough that the whole raid will happen in it. */
-  raidCanStart() {
+  /** Open sky now and for this many seconds, with no section in the way. */
+  openFor(seconds) {
     const t = this.runTime;
     const ceiling = this.schedule.nextCeilingAt(t);
     return (
       !this.run.powerupActive("jetpack") &&
       this.lookNow().ceiling === null &&
       !this.schedule.eventAt(t) &&
-      !this.schedule.eventAt(t + RAID_CLEAR_SECONDS) &&
-      !(ceiling && ceiling.seconds < RAID_CLEAR_SECONDS)
+      !this.schedule.eventAt(t + seconds) &&
+      !(ceiling && ceiling.seconds < seconds)
     );
+  }
+
+  raidCanStart() {
+    return this.openFor(RAID_CLEAR_SECONDS) && !this.trackEvents.busy;
   }
 
   /** A line, the sleigh arriving, a three second count, and then the parcel. */
@@ -1648,6 +1653,8 @@ export class Game {
     this.wheelRetries = 0;
     this.raid = new SantaRaid();
     if (this.flyer) this.flyer.visible = false;
+    if (this.trackEvents) this.trackEvents.reset();
+    else this.trackEvents = new TrackEventStage(this);
     this.screens?.hideRaid();
     this.hintT = 0;
     this.deadAt = 0;
@@ -1950,6 +1957,7 @@ export class Game {
     this.fovPunch = Math.max(0, this.fovPunch - frameDt * (1.2 + this.fovPunch * 2.6));
     this.emitAmbientParticles(frameDt);
     this.updateFlyer(frameDt);
+    this.trackEvents.present(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
     // The title screen holds the opening look; only a run travels through zones.
@@ -2278,6 +2286,7 @@ export class Game {
     // anything added later that has one, without naming any of them.
     const open =
       this.state === "playing" &&
+      !this.trackEvents.busy &&
       this.run.score >= STORM_FROM_SCORE &&
       this.lookNow().ceiling == null;
     const event = this.storm.update(dt, { open, lanes: this.lanes });
@@ -2302,6 +2311,7 @@ export class Game {
   advanceRun(dt) {
     this.runTime += dt;
     this.advanceSantaRaid(dt);
+    if (this.christmas) this.trackEvents.advance(dt);
     this.announceDebuts();
     this.advanceRoad(dt);
 
@@ -2592,7 +2602,9 @@ export class Game {
       // pick towards the gates you can only get under by sliding.
       slideBias: playing ? this.schedule.lookAt(this.runTime).slideBias : 0,
       // While a section runs, its layouts are the only ones dealt.
-      eventPatterns: playing ? (this.schedule.eventAt(this.runTime)?.event.patterns ?? null) : null,
+      eventPatterns: playing
+        ? (this.trackEvents.patterns ?? this.schedule.eventAt(this.runTime)?.event.patterns ?? null)
+        : null,
       // What the crow's cadence is keyed to past a hundred thousand; see
       // HAZARD_FRENZY_SCORE. Zero off a run, so the title screen's preview
       // never deals the frenzy behind the menu.
@@ -2664,7 +2676,7 @@ export class Game {
     for (const item of this.pool.live) {
       if (item.type === "coin") {
         item.mesh.rotation.y += dt * 5;
-      } else if (item.token === "diamond" || item.token === "gift") {
+      } else if (item.token === "diamond" || item.token === "gift" || item.token === "elfGift" || item.token === "elfSack") {
         // Faster and wider than the power-ups, and breathing.
         //
         // The old one did not move at all — `token` is not `powerup`, so it
@@ -2707,10 +2719,13 @@ export class Game {
         this.audio.coin();
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
+        this.trackEvents.onCoin();
       } else if (event.type === "token") {
         if (event.id === "chuseokMoon") this.onChuseokMoon(event);
         else if (event.id === "gift") this.onGift();
         else if (event.id === "santaDrop") this.onSantaDrop(event);
+        else if (event.id === "elfGift") this.trackEvents.onElfGift(event);
+        else if (event.id === "elfSack") this.trackEvents.onElfSack(event);
         else this.onDiamond(event);
       } else if (event.type === "hazard") {
         if (event.blocked) {
@@ -2761,6 +2776,7 @@ export class Game {
     }
 
     const cleared = this.interactions.scoreClears(this.player);
+    this.trackEvents.onIceClear(cleared.iceCoins);
     for (const trick of cleared.tricks) {
       this.audio.nearMiss();
       this.screens.flashTrick(trick.kind, trick.gain, trick.multiplier);

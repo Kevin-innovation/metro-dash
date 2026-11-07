@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.11";
+export const VERSION = "6.20";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.20",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "달리는 중에 벌어지는 크리스마스 이벤트 4종",
+    notes: [
+      "🧝 도둑 요정 추격: 요정이 레인을 바꾸며 달아나면서 선물을 흘립니다. 8개를 모두 주우면 자루를 통째로 떨어뜨려요.",
+      "🏔️ 눈사태 탈출: 뒤에서 눈사태가 밀려오고 10초 동안 빨라집니다. 끝까지 버티면 코인 1,000을 받습니다.",
+      "🧊 빙판 구간: 8초 동안 레인을 바꿀 때 미끄러워요. 빙판에서 장애물을 넘을 때마다 코인 100을 받습니다.",
+      "🌌 오로라 타임: 콤보 15를 넘기면 하늘에 오로라가 뜨고 8초 동안 코인이 2배가 됩니다. 콤보가 끊기면 바로 사라져요.",
+    ],
+  },
   {
     version: "6.11",
     date: "2026-11-07",

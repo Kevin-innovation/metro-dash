@@ -14,6 +14,7 @@ import { DIAMOND_GOAL } from "./slots.js";
 import { ANTIDOTE_SECONDS } from "./shop.js";
 import { missionTier, runXp } from "./progression.js";
 import { perkFor } from "./characters.js";
+import { maxCoinsFor } from "./leaderboard-rules.js";
 import {
   COIN_BASE,
   NEAR_MISS_BONUS,
@@ -26,6 +27,9 @@ import {
   survivalGain,
   totalScore,
 } from "./scoring.js";
+
+/** Left free for the coins still to be picked up as the distance catches up. */
+const EVENT_COIN_MARGIN = 20;
 
 /**
  * Everything numeric about the run in progress: score, combo, power-up timers,
@@ -63,6 +67,7 @@ export class Run {
     this.scoreBonus = 0;
     this.coins = 0;
     this.santaCoins = 0;
+    this.onIce = false;
     /** Set by Game while a section is running; 1 the rest of the time. */
     this.eventMultiplier = 1;
     /**
@@ -442,8 +447,29 @@ export class Run {
    */
   addSantaDrop(coins) {
     this.metrics.santaDrops += 1;
-    this.coins += coins;
-    this.santaCoins += coins;
+    return this.addEventCoins(coins);
+  }
+
+  /**
+   * Coins from a track event: run coins, kept apart from the ones picked up off
+   * the track so they do not count towards coin missions.
+   *
+   * Capped at what the server will accept for the distance run so far. Past that
+   * it refuses the whole run, so one payout too many early on would cost the
+   * player their score. Returns what was really paid, which is what to show.
+   */
+  addEventCoins(coins) {
+    const room = maxCoinsFor(this.distance) - EVENT_COIN_MARGIN - this.coins;
+    const paid = Math.max(0, Math.min(Math.floor(coins), room));
+    this.coins += paid;
+    this.santaCoins += paid;
+    return paid;
+  }
+
+  /** An obstacle cleared on the ice: a step of combo, like a blizzard, and coins. */
+  addIceClear(coins) {
+    this.bumpCombo();
+    return this.addEventCoins(coins);
   }
 
   /** A Christmas gift. It spins straight away, so nothing is held toward a goal. */

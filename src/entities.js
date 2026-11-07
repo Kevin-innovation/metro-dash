@@ -695,6 +695,33 @@ export function makeSantaDrop() {
   return g;
 }
 
+/** What the thief elf drops: smaller than a wheel gift, and in the sack's colours. */
+export function makeElfGift() {
+  return new THREE.Mesh(
+    mergeGeometries([
+      tinted(new THREE.BoxGeometry(0.62, 0.62, 0.62), 0xdc2626),
+      tinted(new THREE.BoxGeometry(0.66, 0.66, 0.14), 0xffd54f),
+      tinted(new THREE.BoxGeometry(0.14, 0.66, 0.66), 0xffd54f),
+      tinted(new THREE.SphereGeometry(0.16, 8, 6), 0xfff3b0, 0, 0.38, 0),
+    ]),
+    new THREE.MeshBasicMaterial({ vertexColors: true }),
+  );
+}
+
+/** The whole sack, gold-tied and spilling, for catching everything the elf dropped. */
+export function makeElfSack() {
+  return new THREE.Mesh(
+    mergeGeometries([
+      tinted(new THREE.SphereGeometry(0.72, 14, 12).scale(1, 1.05, 1), 0xc62828, 0, -0.1, 0),
+      tinted(new THREE.CylinderGeometry(0.2, 0.32, 0.22, 10), 0xffd54f, 0, 0.68, 0),
+      tinted(new THREE.BoxGeometry(0.34, 0.34, 0.34), 0x38bdf8, -0.15, 0.92, 0),
+      tinted(new THREE.BoxGeometry(0.3, 0.3, 0.3), 0x4ade80, 0.17, 0.96, 0.04),
+      tinted(new THREE.SphereGeometry(0.1, 8, 6), 0xfff3b0, 0, 1.2, 0),
+    ]),
+    new THREE.MeshBasicMaterial({ vertexColors: true }),
+  );
+}
+
 /**
  * The Christmas gift, standing in for the diamond.
  *
@@ -779,6 +806,8 @@ const FACTORIES = {
   diamond: makeDiamond,
   gift: makeGift,
   santaDrop: makeSantaDrop,
+  elfGift: makeElfGift,
+  elfSack: makeElfSack,
   chuseokMoon: makeChuseokMoon,
 };
 

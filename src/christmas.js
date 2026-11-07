@@ -124,6 +124,11 @@ export class SantaRaid {
     return { type: "drop" };
   }
 
+  /** Whether a raid is under way, or would be if the sky allowed it. */
+  due(runTime) {
+    return this.phase !== "waiting" || (this.raids < RAID_MAX_PER_RUN && runTime >= this.at);
+  }
+
   /** The parcel is on the track, so the next raid can be scheduled. */
   dropped(runTime) {
     this.phase = "waiting";
@@ -202,4 +207,129 @@ export function spinChristmas(rng = Math.random, risk = 1) {
   }
   const index = CHRISTMAS_SLOT_FACES.length - 1;
   return { face: CHRISTMAS_SLOT_FACES[index], index };
+}
+
+/**
+ * The three events the track deals in turn. One at a time, never during a raid or
+ * a blizzard, and each with the raid's line and count first, so nobody is asked
+ * to react to something that started without warning.
+ */
+export const TRACK_EVENT_FIRST_MIN = 35;
+export const TRACK_EVENT_FIRST_MAX = 45;
+export const TRACK_EVENT_GAP_MIN = 30;
+export const TRACK_EVENT_GAP_MAX = 45;
+export const TRACK_EVENT_KINDS = ["elf", "avalanche", "ice"];
+export const TRACK_EVENT_SECONDS = { elf: 10.5, avalanche: 10, ice: 8 };
+/** From the line going up to the event starting. */
+export const TRACK_EVENT_LEAD_SECONDS = RAID_ANNOUNCE_SECONDS + RAID_COUNT_FROM;
+/** The whole of the longest one, line and count included: how much open sky to ask for. */
+export const TRACK_EVENT_CLEAR_SECONDS = TRACK_EVENT_LEAD_SECONDS + 11;
+
+/** A gift is worth a little, all of them and the sack a lot. */
+export const ELF_GIFTS = 8;
+export const ELF_GIFT_COINS = 60;
+export const ELF_SACK_COINS = 500;
+export const AVALANCHE_COINS = 1000;
+/** Quicker, but well inside the ×1.18 the validator already allows the wheel. */
+export const AVALANCHE_SPEED = 1.15;
+export const ICE_CLEAR_COINS = 100;
+/** A lane change takes about twice as long to settle. Mild, because it can kill. */
+export const ICE_LANE_SCALE = 0.45;
+
+export const AURORA_COMBO = 15;
+export const AURORA_SECONDS = 8;
+export const AURORA_COOLDOWN = 30;
+/** Extra coins per coin picked up. */
+export const AURORA_COIN_BONUS = 1;
+
+export class TrackEvents {
+  constructor(rng = Math.random) {
+    this.rng = rng;
+    this.phase = "waiting";
+    this.at = between(rng, TRACK_EVENT_FIRST_MIN, TRACK_EVENT_FIRST_MAX);
+    this.kind = null;
+    this.t = 0;
+    this.count = 0;
+    this.deck = [];
+  }
+
+  get busy() {
+    return this.phase !== "waiting";
+  }
+
+  /** Each of the three before any of them twice, in a different order each time. */
+  deal() {
+    if (!this.deck.length) {
+      const deck = [...TRACK_EVENT_KINDS];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(this.rng() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      this.deck = deck;
+    }
+    return this.deck.shift();
+  }
+
+  /**
+   * @param {number} dt seconds of play
+   * @param {number} runTime
+   * @param {boolean} canStart only asked before one starts: a count is not called off.
+   * @returns {{ type: "announce" | "start" | "end", kind: string } | { type: "count", value: number } | null}
+   */
+  update(dt, runTime, canStart) {
+    if (this.phase === "waiting") {
+      if (runTime < this.at || !canStart) return null;
+      this.kind = this.deal();
+      this.phase = "announce";
+      this.t = RAID_ANNOUNCE_SECONDS;
+      return { type: "announce", kind: this.kind };
+    }
+
+    this.t -= dt;
+    if (this.t > 0) return null;
+
+    if (this.phase === "active") {
+      const { kind } = this;
+      this.phase = "waiting";
+      this.kind = null;
+      this.at = runTime + between(this.rng, TRACK_EVENT_GAP_MIN, TRACK_EVENT_GAP_MAX);
+      return { type: "end", kind };
+    }
+
+    this.t += 1;
+    this.count = this.phase === "announce" ? RAID_COUNT_FROM : this.count - 1;
+    this.phase = "count";
+    if (this.count > 0) return { type: "count", value: this.count };
+    this.phase = "active";
+    this.t = TRACK_EVENT_SECONDS[this.kind];
+    return { type: "start", kind: this.kind };
+  }
+}
+
+/** The reward for a long combo: it lights up at the threshold and dies with the combo. */
+export class Aurora {
+  constructor() {
+    this.t = 0;
+    this.cooldown = 0;
+  }
+
+  get active() {
+    return this.t > 0;
+  }
+
+  /** @returns {"start" | "end" | "broken" | null} */
+  update(dt, combo, canStart) {
+    if (this.t > 0) {
+      this.t -= dt;
+      const broken = combo <= 0;
+      if (this.t > 0 && !broken) return null;
+      this.t = 0;
+      this.cooldown = AURORA_COOLDOWN;
+      return broken ? "broken" : "end";
+    }
+    this.cooldown = Math.max(0, this.cooldown - dt);
+    if (this.cooldown > 0 || combo < AURORA_COMBO || !canStart) return null;
+    this.t = AURORA_SECONDS;
+    return "start";
+  }
 }
