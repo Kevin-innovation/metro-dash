@@ -4,15 +4,15 @@
  * Kept pure, for the same reason chuseok.js is: the browser, the spawner, the
  * score validator and the tests all need the same dates and wheel.
  *
- * The operating dates have not been decided, so both ends are null and the
- * event is off everywhere — including production — until they are written in as
- * Date.UTC values. Locally, `npm run dev` with `?christmas` in the URL turns it
- * on; see main.js. That switch is compiled out of a production build.
+ * November 7 through December 31, 2026, KST. Midnight KST is 15:00 UTC on the
+ * day before. Outside those dates, `npm run dev` with `?christmas` in the URL
+ * turns it on locally; see main.js. That switch is compiled out of a production
+ * build.
  */
 
 export const CHRISTMAS_TITLE = "메트로 대시 · 크리스마스 에디션";
-export const CHRISTMAS_EVENT_FROM = null;
-export const CHRISTMAS_EVENT_TO = null;
+export const CHRISTMAS_EVENT_FROM = Date.UTC(2026, 10, 6, 15, 0, 0);
+export const CHRISTMAS_EVENT_TO = Date.UTC(2026, 11, 31, 15, 0, 0);
 
 let preview = false;
 
@@ -29,7 +29,7 @@ export function setChristmasPreview(on) {
  */
 export function christmasAt(ms = Date.now(), from = CHRISTMAS_EVENT_FROM, to = CHRISTMAS_EVENT_TO) {
   if (preview) return true;
-  return from !== null && to !== null && ms >= from && ms < to;
+  return ms >= from && ms < to;
 }
 
 export const GIFT_FIRST_MIN = 25;

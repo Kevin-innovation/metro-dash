@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.00";
+export const VERSION = "5.10";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.10",
+    date: "2026-11-07",
+    kind: "major",
+    title: "메트로 대시 · 크리스마스 에디션",
+    notes: [
+      "트랙과 지붕에 눈이 쌓이고, 길가에 트리와 전구가 섰습니다. 레일과 장애물은 그대로 잘 보입니다.",
+      "상점에서 산타를 무료로 고를 수 있습니다. 썰매를 타고 달리고, 슈퍼 스니커즈를 먹으면 루돌프가 썰매를 끕니다. 외형만 바뀌고 판정과 능력치는 같습니다.",
+      "12월 31일까지 다이아몬드 대신 선물 상자가 나옵니다. 하나만 먹어도 바로 룰렛이 돕니다.",
+      "선물 룰렛은 꽝 또는 점수 ×2·×3·×5·×10입니다. 꽝은 아무것도 바꾸지 않고, 당첨은 진행 중인 룰렛 배율을 교체합니다.",
+    ],
+  },
   {
     version: "5.00",
     date: "2026-09-21",

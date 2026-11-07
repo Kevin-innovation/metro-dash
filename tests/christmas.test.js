@@ -53,21 +53,17 @@ function fakePool() {
 describe("이벤트 기간", () => {
   afterEach(() => setChristmasPreview(false));
 
-  it("날짜가 정해지기 전에는 어느 시각에도 꺼져 있다", () => {
-    expect(CHRISTMAS_EVENT_FROM).toBe(null);
-    expect(CHRISTMAS_EVENT_TO).toBe(null);
-    expect(christmasAt(Date.UTC(2026, 11, 25))).toBe(false);
-  });
-
-  it("시작은 포함하고 끝은 포함하지 않는다", () => {
-    const [from, to] = [1000, 2000];
-    expect(christmasAt(999, from, to)).toBe(false);
-    expect(christmasAt(1000, from, to)).toBe(true);
-    expect(christmasAt(1999, from, to)).toBe(true);
-    expect(christmasAt(2000, from, to)).toBe(false);
+  it("한국 시간 11월 7일 0시에 시작해 12월 31일 끝까지 켜져 있다", () => {
+    expect(new Date(CHRISTMAS_EVENT_FROM).toISOString()).toBe("2026-11-06T15:00:00.000Z");
+    expect(new Date(CHRISTMAS_EVENT_TO).toISOString()).toBe("2026-12-31T15:00:00.000Z");
+    expect(christmasAt(CHRISTMAS_EVENT_FROM - 1)).toBe(false);
+    expect(christmasAt(CHRISTMAS_EVENT_FROM)).toBe(true);
+    expect(christmasAt(CHRISTMAS_EVENT_TO - 1)).toBe(true);
+    expect(christmasAt(CHRISTMAS_EVENT_TO)).toBe(false);
   });
 
   it("개발 미리보기는 명시적으로 켰을 때만 켜진다", () => {
+    expect(christmasAt(0)).toBe(false);
     setChristmasPreview(true);
     expect(christmasAt(0)).toBe(true);
   });
