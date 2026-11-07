@@ -658,6 +658,44 @@ export function makeDiamond() {
 }
 
 /**
+ * The parcel the raid leaves behind, hanging under a little parachute. All gold
+ * and self-lit, so it is the brightest thing in a dark sky and cannot be taken
+ * for an ordinary gift on the ground.
+ */
+export function makeSantaDrop() {
+  const g = new THREE.Group();
+  const gold = new THREE.MeshBasicMaterial({ color: 0xffc933 });
+  const ribbon = new THREE.MeshBasicMaterial({ color: 0xc62828 });
+  const line = new THREE.MeshBasicMaterial({ color: 0xfff8e1 });
+
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.62, 0.74), gold));
+  for (const [w, d] of [
+    [0.77, 0.16],
+    [0.16, 0.77],
+  ]) {
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(w, 0.65, d), ribbon));
+  }
+  const canopy = new THREE.Mesh(
+    new THREE.SphereGeometry(0.72, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: 0xef4444 }),
+  );
+  canopy.position.y = 0.92;
+  g.add(canopy);
+  for (const [x, z] of [
+    [-0.46, -0.46],
+    [0.46, -0.46],
+    [-0.46, 0.46],
+    [0.46, 0.46],
+  ]) {
+    const cord = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.72, 0.03), line);
+    cord.position.set(x * 0.72, 0.62, z * 0.72);
+    cord.rotation.set(z * 0.5, 0, -x * 0.5);
+    g.add(cord);
+  }
+  return g;
+}
+
+/**
  * The Christmas gift, standing in for the diamond.
  *
  * Same job and the same tricks: half again as large as anything else out there,
@@ -740,6 +778,7 @@ const FACTORIES = {
   crowEgg: makeCrowEgg,
   diamond: makeDiamond,
   gift: makeGift,
+  santaDrop: makeSantaDrop,
   chuseokMoon: makeChuseokMoon,
 };
 

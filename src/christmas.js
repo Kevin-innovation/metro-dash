@@ -44,6 +44,20 @@ export const GIFT_FIRST_MAX = 35;
 export const GIFT_GAP_MIN = 40;
 export const GIFT_GAP_MAX = 55;
 
+/**
+ * The Santa raid: a sleigh goes over and leaves one golden parcel in the air.
+ *
+ * Paid as ordinary run coins, which the server checks against distance. The
+ * daily allowance for client claims is already spent in full by a good day's
+ * missions, so paying this from it would quietly cost someone their mission coins.
+ */
+export const RAID_FIRST_MIN = 50;
+export const RAID_FIRST_MAX = 70;
+export const RAID_GAP_MIN = 70;
+export const RAID_GAP_MAX = 100;
+export const RAID_MAX_PER_RUN = 3;
+export const SANTA_DROP_COINS = 150;
+
 const between = (rng, low, high) => low + Math.floor(rng() * (high - low + 1));
 
 /** Seconds of play before a run's first gift. */
@@ -54,6 +68,16 @@ export function firstGiftAt(rng = Math.random) {
 /** Seconds of play until the next gift after one has appeared. */
 export function nextGiftGap(rng = Math.random) {
   return between(rng, GIFT_GAP_MIN, GIFT_GAP_MAX);
+}
+
+/** Seconds of play before a run's first raid. */
+export function firstRaidAt(rng = Math.random) {
+  return between(rng, RAID_FIRST_MIN, RAID_FIRST_MAX);
+}
+
+/** Seconds of play until the next raid after one has come. */
+export function nextRaidGap(rng = Math.random) {
+  return between(rng, RAID_GAP_MIN, RAID_GAP_MAX);
 }
 
 const multiplier = (value, seconds, weight, extra = {}) => ({

@@ -69,6 +69,13 @@ export class AudioBus {
     });
   }
 
+  /** Sleigh bells, as the raid goes over. */
+  bells() {
+    [1568, 1760, 1568, 1760, 2093].forEach((hz, i) => {
+      setTimeout(() => this.beep(hz, 0.09, "triangle", 0.4), i * 110);
+    });
+  }
+
   /** A wheel face going past the pointer. */
   tick() {
     this.beep(1500, 0.025, "square", 0.16);

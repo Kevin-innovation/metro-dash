@@ -5,6 +5,12 @@ import {
   CHRISTMAS_EVENT_TO,
   CHRISTMAS_SLOT_FACES,
   GIFT_FIRST_MAX,
+  RAID_FIRST_MAX,
+  RAID_FIRST_MIN,
+  RAID_GAP_MAX,
+  RAID_GAP_MIN,
+  RAID_MAX_PER_RUN,
+  SANTA_DROP_COINS,
   christmasTickets,
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
@@ -536,6 +542,100 @@ describe("크리스마스 캐릭터 5종", () => {
     expect(game.wheelQueue).toEqual([]);
     expect(game.state).toBe("playing");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("눈보라 돌파", () => {
+  const cross = (type, christmas, crowT) => {
+    const pool = fakePool();
+    const item = pool.spawn(type, 0, 10);
+    const run = new Run(store());
+    run.crowT = crowT;
+    const interactions = new Interactions(pool, run, { burst() {} });
+    interactions.christmas = christmas;
+    const tally = interactions.scoreClears({ x: 0, y: 3, z: 11, prevZ: 9, flying: false, mounted: null, laneChangeT: 9 });
+    return { run, tally, item };
+  };
+
+  it("이벤트 눈보라 중에만 콤보가 하나 더 오르고, 점수는 같다", () => {
+    const plain = cross("barrier", true, 0);
+    const storm = cross("barrier", true, 3);
+    const crow = cross("barrier", false, 3);
+    expect(plain.run.combo).toBe(1);
+    expect(crow.run.combo).toBe(1);
+    expect(storm.run.combo).toBe(2);
+    expect(storm.run.metrics.blizzardClears).toBe(1);
+    expect(crow.run.metrics.blizzardClears).toBe(0);
+    expect(storm.run.scoreBonus).toBe(plain.run.scoreBonus);
+    expect(storm.tally.tricks[0].kind).toBe("blizzard");
+    expect(plain.tally.tricks[0].kind).toBe("jump");
+  });
+
+  it("게이트도 같고, 판당 한 장애물에 한 번만 받는다", () => {
+    const storm = cross("sign", true, 3);
+    expect(storm.tally.tricks[0].kind).toBe("blizzard");
+    expect(storm.item.scored).toBe(true);
+  });
+});
+
+describe("산타 습격", () => {
+  const raids = (options, layouts = 240, step = 2) => {
+    const pool = fakePool();
+    let announced = 0;
+    const spawner = new Spawner(pool, { onSantaRaid: () => (announced += 1) });
+    spawner.reset(17);
+    const times = [];
+    for (let i = 0; i < layouts; i++) {
+      const before = pool.live.length;
+      const runTime = i * step;
+      spawner.place(100 + i * 100, { speed: 40, phaseId: 4, runTime, christmas: true, ...options });
+      if (pool.live.slice(before).some((item) => item.type === "santaDrop")) times.push(runTime);
+    }
+    return { times, announced };
+  };
+
+  it("지정한 시간에 오고 한 판에 세 번까지이며, 올 때마다 알린다", () => {
+    const { times, announced } = raids({});
+    expect(times).toHaveLength(RAID_MAX_PER_RUN);
+    expect(announced).toBe(RAID_MAX_PER_RUN);
+    expect(times[0]).toBeGreaterThanOrEqual(RAID_FIRST_MIN);
+    expect(times[0]).toBeLessThanOrEqual(RAID_FIRST_MAX + 6);
+    times.slice(1).forEach((time, i) => {
+      expect(time - times[i]).toBeGreaterThanOrEqual(RAID_GAP_MIN);
+      expect(time - times[i]).toBeLessThanOrEqual(RAID_GAP_MAX + 6);
+    });
+  });
+
+  it("터널과 제트팩 중에는 미루고, 일반 모드와 타이틀에는 없다", () => {
+    expect(raids({ skyOpen: false }).times).toEqual([]);
+    expect(raids({ flying: true }).times).toEqual([]);
+    expect(raids({ christmas: false }).times).toEqual([]);
+    expect(raids({ runTime: null }).times).toEqual([]);
+  });
+
+  it("점프해야 먹을 수 있고, 코인만 늘며 점수와 일일 한도를 쓰지 않는다", () => {
+    const pool = fakePool();
+    pool.spawn("santaDrop", 0, 0, 4.1);
+    const run = new Run(store());
+    const interactions = new Interactions(pool, run, { burst() {} });
+    const runner = (y) => ({ x: 0, prevX: 0, y, prevY: y, z: 0.4, prevZ: -0.4, height: 1.55, prevHeight: 1.55 });
+    const score = run.score;
+
+    expect(interactions.collectPickups(runner(0), { upgradeLevel: () => 1 })).toEqual([]);
+    expect(interactions.collectPickups(runner(2.2), { upgradeLevel: () => 1 })).toEqual([
+      { type: "token", id: "santaDrop", gain: SANTA_DROP_COINS },
+    ]);
+    expect(interactions.collectPickups(runner(2.2), { upgradeLevel: () => 1 })).toEqual([]);
+    expect(run.coins).toBe(SANTA_DROP_COINS);
+    expect(run.metrics.santaDrops).toBe(1);
+    expect(run.score).toBe(score);
+    expect(run.claimed.coins).toBe(0);
+  });
+
+  it("세 번 다 먹어도 서버 코인 검증을 통과한다", () => {
+    const seconds = RAID_FIRST_MIN + RAID_GAP_MIN * 2 + 3;
+    const coins = SANTA_DROP_COINS * RAID_MAX_PER_RUN;
+    expect(validateRun({ score: 0, distance: maxDistanceIn(seconds) * 0.8, coins, seconds })).toEqual({ ok: true });
   });
 });
 

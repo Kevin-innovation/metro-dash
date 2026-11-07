@@ -132,6 +132,8 @@ export class Run {
       diamonds: 0,
       gifts: 0,
       spins: 0,
+      blizzardClears: 0,
+      santaDrops: 0,
     };
     // A run is banked when the player dies and again when they leave the card,
     // so progress is always committed as a delta against this.
@@ -421,6 +423,22 @@ export class Run {
   countSpin() {
     this.spins += 1;
     this.metrics.spins += 1;
+  }
+
+  /**
+   * An obstacle cleared in a blizzard. Worth one more step of combo and nothing
+   * else: the combo is already bounded on the server, so no ceiling has to move,
+   * and what it pays for is not stopping when the screen goes white.
+   */
+  addBlizzardClear() {
+    this.metrics.blizzardClears += 1;
+    this.bumpCombo();
+  }
+
+  /** The Santa raid's parcel. Real run coins, checked the way coins are. */
+  addSantaDrop(coins) {
+    this.metrics.santaDrops += 1;
+    this.coins += coins;
   }
 
   /** A Christmas gift. It spins straight away, so nothing is held toward a goal. */

@@ -37,7 +37,7 @@ import { RunSchedule } from "./schedule.js";
 import { POWERUPS, POWERUP_IDS, clearPowerups, jumpMultiplier, runSpeedFactor } from "./powerups.js";
 import { ParticleField } from "./particles.js";
 import { applyAction, applySkin, createPlayer, resetPlayer, updatePlayer } from "./player.js";
-import { setCostume } from "./costumes.js";
+import { makeFlyingSanta, setCostume } from "./costumes.js";
 import { missionTier, rankAt, rankUpBetween } from "./progression.js";
 import { Run } from "./run.js";
 import {
@@ -134,6 +134,9 @@ const GIFT_EASE = "cubic-bezier(0.12, 0.7, 0.05, 1)";
 const SNOW_PER_BUDGET = 0.06;
 /** How many times the flakes a blizzard is. */
 const BLIZZARD_SNOW = 7;
+/** How long the raid's sleigh is in the sky, and how fast it pulls away. */
+const RAID_FLY_SECONDS = 3.6;
+const RAID_FLY_SPEED = 32;
 
 /**
  * Metres between two coins in the jetpack's sky trail.
@@ -248,7 +251,10 @@ export class Game {
     this.scene.add(this.lightning.root);
     this.pool = new EntityPool(this.scene);
     this.particles = new ParticleField(this.scene, 260);
-    this.spawner = new Spawner(this.pool, { onOncoming: (item) => this.makeItemOncoming(item) });
+    this.spawner = new Spawner(this.pool, {
+      onOncoming: (item) => this.makeItemOncoming(item),
+      onSantaRaid: () => this.startSantaRaid(),
+    });
     this.interactions = new Interactions(this.pool, this.run, this.particles);
 
     this.applyQuality(this.activeTier());
@@ -1104,6 +1110,50 @@ export class Game {
     this.wheelQueue.push({ kind: "gift" });
   }
 
+  /**
+   * The sleigh goes over as the parcel it dropped comes into range. Called from
+   * inside the spawner, so all it does is start things that run on their own.
+   */
+  startSantaRaid() {
+    if (this.state !== "playing") return;
+    this.audio.bells();
+    this.screens.showToast("🎅 산타 습격! 뛰어올라 황금 선물을 낚아채세요");
+    if (reducedMotion()) return;
+    if (!this.flyer) {
+      this.flyer = makeFlyingSanta();
+      this.flyer.scale.setScalar(2.2);
+      this.scene.add(this.flyer);
+    }
+    this.flyerT = RAID_FLY_SECONDS;
+  }
+
+  /** Over the camera, then away down the avenue, climbing into the dark. */
+  updateFlyer(dt) {
+    if (!this.flyer) return;
+    if (!(this.flyerT > 0)) {
+      this.flyer.visible = false;
+      return;
+    }
+    if (this.state === "playing") this.flyerT -= dt;
+    const flown = RAID_FLY_SECONDS - this.flyerT;
+    const p = this.player;
+    const { position } = this.flyer;
+    position.set(Math.sin(flown * 1.1) * 2.5, 11 + flown * 2.2, p.z - 10 + flown * RAID_FLY_SPEED);
+    this.flyer.rotation.x = -0.1 + Math.sin(flown * 3) * 0.05;
+    this.flyer.visible = true;
+    if (this.state === "playing" && Math.random() < this.quality.particleBudget / 200) {
+      this.particles.trail(position.x, position.y + 1, position.z, { count: 1, colour: 0xffe082, spread: 1.4, back: 1 });
+    }
+  }
+
+  onSantaDrop(event) {
+    this.audio.purchase();
+    vibrate([20, 30, 40]);
+    this.screens.flashCoinGain(event.gain);
+    this.screens.showToast(`🎁 산타의 선물! 코인 +${event.gain}`);
+    if (!reducedMotion()) this.fovPunch = Math.max(this.fovPunch, 0.6);
+  }
+
   onChuseokMoon(event) {
     this.audio.powerup();
     vibrate([22, 35, 22, 35, 28]);
@@ -1535,6 +1585,7 @@ export class Game {
     this.wheelQueue = [];
     this.rudolph = false;
     this.wheelRetries = 0;
+    this.flyerT = 0;
     this.hintT = 0;
     this.deadAt = 0;
     this.runTime = 0;
@@ -1834,6 +1885,7 @@ export class Game {
     // is the shape that reads as force instead of as a glitch.
     this.fovPunch = Math.max(0, this.fovPunch - frameDt * (1.2 + this.fovPunch * 2.6));
     this.emitAmbientParticles(frameDt);
+    this.updateFlyer(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
     // The title screen holds the opening look; only a run travels through zones.
@@ -2485,6 +2537,7 @@ export class Game {
       // Not gated on `playing`: the title preview must not deal diamonds either.
       christmas: this.christmas,
       giftGap: this.giftGap,
+      skyOpen: !playing || this.lookNow().ceiling === null,
       // A due moon waits until it can be reached by the jump it was designed
       // for instead of passing underneath an active jetpack.
       flying: playing && this.run.powerupActive("jetpack"),
@@ -2557,7 +2610,7 @@ export class Game {
         const t = this.player.runT * 3 + item.z;
         item.mesh.position.y = item.y + Math.sin(t) * 0.22;
         item.mesh.scale.setScalar(1 + Math.sin(t * 1.7) * 0.1);
-      } else if (item.token === "chuseokMoon") {
+      } else if (item.token === "chuseokMoon" || item.token === "santaDrop") {
         const t = this.player.runT * 2.2 + item.z * 0.15;
         item.mesh.rotation.z = Math.sin(t * 0.55) * 0.07;
         item.mesh.position.y = item.y + Math.sin(t) * 0.18;
@@ -2589,6 +2642,7 @@ export class Game {
       } else if (event.type === "token") {
         if (event.id === "chuseokMoon") this.onChuseokMoon(event);
         else if (event.id === "gift") this.onGift();
+        else if (event.id === "santaDrop") this.onSantaDrop(event);
         else this.onDiamond(event);
       } else if (event.type === "hazard") {
         if (event.blocked) {

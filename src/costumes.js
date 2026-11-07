@@ -346,6 +346,37 @@ function buildRudolph(p) {
   return { kind: "mascot", mascot: "rudolph", on: false, parts: [model], model, deer, scale: RUDOLPH_SCALE };
 }
 
+/**
+ * The sleigh for the Santa raid: this skin's sled and four reindeer at a gallop,
+ * with a plain rider. It belongs to the sky, not to the player, so it has no
+ * reins to re-lay and nothing to pose.
+ */
+export function makeFlyingSanta() {
+  const style = SLED_STYLES.santa;
+  const g = new THREE.Group();
+  g.add(makeSled(style));
+
+  const red = lambert(style.hat);
+  const white = lambert(style.fur);
+  add(g, box(0.5, 0.56, 0.36), red, 0, 0.66, 0);
+  add(g, new THREE.SphereGeometry(0.2, 10, 8), lambert(0xffdbb4), 0, 1.1, 0);
+  add(g, new THREE.CylinderGeometry(0.225, 0.225, 0.08, 12), white, 0, 1.24, 0);
+  const hat = add(g, new THREE.ConeGeometry(0.19, 0.42, 10), red, 0, 1.46, -0.06);
+  hat.rotation.x = -0.4;
+
+  for (const z of [REINDEER_Z, REINDEER_Z + 1.2]) {
+    for (const x of [-0.36, 0.36]) {
+      const deer = makeDeer(style.deer);
+      deer.group.position.set(x, 0, z);
+      deer.legs.forEach((leg, i) => (leg.rotation.x = i < 2 ? -1.1 : 1.1));
+      g.add(deer.group);
+    }
+  }
+  add(g, box(0.05, 0.05, REINDEER_Z + 1.2), lambert(style.rein), 0, 0.72, (REINDEER_Z + 1.2) / 2);
+  g.visible = false;
+  return g;
+}
+
 const BUILD = {
   santa: (p) => buildSledSkin(p, SLED_STYLES.santa),
   supersanta: (p) => buildSledSkin(p, SLED_STYLES.supersanta),

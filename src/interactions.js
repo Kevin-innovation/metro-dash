@@ -4,6 +4,7 @@ import {
   MAGNET_RANGE,
   PICKUP_DEPTH,
 } from "./config.js";
+import { SANTA_DROP_COINS } from "./christmas.js";
 import { POWERUPS } from "./powerups.js";
 import { LATE_DODGE_SECONDS, NEAR_MISS_RANGE } from "./scoring.js";
 
@@ -134,7 +135,7 @@ export class Interactions {
         // The moon is authored as a jump-timing pickup. Super sneakers widen
         // ordinary reward reach so their high arc does not miss coins, but
         // applying that reach here would collect a 4.1m moon from the deck.
-        const preciseToken = item.token === "chuseokMoon";
+        const preciseToken = item.token === "chuseokMoon" || item.token === "santaDrop";
         const reach = item.hazard || preciseToken ? PICKUP_REACH : rewardReach;
         if (Math.abs(midY - itemY) > reach) continue;
       }
@@ -174,6 +175,17 @@ export class Interactions {
         });
         const ready = this.run.addDiamond();
         events.push({ type: "token", id: "diamond", held: this.run.diamonds, ready });
+      } else if (item.token === "santaDrop") {
+        this.particles.burst(itemX, itemY, item.z, {
+          count: 32,
+          colour: 0xffd54f,
+          speed: 7.5,
+          life: 0.9,
+          size: 0.46,
+          gravity: -4,
+        });
+        this.run.addSantaDrop(SANTA_DROP_COINS);
+        events.push({ type: "token", id: "santaDrop", gain: SANTA_DROP_COINS });
       } else if (item.token === "gift") {
         this.particles.burst(itemX, itemY, item.z, {
           count: 24,
@@ -277,18 +289,15 @@ export class Interactions {
       else if (item.type === "barrier") tally.barriers += 1;
       if (player.mounted === item) continue;
 
-      if (item.type === "sign") {
+      const clear = item.type === "sign" ? "slide" : item.type === "barrier" || item.type === "crate" ? "jump" : null;
+      if (clear) {
+        const blizzard = this.christmas && this.run.crowT > 0;
         tally.tricks.push({
-          kind: "slide",
+          kind: blizzard ? "blizzard" : clear,
           multiplier: this.run.multiplier(),
-          gain: this.run.addClear("slide"),
+          gain: this.run.addClear(clear),
         });
-      } else if (item.type === "barrier" || item.type === "crate") {
-        tally.tricks.push({
-          kind: "jump",
-          multiplier: this.run.multiplier(),
-          gain: this.run.addClear("jump"),
-        });
+        if (blizzard) this.run.addBlizzardClear();
       }
     }
 

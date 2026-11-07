@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.60";
+export const VERSION = "5.70";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.70",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "산타 습격과 눈보라 돌파",
+    notes: [
+      "판 도중 산타 썰매가 하늘을 지나가며 황금 선물을 떨어뜨립니다. 점프해서 낚아채면 코인 +150입니다. 한 판에 세 번까지 옵니다.",
+      "눈보라 속에서 게이트나 장애물을 넘으면 콤보가 2 오릅니다. 눈보라를 맞아도 달려야 할 이유가 생겼습니다.",
+    ],
+  },
   {
     version: "5.60",
     date: "2026-11-07",

@@ -88,6 +88,15 @@ export const SPEC = {
   // it is placed by the same rules and read by the same collision test.
   diamond: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "diamond" },
   gift: { length: 0.6, depth: 0.3, minY: 0, maxY: 3.2, lethal: false, token: "gift" },
+  // Up where the moon was, for the same reason: a jump has to go and get it.
+  santaDrop: {
+    length: 0.9,
+    depth: 0.42,
+    minY: 0,
+    maxY: JUMP_APEX + PLAYER_HEIGHT + 0.5,
+    lethal: false,
+    token: "santaDrop",
+  },
   // High enough that running underneath cannot collect it. The coarse band
   // reaches the top of a normal jump; interactions.js applies the precise
   // pickup reach around the image's 4.1m centre.

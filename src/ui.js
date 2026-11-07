@@ -11,6 +11,7 @@ import {
 import {
   BLIZZARD,
   CHRISTMAS_EVENT_TO,
+  SANTA_DROP_COINS,
   GIFT_FIRST_MAX,
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
@@ -486,6 +487,8 @@ const TALLY_ROWS = [
   { key: "nearMisses", icon: "💨", label: "아슬아슬", always: true },
   { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true, christmas: false },
   { key: "crows", icon: BLIZZARD.icon, label: BLIZZARD.name, always: true, christmas: true },
+  { key: "blizzardClears", icon: "🌬️", label: "눈보라 돌파", always: true, christmas: true },
+  { key: "santaDrops", icon: "🎅", label: "산타 선물", always: true, christmas: true },
   { key: "gates", icon: "🚧", label: "게이트", always: true },
   { key: "boards", icon: "🛹", label: "호버보드", always: false },
   { key: "antidotes", icon: "💊", label: "해독제", always: false },
@@ -737,7 +740,12 @@ function christmasRules() {
       ${row(
         BLIZZARD.icon,
         "눈덩이와 눈보라",
-        `까마귀 알 대신 ${HAZARD_FROM_SCORE / 10000}만 점부터 나옵니다. 먹으면 ${CROW_TIME}초 동안 눈보라가 몰아쳐 앞이 흐려집니다. 해독제로 막을 수 있습니다.`,
+        `까마귀 알 대신 ${HAZARD_FROM_SCORE / 10000}만 점부터 나옵니다. 먹으면 ${CROW_TIME}초 동안 눈보라가 몰아쳐 앞이 흐려집니다. 해독제로 막을 수 있습니다. 눈보라 속에서 게이트나 장애물을 넘으면 콤보가 2 오릅니다.`,
+      )}
+      ${row(
+        "🎅",
+        "산타 습격",
+        `판 도중 산타 썰매가 하늘을 지나가며 황금 선물을 떨어뜨립니다. 점프해서 낚아채면 코인 +${SANTA_DROP_COINS}입니다. 빨간 코가 올라가는 줄을 따라 뛰세요.`,
       )}
       ${row("🔴", "루돌프 코", "코인이 루돌프 코로 보입니다. 값과 자석·미션·상점 규칙은 그대로입니다.")}
       ${row(
