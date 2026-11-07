@@ -51,7 +51,7 @@ import { makeRng } from "../src/rng.js";
 import { Run } from "../src/run.js";
 import { setCostume } from "../src/costumes.js";
 import { SaveStore, hasProgress, normalizeSave } from "../src/save.js";
-import { purchase, shopView, unseenNewCharacters } from "../src/shop.js";
+import { hasNewCharacters, purchase, shopView } from "../src/shop.js";
 import { SPEC } from "../src/specs.js";
 import { HAZARD_FROM_SCORE, Spawner } from "../src/spawner.js";
 import { renderRunTally, renderShop } from "../src/ui.js";
@@ -948,21 +948,21 @@ describe("상점의 크리스마스 탭과 NEW", () => {
     expect(off).toContain("네온");
   });
 
-  it("NEW는 안 산 새 캐릭터에만, 상점 버튼은 안 본 것이 있을 때만 붙는다", () => {
+  it("NEW는 안 산 새 캐릭터에만, 상점 버튼에는 이벤트 내내 붙는다", () => {
     const s = store();
     s.data.coins = 100000;
     expect(render(s.data, { christmas: true }, "christmas").match(/new-tag/g)).toHaveLength(6);
     expect(render(s.data, { christmas: true }, "general")).not.toContain("new-tag");
 
-    const fresh = unseenNewCharacters(s.data, [], { christmas: true });
-    expect(fresh).toContain("supersanta");
-    expect(unseenNewCharacters(s.data, fresh, { christmas: true })).toEqual([]);
+    expect(hasNewCharacters(s.data, { christmas: true })).toBe(true);
     // Nothing to nudge about when none of it is for sale.
-    expect(unseenNewCharacters(s.data, [])).toEqual([]);
+    expect(hasNewCharacters(s.data)).toBe(false);
 
     purchase(s, "character", "elf", { christmas: true });
     expect(shopView(s.data, { christmas: true }).characters.find((c) => c.id === "elf").isNew).toBe(false);
-    expect(unseenNewCharacters(s.data, [], { christmas: true })).not.toContain("elf");
+    expect(hasNewCharacters(s.data, { christmas: true })).toBe(true);
+    // Once the event is over, a runner already bought is not news.
+    expect(hasNewCharacters(s.data)).toBe(false);
   });
 });
 

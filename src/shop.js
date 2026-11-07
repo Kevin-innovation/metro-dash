@@ -125,17 +125,14 @@ function offered(character, save, christmas) {
 }
 
 /**
- * Runners worth a NEW on the shop button: flagged, on offer, not yet owned, and
- * not already looked at. `seen` is the ids the player has opened the shop on.
+ * Whether the shop button wears a NEW. It stays on for the whole event, whoever
+ * has already looked or bought; afterwards an owned runner is not news.
  */
-export function unseenNewCharacters(save, seen = [], { christmas = false } = {}) {
-  return CHARACTERS.filter(
+export function hasNewCharacters(save, { christmas = false } = {}) {
+  return CHARACTERS.some(
     (character) =>
-      character.isNew &&
-      offered(character, save, christmas) &&
-      !save.characters.includes(character.id) &&
-      !seen.includes(character.id),
-  ).map((character) => character.id);
+      character.isNew && offered(character, save, christmas) && (christmas || !save.characters.includes(character.id)),
+  );
 }
 
 /**

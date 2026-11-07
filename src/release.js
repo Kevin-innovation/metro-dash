@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.10";
+export const VERSION = "6.11";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,13 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.11",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "상점 NEW 표시",
+    notes: ["상점 버튼의 NEW 표시가 한 번 열어 보면 사라지던 것을 이벤트 내내 붙어 있도록 고쳤습니다."],
+  },
   {
     version: "6.10",
     date: "2026-11-07",

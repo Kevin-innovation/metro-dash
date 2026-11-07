@@ -9,7 +9,7 @@ import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { SPEED_STEP_SECONDS, nextStepIn, speedStepAt } from "./pace.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
-import { purchase, shopView, unseenNewCharacters } from "./shop.js";
+import { hasNewCharacters, purchase, shopView } from "./shop.js";
 import { VERSION, previousSeason, seasonAt } from "./release.js";
 import { CHUSEOK_EVENT_NAME, chuseokAt } from "./chuseok.js";
 import { BLIZZARD, CHRISTMAS_TITLE } from "./christmas.js";
@@ -34,7 +34,6 @@ const $ = (id) => document.getElementById(id);
 const podium = (rank) => (rank >= 1 && rank <= 3 ? ` rank-${rank}` : "");
 
 /** Per device on purpose: this is a nudge on one screen, not part of a profile. */
-const SEEN_NEW_KEY = "metdash-seen-new";
 
 /**
  * Every piece of DOM the game touches.
@@ -1027,17 +1026,6 @@ export class Screens {
     this.shopTab = "christmas";
     this.drawShop(save);
     $("shop-screen").classList.remove("hidden");
-    // Opening the shop is what it was asking for, so the button can stop asking.
-    this.seenNew = [
-      ...this.seenCharacters(),
-      ...unseenNewCharacters(save, this.seenCharacters(), { christmas: this.christmas }),
-    ];
-    try {
-      localStorage.setItem(SEEN_NEW_KEY, JSON.stringify(this.seenNew));
-    } catch {
-      /* Private mode. The button simply asks again next visit. */
-    }
-    this.refreshShopBadge(save);
   }
 
   closeShop() {
@@ -1075,23 +1063,11 @@ export class Screens {
     renderSettings($("settings-list"), settings, tier);
   }
 
-  /** Runner ids this device has already opened the shop on. */
-  seenCharacters() {
-    if (this.seenNew) return this.seenNew;
-    try {
-      const stored = JSON.parse(localStorage.getItem(SEEN_NEW_KEY));
-      this.seenNew = Array.isArray(stored) ? stored : [];
-    } catch {
-      this.seenNew = [];
-    }
-    return this.seenNew;
-  }
-
-  /** The NEW on the shop button, for anything on offer not looked at yet. */
+  /** The NEW on the shop button, for as long as new runners are on offer. */
   refreshShopBadge(save) {
     const button = $("btn-shop");
     if (!button) return;
-    const fresh = unseenNewCharacters(save, this.seenCharacters(), { christmas: this.christmas }).length > 0;
+    const fresh = hasNewCharacters(save, { christmas: this.christmas });
     button.classList.toggle("has-new", fresh);
     if (fresh) button.setAttribute("aria-label", "상점 · 강화, 새 캐릭터 있음");
     else button.removeAttribute("aria-label");
