@@ -68,13 +68,16 @@ const multiplier = (value, seconds, weight, extra = {}) => ({
   ...extra,
 });
 
+const GIFT_SECONDS = 8;
+
 /**
- * One thousand tickets, so the top faces can be as rare as they are.
+ * One hundred tickets, and every result that pays lasts the same eight seconds,
+ * so the number on the face is the whole of what was won.
  *
  * In reel order, which has no effect on the odds. ×99 sits between the two most
- * common outcomes on purpose: more than half of all spins come to rest with it
- * right beside the pointer, or crawl past it on the way, and that near thing is
- * the whole of the tease. The other big faces are spaced between small ones so a
+ * common outcomes on purpose: about half of all spins come to rest with it right
+ * beside the pointer, or crawl past it on the way, and that near thing is the
+ * whole of the tease. The other big faces are spaced between small ones so a
  * slowing reel is always creeping up on something.
  */
 export const CHRISTMAS_SLOT_FACES = [
@@ -85,17 +88,17 @@ export const CHRISTMAS_SLOT_FACES = [
     icon: "🧦",
     label: "꽝",
     detail: "다음 선물을 노려보세요!",
-    weight: 200,
+    weight: 10,
     effect: { type: "none" },
   },
-  multiplier(99, 3, 1, { icon: "👑", jackpot: true }),
-  multiplier(2, 10, 330),
-  multiplier(20, 4, 3, { icon: "🌟" }),
-  multiplier(3, 8, 250),
-  multiplier(15, 4, 6),
-  multiplier(5, 6, 150),
-  multiplier(12, 5, 10),
-  multiplier(10, 5, 50),
+  multiplier(12, GIFT_SECONDS, 5),
+  multiplier(3, GIFT_SECONDS, 22),
+  multiplier(99, GIFT_SECONDS, 1, { icon: "👑", jackpot: true }),
+  multiplier(2, GIFT_SECONDS, 30),
+  multiplier(20, GIFT_SECONDS, 3, { icon: "🌟" }),
+  multiplier(5, GIFT_SECONDS, 15),
+  multiplier(15, GIFT_SECONDS, 4),
+  multiplier(10, GIFT_SECONDS, 10),
 ];
 
 /** @param {() => number} rng */

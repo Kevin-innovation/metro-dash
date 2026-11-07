@@ -74,22 +74,22 @@ describe("이벤트 기간", () => {
 });
 
 describe("선물 룰렛 확률표", () => {
-  it("합계 1000에 지정한 확률과 시간을 쓴다", () => {
+  it("합계 100에 지정한 확률을 쓰고, 당첨은 모두 8초다", () => {
     const table = Object.fromEntries(
       CHRISTMAS_SLOT_FACES.map((face) => [face.effect.value ?? 0, [face.weight, face.effect.seconds ?? 0]]),
     );
     expect(table).toEqual({
-      0: [200, 0],
-      2: [330, 10],
-      3: [250, 8],
-      5: [150, 6],
-      10: [50, 5],
-      12: [10, 5],
-      15: [6, 4],
-      20: [3, 4],
-      99: [1, 3],
+      0: [10, 0],
+      2: [30, 8],
+      3: [22, 8],
+      5: [15, 8],
+      10: [10, 8],
+      12: [5, 8],
+      15: [4, 8],
+      20: [3, 8],
+      99: [1, 8],
     });
-    expect(CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0)).toBe(1000);
+    expect(CHRISTMAS_SLOT_FACES.reduce((sum, face) => sum + face.weight, 0)).toBe(100);
   });
 
   it("모든 칸에 실제 확률대로 멈추고, 돌려준 칸과 번호가 일치한다", () => {
@@ -101,32 +101,41 @@ describe("선물 룰렛 확률표", () => {
       counts.set(face.id, (counts.get(face.id) ?? 0) + 1);
     }
     for (const face of CHRISTMAS_SLOT_FACES) {
-      expect(counts.get(face.id) / draws, face.id).toBeCloseTo(face.weight / 1000, 3);
+      expect(counts.get(face.id) / draws, face.id).toBeCloseTo(face.weight / 100, 3);
     }
   });
 
   it("×99가 나와도 서버가 정상 기록을 거절하지 않고, 상한은 늘어나지 않는다", () => {
     expect(MAX_WHEEL_MULTIPLIER).toBe(30);
     // The ceilings allow ×30 for the whole run. Each face has to fit in what that
-    // allows by the earliest moment a gift can possibly arrive.
+    // allows by the end of its own window, at the earliest it can possibly start.
     for (const face of CHRISTMAS_SLOT_FACES) {
-      const worth = (face.effect.value ?? 0) * (face.effect.seconds ?? 0);
-      expect(worth, face.id).toBeLessThanOrEqual(MAX_WHEEL_MULTIPLIER * GIFT_FIRST_MIN);
+      const window = face.effect.seconds ?? 0;
+      const worth = (face.effect.value ?? 0) * window;
+      expect(worth, face.id).toBeLessThanOrEqual(MAX_WHEEL_MULTIPLIER * (GIFT_FIRST_MIN + window));
     }
 
-    // The busiest three seconds there can be: first gift, ×99, every multiplier
-    // at its top and a clear on every quarter second.
-    const seconds = GIFT_FIRST_MIN + 3;
+    // A ×99 on every gift, every multiplier at its top, a clear on every quarter
+    // second of it: nothing can be luckier, and it still has to be accepted. The
+    // run ends right after the second window, where the most has been paid for
+    // the least time.
     const multiplier = MAX_COMBO_MULTIPLIER * MAX_EVENT_MULTIPLIER * 99 * MAX_CHARACTER_SCORE_BONUS;
-    const score = 4 * 3 * Math.max(SLIDE_BONUS, JUMP_BONUS, MOUNT_BONUS) * multiplier;
-    expect(validateRun({ score, distance: maxDistanceIn(seconds), coins: 0, seconds })).toEqual({ ok: true });
+    const perWindow = 4 * 8 * Math.max(SLIDE_BONUS, JUMP_BONUS, MOUNT_BONUS) * multiplier;
+    for (const [windows, seconds] of [
+      [1, GIFT_FIRST_MIN + 8],
+      [2, GIFT_FIRST_MIN + GIFT_GAP_MIN + 8],
+    ]) {
+      expect(
+        validateRun({ score: windows * perWindow, distance: maxDistanceIn(seconds), coins: 0, seconds }),
+      ).toEqual({ ok: true });
+    }
   });
 
-  it("×99는 꽝과 ×2 사이에 있어 절반 넘게 포인터 옆에서 멈춘다", () => {
+  it("×99는 흔한 칸 사이에 있어 절반 넘게 포인터 옆에서 멈춘다", () => {
     const at = CHRISTMAS_SLOT_FACES.findIndex((face) => face.jackpot);
     expect(CHRISTMAS_SLOT_FACES[at].effect.value).toBe(99);
     const beside = [CHRISTMAS_SLOT_FACES[at - 1], CHRISTMAS_SLOT_FACES[at + 1]];
-    expect(beside.reduce((sum, face) => sum + face.weight, 0)).toBeGreaterThan(500);
+    expect(beside.reduce((sum, face) => sum + face.weight, 0)).toBeGreaterThan(50);
   });
 });
 

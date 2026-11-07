@@ -606,10 +606,10 @@ export function renderShop(root, view) {
         <div class="shop-title">${view.christmas ? "눈보라" : "까마귀"} 해독제 <em>${antidote.owned}/${antidote.max}</em></div>
         <div class="shop-blurb">${
           view.christmas
-            ? `눈보라 구름을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 눈보라가 치지 않습니다`
+            ? `눈덩이를 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 눈보라가 치지 않습니다`
             : `까마귀 알을 먹으면 대신 사라지고, ${ANTIDOTE_SECONDS}초간 까마귀가 붙지 않습니다`
         }</div>
-        <div class="shop-meta">${view.christmas ? "눈보라 구름은 15만 점부터 나옵니다" : "까마귀는 10만 점부터 나옵니다"}</div>
+        <div class="shop-meta">${view.christmas ? "눈덩이는 15만 점부터 나옵니다" : "까마귀는 10만 점부터 나옵니다"}</div>
       </div>
       <button type="button" class="shop-buy" data-buy="antidote" data-id="antidote"
         ${antidote.affordable ? "" : "disabled"}>${

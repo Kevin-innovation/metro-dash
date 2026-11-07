@@ -351,34 +351,33 @@ export function makeNoseCoin() {
 }
 
 /**
- * The Christmas crow egg: a small storm cloud with snow caught in it.
+ * The Christmas crow egg: a snowball, and taking it brings the blizzard down.
  *
- * A trap has to look like one against a white floor, so it is the darkest thing
- * in the lane, with the flakes saying what it will do if it is taken.
+ * It is white on a white floor, which a trap cannot afford, so the underside is
+ * painted a strong ice blue and two dark rings of wind turn around it. Self-lit,
+ * like the gift, so it reads the same in a tunnel and through the white-out.
  */
-export function makeBlizzardCloud() {
+export function makeSnowball() {
   const g = new THREE.Group();
-  const cloud = new THREE.MeshLambertMaterial({ color: 0x3b4a5e, emissive: 0x1e293b, emissiveIntensity: 0.6 });
-  for (const [x, y, r] of [
-    [0, 0.12, 0.38],
-    [-0.3, 0, 0.27],
-    [0.3, 0.02, 0.29],
-  ]) {
-    const puff = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), cloud);
-    puff.position.set(x, y, 0);
-    g.add(puff);
+  const shade = new THREE.Color();
+  const body = new THREE.SphereGeometry(0.44, 12, 10);
+  const normals = body.attributes.normal;
+  const colours = new Float32Array(normals.count * 3);
+  for (let i = 0; i < normals.count; i++) {
+    const up = (normals.getY(i) + 1) / 2;
+    shade.setRGB(0.22 + up * 0.78, 0.45 + up * 0.55, 0.85 + up * 0.15).toArray(colours, i * 3);
   }
-  const snow = new THREE.MeshBasicMaterial({ color: 0xf2f8ff });
-  for (const [x, y, z] of [
-    [-0.42, -0.34, 0.1],
-    [0, -0.42, -0.14],
-    [0.38, -0.32, 0.12],
-    [0.5, 0.26, -0.1],
-    [-0.5, 0.28, 0.08],
+  body.setAttribute("color", new THREE.BufferAttribute(colours, 3));
+  g.add(new THREE.Mesh(body, new THREE.MeshBasicMaterial({ vertexColors: true })));
+
+  const wind = new THREE.MeshBasicMaterial({ color: 0x1d4ed8 });
+  for (const [x, z, r] of [
+    [1.25, 0.25, 0.6],
+    [1.9, -0.3, 0.68],
   ]) {
-    const flake = new THREE.Mesh(new THREE.OctahedronGeometry(0.07), snow);
-    flake.position.set(x, y, z);
-    g.add(flake);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 6, 24), wind);
+    ring.rotation.set(x, 0, z);
+    g.add(ring);
   }
   return g;
 }
@@ -747,7 +746,7 @@ const FACTORIES = {
 /** Same entity and same rules, drawn differently while the event is on. */
 const CHRISTMAS_FACTORIES = {
   coin: makeNoseCoin,
-  crowEgg: makeBlizzardCloud,
+  crowEgg: makeSnowball,
 };
 
 export { SPEC };

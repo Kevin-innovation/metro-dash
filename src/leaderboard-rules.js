@@ -93,7 +93,7 @@ export function maxDistanceIn(seconds) {
  * added to the game cannot fail to be added here.
  *
  * The Christmas wheel is left out on purpose. These ceilings assume the top
- * multiplier could run for a whole run, and its ×99 lasts three seconds and
+ * multiplier could run for a whole run, and its ×99 lasts eight seconds and
  * cannot arrive in the first twenty-five, so it fits under the ×30 already here
  * (tests/christmas.test.js holds it to that). Folding it in would let a console
  * edit claim over three times the score.

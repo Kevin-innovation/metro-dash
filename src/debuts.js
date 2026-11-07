@@ -36,7 +36,7 @@ export const DEBUTS = [
     id: "crow",
     at: HAZARD_FROM_SCORE,
     text: "곧 까마귀 알 — 코인 줄에 함정이 섞입니다",
-    christmasText: "곧 눈보라 구름 — 코인 줄에 함정이 섞입니다",
+    christmasText: "곧 눈덩이 — 코인 줄에 함정이 섞입니다. 먹으면 눈보라!",
   },
   {
     id: "lanes",

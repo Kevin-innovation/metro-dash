@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.20";
+export const VERSION = "5.30";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.30",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "눈덩이가 눈보라를 부르고, 룰렛이 후해졌습니다",
+    notes: [
+      "트랙의 함정이 눈덩이로 바뀌었습니다. 먹으면 눈보라가 휘몰아칩니다.",
+      "선물 룰렛의 당첨은 이제 모두 8초 동안 유지됩니다.",
+      "꽝이 10%로 줄고 큰 배수가 잘 나옵니다. ×12 5%, ×15 4%, ×20 3%, ×99 1%입니다.",
+    ],
+  },
   {
     version: "5.20",
     date: "2026-11-07",
