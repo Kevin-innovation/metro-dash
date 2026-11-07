@@ -97,6 +97,13 @@ function keepEarned(next, held) {
     ...(Array.isArray(next.characters) ? next.characters : []),
   ]);
   merged.characters = [...owned];
+  // Looks are bought the same way, and are kept the same way.
+  merged.cosmetics = [
+    ...new Set([
+      ...(Array.isArray(held.cosmetics) ? held.cosmetics : []),
+      ...(Array.isArray(next.cosmetics) ? next.cosmetics : []),
+    ]),
+  ];
 
   // Upgrade levels are bought one step at a time and never refunded, so the
   // higher of the two is the one that was paid for.

@@ -1314,6 +1314,14 @@ export class Screens {
     replayAnimation(chip, "coin-punch");
   }
 
+  /** The closest thing the run just missed, or nothing if none was close. */
+  showGoal(goal) {
+    const el = $("over-goal");
+    if (!el) return;
+    el.classList.toggle("hidden", !goal);
+    if (goal) el.textContent = `${goal.icon} 한 판만 더! ${goal.text}`;
+  }
+
   /**
    * The word, and what it was worth.
    *

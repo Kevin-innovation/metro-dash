@@ -291,6 +291,12 @@ export function makeCrate() {
   return g;
 }
 
+const NOSE_RED = new THREE.Color(1, 0.09, 0.06);
+const PLAIN_COIN = 0xffd54f;
+const PLAIN_COIN_GLOW = 0xaa7700;
+let coinColour = null;
+let plainCoinMaterial = null;
+
 export function makeCoin() {
   const songpyeon = chuseokAt() ? eventTexture("/assets/events/chuseok/songpyeon.png") : null;
   if (songpyeon) {
@@ -307,14 +313,12 @@ export function makeCoin() {
     mesh.renderOrder = 1;
     return mesh;
   }
-  const mesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.36, 0.36, 0.09, 18),
-    new THREE.MeshLambertMaterial({
-      color: 0xffd54f,
-      emissive: 0xaa7700,
-      emissiveIntensity: 0.35,
-    }),
-  );
+  plainCoinMaterial ??= new THREE.MeshLambertMaterial({
+    color: coinColour ?? PLAIN_COIN,
+    emissive: coinColour ?? PLAIN_COIN_GLOW,
+    emissiveIntensity: 0.35,
+  });
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.09, 18), plainCoinMaterial);
   mesh.rotation.z = Math.PI / 2;
   return mesh;
 }
@@ -340,14 +344,24 @@ export function makeNoseCoin() {
       for (let i = 0; i < normals.count; i++) colourAt(normals.getY(i)).toArray(colours, i * 3);
       geometry.setAttribute("color", new THREE.BufferAttribute(colours, 3));
     };
-    paint(body, (up) => red.setRGB(0.62 + up * 0.38, 0.03 + Math.max(0, up) * 0.1, 0.05));
-    paint(shine, () => red.setRGB(1, 0.86, 0.86));
+    // Painted in shades of grey and coloured by the material, so a bought colour
+    // is one write. The highlight is far over 1 so it stays white under any of them.
+    paint(body, (up) => red.setScalar(0.62 + up * 0.38));
+    paint(shine, () => red.setRGB(1, 8.6, 14));
     noseParts = {
       geometry: mergeGeometries([body, shine]),
-      material: new THREE.MeshBasicMaterial({ vertexColors: true }),
+      material: new THREE.MeshBasicMaterial({ vertexColors: true, color: coinColour ?? NOSE_RED }),
     };
   }
   return new THREE.Mesh(noseParts.geometry, noseParts.material);
+}
+
+/** The colour bought for coins, or null for what they come in. */
+export function setCoinColour(colour) {
+  coinColour = colour;
+  noseParts?.material.color.set(colour ?? NOSE_RED);
+  plainCoinMaterial?.color.set(colour ?? PLAIN_COIN);
+  plainCoinMaterial?.emissive.set(colour ?? PLAIN_COIN_GLOW);
 }
 
 /**

@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.41";
+export const VERSION = "6.50";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.50",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "내 맘대로 꾸미기 44종",
+    notes: [
+      "🎨 상점에 꾸미기가 생겼습니다. 머리 장식, 썰매 자국, 달리기 오라, 착지 효과, 코인 색, 코인 소리, 호버보드까지 44가지예요. 점수와 판정에는 영향이 없습니다.",
+      "🔥 달리는 중에 이번 주 순위표의 친구를 앞지르면 바로 알려 줍니다.",
+      "🏁 게임이 끝나면 가장 아깝게 놓친 목표를 알려 줍니다. 「숲까지 320m」처럼요.",
+    ],
+  },
   {
     version: "6.41",
     date: "2026-11-07",

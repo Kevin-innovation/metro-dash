@@ -13,12 +13,6 @@ const merged = (parts) => new THREE.Mesh(shaded(mergeGeometries(parts)), selfLit
 const LIGHT_EASE = 3.2;
 const SKY_EASE = 0.35;
 
-const TRAIL_ROWS = 26;
-const TRAIL_STEP = 0.5;
-const TRAIL_GAUGE = 0.27;
-const TRAIL_WIDTH = 0.1;
-const TRAIL_HEIGHT = 0.13;
-
 /** Both built longer than the shell by a tile, so sliding back one tile has no seam. */
 const CAVE_TILE = 18;
 const MARKET_TILE = 30;
@@ -170,44 +164,6 @@ function makeFlyingSleigh() {
   return mesh;
 }
 
-function makeTrail() {
-  const vertices = TRAIL_ROWS * 4;
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(vertices * 3), 3));
-  const colours = new Float32Array(vertices * 3);
-  for (let row = 0; row < TRAIL_ROWS; row++) {
-    // Multiplied into the snow: darkest at the runner, and gone by the far end.
-    const shade = 1 - (1 - row / TRAIL_ROWS) * 0.62;
-    for (let v = 0; v < 4; v++) colours.fill(shade, (row * 4 + v) * 3, (row * 4 + v) * 3 + 3);
-  }
-  geometry.setAttribute("color", new THREE.BufferAttribute(colours, 3));
-  const index = [];
-  for (let row = 0; row < TRAIL_ROWS - 1; row++) {
-    for (const v of [0, 2]) {
-      const a = row * 4 + v;
-      const b = a + 4;
-      index.push(a, a + 1, b, a + 1, b + 1, b);
-    }
-  }
-  geometry.setIndex(index);
-  const mesh = new THREE.Mesh(
-    geometry,
-    new THREE.MeshBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      premultipliedAlpha: true,
-      blending: THREE.MultiplyBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      fog: false,
-    }),
-  );
-  mesh.frustumCulled = false;
-  mesh.renderOrder = 1;
-  mesh.visible = false;
-  return mesh;
-}
-
 /**
  * Everything that makes the ordinary run feel like Christmas, as opposed to the
  * events in trackevents.js that interrupt it. Built whole when the event first
@@ -228,14 +184,10 @@ export class FestiveStage {
     this.arrived = false;
     this.nextMark = 0;
     this.shellZone = null;
-    this.trailX = new Array(TRAIL_ROWS).fill(0);
-    this.trailGround = new Array(TRAIL_ROWS).fill(false);
-    this.trailRow = null;
     const world = this.game.world;
     if (!this.built) return;
     world.journey = { index: 0, k: 0 };
     this.parts.sign.visible = false;
-    this.parts.trail.visible = false;
     this.game.trackEvents.skyAurora = false;
     for (const building of world.buildings) this.dressBuilding(building, 0);
   }
@@ -264,16 +216,14 @@ export class FestiveStage {
     world.shell.add(ice, market);
     ice.visible = false;
     market.visible = false;
-    this.parts = { ice, market, sign: makeSign(), sleigh: makeFlyingSleigh(), trail: makeTrail() };
-    scene.add(this.parts.sign, this.parts.trail);
+    this.parts = { ice, market, sign: makeSign(), sleigh: makeFlyingSleigh() };
+    scene.add(this.parts.sign);
     this.game.player.root.add(this.parts.sleigh);
     this.shellPlain = {
       wall: world.walls[0].material.color.getHex(),
       roof: world.roof.material.color.getHex(),
       lamp: world.lamps[0].material.color.getHex(),
     };
-    const board = this.game.player.board.children;
-    this.boardPlain = { deck: board[0].material.color.getHex(), glow: board[1].material.color.getHex() };
 
     // The shapes the buildings can turn into, to go up to the GPU with the rest.
     const forest = new THREE.Mesh(pine, scenery);
@@ -281,18 +231,14 @@ export class FestiveStage {
     forest.visible = arctic.visible = false;
     scene.add(forest, arctic);
     world.journey = { index: 0, k: 0 };
-    return [forest, arctic, world.shell, world.mouth, this.parts.sign, this.parts.sleigh, this.parts.trail];
+    return [forest, arctic, world.shell, world.mouth, this.parts.sign, this.parts.sleigh];
   }
 
   /** Switch the look of what is shared with the ordinary game. */
   setChristmas(on) {
     this.on = on;
     if (!this.built) return;
-    const { world, player } = this.game;
-    const [deck, glow] = player.board.children;
-    deck.material.color.setHex(on ? 0x38bdf8 : this.boardPlain.deck);
-    glow.material.color.setHex(on ? 0xffffff : this.boardPlain.glow);
-    deck.scale.set(on ? 1.15 : 1, 1, on ? 1.45 : 1);
+    const { world } = this.game;
     if (!on) {
       world.walls[0].material.color.setHex(this.shellPlain.wall);
       world.roof.material.color.setHex(this.shellPlain.roof);
@@ -302,7 +248,6 @@ export class FestiveStage {
       this.parts.ice.visible = false;
       this.parts.market.visible = false;
       this.parts.sleigh.visible = false;
-      this.parts.trail.visible = false;
       this.parts.sign.visible = false;
       for (const building of world.buildings) this.dressBuilding(building, 0);
     }
@@ -369,11 +314,6 @@ export class FestiveStage {
     sign.visible = true;
   }
 
-  onLanding() {
-    const p = this.game.player;
-    this.game.particles.burst(p.x, 0.15, p.z, { count: 12, colour: 0xf4faff, speed: 4.2, life: 0.45, size: 0.3, gravity: -5 });
-  }
-
   /** One rendered frame. */
   present(dt) {
     if (!this.built || !this.on) return;
@@ -437,31 +377,6 @@ export class FestiveStage {
       g.particles.burst(p.x + (Math.random() - 0.5) * 0.7, 0.12, p.z - 0.3, { count: 2, colour: 0xf4faff, speed: 3.4, life: 0.32, size: 0.24, gravity: -5 });
     }
 
-    const trail = this.parts.trail;
-    trail.visible = true;
-    const row = Math.floor(p.z / TRAIL_STEP);
-    if (row !== this.trailRow) {
-      const moved = this.trailRow === null ? TRAIL_ROWS : Math.min(TRAIL_ROWS, row - this.trailRow);
-      this.trailRow = row;
-      for (let i = 0; i < moved; i++) {
-        this.trailX.pop();
-        this.trailX.unshift(p.x);
-        this.trailGround.pop();
-        this.trailGround.unshift(grounded);
-      }
-      const position = trail.geometry.attributes.position;
-      for (let i = 0; i < TRAIL_ROWS; i++) {
-        const z = (row - i) * TRAIL_STEP;
-        const half = this.trailGround[i] ? TRAIL_WIDTH : 0;
-        const x = this.trailX[i];
-        const base = i * 4;
-        position.setXYZ(base, x - TRAIL_GAUGE - half, TRAIL_HEIGHT, z);
-        position.setXYZ(base + 1, x - TRAIL_GAUGE + half, TRAIL_HEIGHT, z);
-        position.setXYZ(base + 2, x + TRAIL_GAUGE - half, TRAIL_HEIGHT, z);
-        position.setXYZ(base + 3, x + TRAIL_GAUGE + half, TRAIL_HEIGHT, z);
-      }
-      position.needsUpdate = true;
-    }
   }
 
   /** Its own sled goes under a costume that has one; everyone else gets this. */

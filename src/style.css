@@ -2690,12 +2690,67 @@ kbd {
   vertical-align: 0.14em;
 }
 
+.cos-count {
+  margin-left: 4px;
+  color: #9ec2d8;
+  font-size: 0.82em;
+  font-style: normal;
+}
+
+.cos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(146px, 1fr));
+  gap: 8px;
+}
+
+.cos-card {
+  display: grid;
+  grid-template-rows: 40px minmax(2.4em, auto) auto;
+  justify-items: center;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  background: rgba(7, 16, 24, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.cos-card.on {
+  border-color: var(--gold);
+  background: rgba(255, 193, 7, 0.12);
+}
+
+.cos-swatch {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.cos-swatch.rainbow {
+  background: conic-gradient(#ff5a5a, #ffd54f, #4ade80, #38bdf8, #a78bfa, #ff5a5a) !important;
+}
+
+.cos-name {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.cos-card .shop-buy {
+  width: 100%;
+  min-height: 38px;
+}
+
 .shop-tabs {
   position: sticky;
   top: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   margin-bottom: 14px;
   padding: 5px;
@@ -3814,6 +3869,17 @@ button.report-flag:disabled {
 
 /* Where the run landed on each board. Two equal halves: the school ranking is
    the one a class actually talks about, so it is not a footnote. */
+.over-goal {
+  margin: 0 0 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 213, 79, 0.55);
+  background: rgba(255, 193, 7, 0.14);
+  color: #ffe08a;
+  font-size: 15px;
+  text-align: center;
+}
+
 .over-ranks {
   display: grid;
   grid-template-columns: 1fr 1fr;

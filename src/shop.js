@@ -1,4 +1,5 @@
 import { CHARACTERS, characterById, wearableCharacter } from "./characters.js";
+import { COSMETICS, COSMETIC_SLOTS, cosmeticById } from "./cosmetics.js";
 import { POWERUPS, POWERUP_IDS, POWERUP_MAX_LEVEL, powerupDuration } from "./powerups.js";
 
 export { CHARACTERS, characterById };
@@ -177,6 +178,16 @@ export function shopView(save, { christmas = false } = {}) {
     coins: save.coins,
     upgrades,
     characters,
+    cosmetics: COSMETIC_SLOTS.map((slot) => ({
+      ...slot,
+      items: COSMETICS.filter((cosmetic) => cosmetic.slot === slot.id).map((cosmetic) => ({
+        ...cosmetic,
+        owned: save.cosmetics.includes(cosmetic.id),
+        equipped: save.equipped[slot.id] === cosmetic.id,
+        affordable: save.coins >= cosmetic.cost,
+      })),
+    })),
+    cosmeticsOwned: save.cosmetics.length,
     hoverboards: {
       owned: save.hoverboards,
       max: HOVERBOARD_MAX,
@@ -223,6 +234,22 @@ export function purchase(store, kind, id, { christmas = false } = {}) {
     if ((save.antidotes ?? 0) >= ANTIDOTE_MAX) return { ok: false, reason: "maxed" };
     if (!store.spendCoins(ANTIDOTE_COST)) return { ok: false, reason: "poor" };
     save.antidotes = (save.antidotes ?? 0) + 1;
+    store.flush();
+    return { ok: true };
+  }
+
+  if (kind === "cosmetic") {
+    const cosmetic = cosmeticById(id);
+    if (!cosmetic) return { ok: false, reason: "unknown" };
+    if (!save.cosmetics.includes(id)) {
+      if (!store.spendCoins(cosmetic.cost)) return { ok: false, reason: "poor" };
+      save.cosmetics.push(id);
+      save.equipped[cosmetic.slot] = id;
+    } else if (save.equipped[cosmetic.slot] === id) {
+      delete save.equipped[cosmetic.slot];
+    } else {
+      save.equipped[cosmetic.slot] = id;
+    }
     store.flush();
     return { ok: true };
   }

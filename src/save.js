@@ -1,4 +1,5 @@
 import { DEFAULT_CHARACTER, characterById, isKnownCharacter } from "./characters.js";
+import { cleanCosmetics } from "./cosmetics.js";
 import { BEST_KEY, SAVE_KEY } from "./config.js";
 import { POWERUP_IDS, POWERUP_MAX_LEVEL } from "./powerups.js";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings.js";
@@ -55,6 +56,9 @@ export function defaultSave() {
     antidotes: 0,
     character: DEFAULT_CHARACTER,
     characters: [DEFAULT_CHARACTER],
+    /** Bought looks and what is worn in each slot. See cosmetics.js. */
+    cosmetics: [],
+    equipped: {},
     upgrades,
     missions: [],
     missionsDone: 0,
@@ -203,6 +207,7 @@ export function normalizeSave(raw) {
   const owned = Array.isArray(raw.characters) ? raw.characters.filter(isKnownCharacter) : [];
   out.characters = Array.from(new Set([DEFAULT_CHARACTER, ...owned]));
   out.character = out.characters.includes(raw.character) ? raw.character : DEFAULT_CHARACTER;
+  Object.assign(out, cleanCosmetics(raw.cosmetics, raw.equipped));
 
   out.missions = Array.isArray(raw.missions)
     ? raw.missions
@@ -408,6 +413,7 @@ export function hasProgress(save) {
     (save.runs ?? 0) > 0 ||
     (save.xp ?? 0) > 0 ||
     (save.hoverboards ?? 0) > 0 ||
+    (save.cosmetics ?? []).length > 0 ||
     (save.characters ?? []).some((id) => characterById(id).cost > 0)
   );
 }
@@ -554,6 +560,13 @@ export function mergeProfiles(local, cloud) {
     (id) => id !== DEFAULT_CHARACTER && out.characters.includes(id),
   );
   out.character = chosen ?? DEFAULT_CHARACTER;
+
+  // Paid for on either side, so both lists stand. What is worn follows this browser
+  // where it has chosen anything, the way the character does.
+  Object.assign(
+    out,
+    cleanCosmetics([...b.cosmetics, ...a.cosmetics], { ...b.equipped, ...a.equipped }),
+  );
 
   out.upgrades = {};
   for (const id of POWERUP_IDS) {

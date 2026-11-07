@@ -358,6 +358,7 @@ describe("players:save", () => {
       profile: {
         characters: ["runner", "scarecrow"],
         character: "scarecrow",
+        cosmetics: ["hat-crown"],
         upgrades: { magnet: 6 },
         runs: 40,
       },
@@ -380,6 +381,7 @@ describe("players:save", () => {
 
     const loaded = await t.query(api.players.load, { token });
     expect(loaded.profile.characters).toContain("scarecrow");
+    expect(loaded.profile.cosmetics).toContain("hat-crown");
     // And the runner it does not know about stays equipped rather than being
     // silently swapped back to the default.
     expect(loaded.profile.character).toBe("scarecrow");

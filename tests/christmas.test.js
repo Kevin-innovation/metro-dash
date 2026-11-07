@@ -69,9 +69,11 @@ import {
 import { CLIENT_COINS_PER_DAY, clientCoinsPerDay } from "../convex/scores.js";
 import { makeRng } from "../src/rng.js";
 import { POWERUPS } from "../src/powerups.js";
+import { COSMETICS, COSMETIC_SLOTS } from "../src/cosmetics.js";
+import { Rivals, nearestGoal } from "../src/goals.js";
 import { Run } from "../src/run.js";
 import { setCostume } from "../src/costumes.js";
-import { SaveStore, hasProgress, normalizeSave } from "../src/save.js";
+import { SaveStore, defaultSave, hasProgress, mergeProfiles, normalizeSave } from "../src/save.js";
 import { hasNewCharacters, purchase, shopView } from "../src/shop.js";
 import { SPEC } from "../src/specs.js";
 import { HAZARD_FROM_SCORE, Spawner } from "../src/spawner.js";
@@ -928,6 +930,105 @@ describe("달리는 동안의 크리스마스", () => {
     for (const id of Object.keys(POWERUPS)) {
       expect(CHRISTMAS_POWERUP_LOOK[id], id).toMatchObject({ name: expect.any(String), icon: expect.any(String) });
     }
+  });
+});
+
+describe("꾸미기", () => {
+  it("30종이 넘고, 슬롯마다 있으며, 없는 슬롯이나 겹치는 번호가 없다", () => {
+    expect(COSMETICS.length).toBeGreaterThanOrEqual(30);
+    expect(new Set(COSMETICS.map((item) => item.id)).size).toBe(COSMETICS.length);
+    const slots = new Set(COSMETIC_SLOTS.map((slot) => slot.id));
+    for (const item of COSMETICS) {
+      expect(slots.has(item.slot), item.id).toBe(true);
+      expect(item.cost, item.id).toBeGreaterThan(0);
+    }
+    for (const slot of slots) expect(COSMETICS.some((item) => item.slot === slot), slot).toBe(true);
+  });
+
+  it("사면 코인이 줄고 장착되며, 다시 누르면 벗고, 돈이 모자라면 사지 못한다", () => {
+    const s = store();
+    s.data.coins = 5000;
+    expect(purchase(s, "cosmetic", "hat-crown").ok).toBe(false);
+    expect(s.data.coins).toBe(5000);
+    expect(purchase(s, "cosmetic", "hat-ribbon").ok).toBe(true);
+    expect(s.data.coins).toBe(2000);
+    expect(s.data.equipped.hat).toBe("hat-ribbon");
+    // Taking it off and putting it back on costs nothing.
+    purchase(s, "cosmetic", "hat-ribbon");
+    expect(s.data.equipped.hat).toBeUndefined();
+    purchase(s, "cosmetic", "hat-ribbon");
+    expect(s.data.equipped.hat).toBe("hat-ribbon");
+    expect(s.data.coins).toBe(2000);
+    expect(purchase(s, "cosmetic", "nope").ok).toBe(false);
+  });
+
+  it("없는 아이템과 안 산 장착은 저장에서 걸러지고, 두 기기의 구매는 합쳐진다", () => {
+    const clean = normalizeSave({
+      ...defaultSave(),
+      cosmetics: ["hat-ribbon", "hat-ribbon", "fake"],
+      equipped: { hat: "hat-ribbon", trail: "trail-gold", coin: "hat-ribbon" },
+    });
+    expect(clean.cosmetics).toEqual(["hat-ribbon"]);
+    expect(clean.equipped).toEqual({ hat: "hat-ribbon" });
+
+    // A save from before there were any of these.
+    expect(normalizeSave({ coins: 3 }).cosmetics).toEqual([]);
+
+    const home = { ...defaultSave(), cosmetics: ["trail-gold"], equipped: { trail: "trail-gold" } };
+    const school = { ...defaultSave(), cosmetics: ["hat-ribbon"], equipped: { hat: "hat-ribbon" } };
+    const { save } = mergeProfiles(home, school);
+    expect(save.cosmetics.sort()).toEqual(["hat-ribbon", "trail-gold"]);
+    expect(save.equipped).toEqual({ hat: "hat-ribbon", trail: "trail-gold" });
+  });
+
+  it("상점에 모두 그려지고, 일반 모드에도 나온다", () => {
+    const s = store();
+    s.data.coins = 100000;
+    const render = (save, options, tab) => {
+      const root = { innerHTML: "" };
+      renderShop(root, shopView(save, options), tab);
+      return root.innerHTML;
+    };
+    const buttons = (html) => (html.match(/data-buy="cosmetic"/g) ?? []).length;
+    expect(buttons(render(s.data, { christmas: true }, "custom"))).toBe(COSMETICS.length);
+    expect(buttons(render(s.data, { christmas: true }, "christmas"))).toBe(0);
+    expect(buttons(render(s.data, {}, "general"))).toBe(COSMETICS.length);
+  });
+});
+
+describe("추월과 다음 목표", () => {
+  const rows = [
+    { handle: "일등", best: 900 },
+    { handle: "이등", best: 500 },
+    { handle: "나", best: 300 },
+    { handle: "사등", best: 100 },
+  ];
+
+  it("내 기록보다 위인 사람만, 낮은 순서로 알리고, 한 번에 여럿 넘으면 가장 높은 사람을 말한다", () => {
+    const rivals = new Rivals(rows, "나");
+    expect(rivals.passed(450)).toBe(null);
+    expect(rivals.passed(510)).toEqual({ handle: "이등", rank: 2 });
+    expect(rivals.passed(520)).toBe(null);
+    expect(rivals.passed(901)).toEqual({ handle: "일등", rank: 1 });
+    expect(rivals.next()).toBe(null);
+
+    const jump = new Rivals(rows, "나");
+    expect(jump.passed(5000)).toEqual({ handle: "일등", rank: 1 });
+    // Not on the board at all: everyone on it is ahead.
+    expect(new Rivals(rows, "신입").passed(150)).toEqual({ handle: "사등", rank: 4 });
+  });
+
+  it("가장 가까운 목표 하나를 고르고, 멀면 아무 말도 하지 않는다", () => {
+    const missions = [{ id: "xmas-gifts", target: 3, progress: 2 }];
+    expect(nearestGoal({ score: 490, distance: 0, rivals: new Rivals(rows, "나") }).text).toBe("이등님까지 10점");
+    expect(nearestGoal({ score: 10, distance: 1900, christmas: true }).text).toBe("눈 덮인 숲까지 100m");
+    expect(nearestGoal({ score: 10, distance: 5900, christmas: true }).text).toBe("북극까지 100m");
+    expect(nearestGoal({ score: 90, distance: 0, best: 100 }).text).toBe("내 최고 기록까지 10점");
+    expect(nearestGoal({ score: 1, distance: 0, missions }).text).toContain("1 남음");
+    expect(nearestGoal({ score: 1, distance: 0, missions: [{ ...missions[0], progress: 3 }] })).toBe(null);
+    expect(nearestGoal({ score: 1, distance: 0, best: 1000 })).toBe(null);
+    // Past the pole there is nothing left on the journey to chase.
+    expect(nearestGoal({ score: 1, distance: 7000, christmas: true })).toBe(null);
   });
 });
 

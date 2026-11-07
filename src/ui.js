@@ -719,7 +719,7 @@ export function renderShop(root, view, tab = "christmas") {
     </section>`;
 
   if (!view.christmas) {
-    root.innerHTML = general;
+    root.innerHTML = general + cosmeticsSections(view);
     return;
   }
 
@@ -729,8 +729,9 @@ export function renderShop(root, view, tab = "christmas") {
       aria-selected="${tab === id}" data-shop-tab="${id}">${text}</button>`;
   root.innerHTML = `
     <div class="shop-tabs" role="tablist" aria-label="상점 구분">
-      ${tabButton("christmas", "🎄 크리스마스 에디션")}
-      ${tabButton("general", "강화 · 아이템 · 캐릭터")}
+      ${tabButton("christmas", "🎄 크리스마스")}
+      ${tabButton("general", "강화 · 캐릭터")}
+      ${tabButton("custom", "🎨 꾸미기")}
     </div>
     ${
       onChristmas
@@ -743,8 +744,45 @@ export function renderShop(root, view, tab = "christmas") {
               .join("")}
           </section>
           ${christmasRules()}`
-        : general
+        : tab === "custom"
+          ? cosmeticsSections(view)
+          : general
     }`;
+}
+
+/** The looks, a section a slot. Every one of them can be taken off again for free. */
+function cosmeticsSections(view) {
+  const total = view.cosmetics.reduce((sum, slot) => sum + slot.items.length, 0);
+  return `
+    <section class="shop-section">
+      <h3>꾸미기 <em class="cos-count">${view.cosmeticsOwned}/${total}</em></h3>
+      <p class="fx-legend">보이고 들리는 것만 바뀝니다. 점수와 판정에는 영향이 없어요. 산 것은 언제든 다시 장착할 수 있습니다.</p>
+    </section>
+    ${view.cosmetics
+      .map(
+        (slot) => `
+      <section class="shop-section">
+        <h3>${slot.icon} ${escapeHtml(slot.name)}</h3>
+        <div class="cos-grid">
+          ${slot.items
+            .map((item) => {
+              const label = item.equipped ? "해제" : item.owned ? "장착" : `${COIN}${money(item.cost)}`;
+              const swatch = item.icon
+                ? `<span class="cos-swatch" aria-hidden="true">${item.icon}</span>`
+                : `<span class="cos-swatch${item.rainbow ? " rainbow" : ""}" style="background:${item.colour}" aria-hidden="true"></span>`;
+              return `
+                <div class="cos-card${item.equipped ? " on" : ""}">
+                  ${swatch}
+                  <span class="cos-name">${escapeHtml(item.name)}</span>
+                  <button type="button" class="shop-buy" data-buy="cosmetic" data-id="${item.id}"
+                    ${item.owned || item.affordable ? "" : "disabled"}>${label}</button>
+                </div>`;
+            })
+            .join("")}
+        </div>
+      </section>`,
+      )
+      .join("")}`;
 }
 
 /**

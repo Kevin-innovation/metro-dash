@@ -38,7 +38,12 @@ export class AudioBus {
   }
 
   /** @param {number} [hz] a note from the carol to play instead of the usual pair */
-  coin(hz) {
+  coin(hz, voice) {
+    if (voice) {
+      this.beep(hz, voice.seconds, voice.type, voice.gain);
+      if (voice.partial) this.beep(hz * voice.partial, voice.seconds * 0.5, "sine", voice.gain * 0.2);
+      return;
+    }
     if (hz) {
       this.beep(hz, 0.16, "triangle", 0.3);
       this.beep(hz * 2, 0.08, "sine", 0.09);

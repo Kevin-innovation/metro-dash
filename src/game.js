@@ -72,7 +72,10 @@ import {
   spinChristmas,
   wheelTeases,
 } from "./christmas.js";
+import { cosmeticById } from "./cosmetics.js";
 import { FestiveStage } from "./festive.js";
+import { Rivals, nearestGoal } from "./goals.js";
+import { Wardrobe } from "./wardrobe.js";
 import { TrackEventStage } from "./trackevents.js";
 import { perkFor, wearableCharacter } from "./characters.js";
 import { attendance, dayKey } from "./daily.js";
@@ -128,6 +131,10 @@ const BOARD_MAX = 50;
 /** Seconds the whole frame freezes on a heavy impact, for weight. */
 const HITSTOP_CRASH = 0.11;
 const HITSTOP_BOARD = 0.07;
+/** How much of this week's board to compare a run against. */
+const RIVALS_FETCHED = 50;
+/** E5, for hearing a coin sound in the shop. */
+const CHIME_PREVIEW_HZ = 659;
 /** The gift wheel's beats, in seconds and ms. */
 const GIFT_HITSTOP = 0.18;
 const GIFT_SPIN_MS = 3600;
@@ -275,6 +282,7 @@ export class Game {
     this.applyQuality(this.activeTier());
     this.cam = { x: 0, y: 3.6, z: -7.4 };
     this.resetRunState();
+    this.wardrobe = new Wardrobe(this);
 
     this.screens = new Screens({
       startRun: () => this.startRun(),
@@ -1485,6 +1493,14 @@ export class Game {
     }
     this.audio.purchase();
     if (kind === "character") this.syncSkin();
+    if (kind === "cosmetic") {
+      this.wardrobe.apply();
+      const voice = this.wardrobe.coinVoice();
+      if (voice && cosmeticById(id)?.slot === "chime") {
+        this.audio.resume();
+        this.audio.coin(CHIME_PREVIEW_HZ, voice);
+      }
+    }
     this.screens.refreshShop(this.store.data);
     this.screens.refreshProfile(this.store.data);
     // Reported now rather than folded into the next run's sync.
@@ -1604,6 +1620,16 @@ export class Game {
 
     const submitted = this.syncRun();
     const cleared = this.screens.showGameOver(this.run, this.store.data, result, promotion);
+    this.screens.showGoal(
+      nearestGoal({
+        score: this.run.score,
+        distance: this.run.distance,
+        best: this.store.data.best,
+        missions: this.store.data.missions,
+        rivals: this.rivals,
+        christmas: this.christmas,
+      }),
+    );
     this.showRunRanks(submitted);
     if (promotion) this.audio.purchase();
     else if (cleared) this.audio.mission();
@@ -1655,6 +1681,26 @@ export class Game {
   }
 
   /**
+   * This week's board, for saying who the run has just gone past. Fetched as a run
+   * starts and never waited on: if it is slow or fails, nobody is announced.
+   */
+  async loadRivals() {
+    this.rivals = null;
+    if (!this.cloud.signedIn) return;
+    try {
+      const rows = await this.cloud.leaderboard(RIVALS_FETCHED, "week");
+      if (rows?.length) this.rivals = new Rivals(rows, this.cloud.handle);
+    } catch {
+      // Announcements are a nicety. The run carries on without them.
+    }
+  }
+
+  announcePass({ handle, rank }) {
+    this.audio.mission();
+    this.screens.showToast(`${rank === 1 ? "👑" : "🔥"} ${handle}님 추월! 이번 주 ${rank}위`);
+  }
+
+  /**
    * Build everything the event only shows now and then, while nobody is running.
    *
    * Made the first time it was needed, each of these cost a stall at the worst
@@ -1670,6 +1716,7 @@ export class Game {
     const parked = [
       this.flyer,
       ...scenery,
+      this.wardrobe.trail,
       ...this.trackEvents.prepare(),
       ...this.pool.prepare(["gift", "santaDrop", "elfGift", "elfSack", "crowEgg", "jetpack", "magnet", "focus", "sneakers"]),
     ];
@@ -1696,6 +1743,7 @@ export class Game {
 
   /** Put on whatever is equipped, and take the last skin's models off. */
   syncSkin() {
+    this.wardrobe?.apply();
     const id = wearableCharacter(this.store.data.character, this.christmas);
     applySkin(this.player, characterById(id).palette);
     setCostume(this.player, id);
@@ -1762,6 +1810,7 @@ export class Game {
 
   startRun() {
     this.audio.resume();
+    this.loadRivals();
     // A run started from the game-over card can be started while the wheel is
     // still on screen, if the player died on the frame the third diamond was
     // taken. Nothing else clears it, because nothing else can: the spin is
@@ -2016,6 +2065,7 @@ export class Game {
     this.updateFlyer(frameDt);
     this.trackEvents.present(frameDt);
     this.festive.present(frameDt);
+    this.wardrobe.present(frameDt);
     this.particles.update(frameDt);
     syncWorld(this.world, this.player.z);
     // The title screen holds the opening look; only a run travels through zones.
@@ -2381,6 +2431,8 @@ export class Game {
       this.festive.advance();
     }
     this.announceDebuts();
+    const passed = this.rivals?.passed(this.run.score);
+    if (passed) this.announcePass(passed);
     this.advanceRoad(dt);
 
     const phase = phaseAt(this.runTime);
@@ -2541,7 +2593,7 @@ export class Game {
 
     this.particles.dust(p.x, 0, p.z, { count: 9, speed: 3 + this.speed * 0.05 });
     this.shake = Math.max(this.shake, 0.14);
-    if (this.christmas) this.festive.onLanding();
+    this.wardrobe.onLanding();
   }
 
   onMount(_item, hop) {
@@ -2785,7 +2837,8 @@ export class Game {
       upgradeLevel: (id) => this.store.upgradeLevel(id),
     })) {
       if (event.type === "coin") {
-        this.audio.coin(this.christmas ? this.bgm.coinHz() : undefined);
+        const voice = this.wardrobe.coinVoice();
+        this.audio.coin(this.christmas || voice ? this.bgm.coinHz() : undefined, voice);
         vibrate(8);
         this.screens.flashCoinGain(Math.round(event.gain));
         this.trackEvents.onCoin();
