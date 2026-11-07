@@ -187,7 +187,42 @@ export const MISSION_DEFS = AUTHORED_DEFS.map((def) => {
   return { ...def, targets: fitToCeiling(extendTargets(def.targets), ceiling) };
 });
 
+/**
+ * The Christmas set, dealt instead of the usual table while the event runs.
+ *
+ * One target and one payout for everybody, on purpose. The ordinary table climbs
+ * with rank, which at this point hands a high level 890,000 points to find and a
+ * newcomer a few hundred coins; the event's characters are priced for coins a
+ * student can actually earn before it ends. A cleared day is worth about 10,000,
+ * so a month of them buys the 300,000 runner by itself, and raids shorten that.
+ */
+export const CHRISTMAS_MISSION_DEFS = [
+  { id: "xmas-gifts", metric: "gifts", scope: "total", targets: [3], label: "선물 상자 {t}개 먹기", coins: 2000, xp: 300 },
+  { id: "xmas-spins", metric: "spins", scope: "total", targets: [5], label: "선물 룰렛 {t}번 돌리기", coins: 2500, xp: 300 },
+  { id: "xmas-santa", metric: "santaDrops", scope: "total", targets: [2], label: "산타 습격 선물 {t}개 잡기", coins: 3000, xp: 300 },
+  { id: "xmas-blizzard", metric: "blizzardClears", scope: "total", targets: [3], label: "눈보라 속에서 장애물 {t}개 넘기", coins: 3000, xp: 300 },
+  { id: "xmas-rudolph", metric: "sneakers", scope: "total", targets: [3], label: "슈퍼 스니커즈 {t}번 먹기", coins: 1500, xp: 300 },
+  { id: "xmas-nose", metric: "coinsTotal", scope: "total", targets: [300], label: "루돌프 코 {t}개 모으기", coins: 1500, xp: 300 },
+  { id: "xmas-gates", metric: "gates", scope: "total", targets: [15], label: "게이트 {t}개 슬라이드로 통과", coins: 1500, xp: 300 },
+  { id: "xmas-canes", metric: "barriers", scope: "total", targets: [10], label: "지팡이 사탕 {t}개 뛰어넘기", coins: 1500, xp: 300 },
+  { id: "xmas-survive", metric: "seconds", scope: "run", targets: [90], label: "한 판에 {t}초 버티기", coins: 2000, xp: 300 },
+  { id: "xmas-score", metric: "score", scope: "run", targets: [300_000], label: "한 판에 {t}점 얻기", coins: 2000, xp: 300 },
+];
+
+/** Paid for clearing all three of the Christmas set in a day. */
+export const CHRISTMAS_DAILY_BONUS = { coins: 4000, xp: 300 };
+
 export const MISSION_SLOTS = 3;
+
+/**
+ * The most a day of Christmas missions can pay, before any character perk. The
+ * server's daily allowance has to clear this or it would drop what it owes.
+ */
+export const CHRISTMAS_DAILY_MAX_COINS =
+  [...CHRISTMAS_MISSION_DEFS]
+    .sort((a, b) => b.coins - a.coins)
+    .slice(0, MISSION_SLOTS)
+    .reduce((sum, def) => sum + def.coins, 0) + CHRISTMAS_DAILY_BONUS.coins;
 
 /**
  * Paid for clearing all three in a day, before the difficulty step is applied.
@@ -216,6 +251,17 @@ export function dailyBonus(tier = 0) {
   };
 }
 
+/** What clearing this particular set pays, whichever kind of set it is. */
+export function setBonus(missions, tier = 0) {
+  return (missions ?? []).some((mission) => isChristmasMission(mission.id))
+    ? { ...CHRISTMAS_DAILY_BONUS }
+    : dailyBonus(tier);
+}
+
+export function isChristmasMission(id) {
+  return CHRISTMAS_MISSION_DEFS.some((def) => def.id === id);
+}
+
 /** True once every mission in the day's set is done. */
 export function allCleared(missions) {
   const list = missions ?? [];
@@ -228,7 +274,7 @@ export function clearedCount(missions) {
 }
 
 export function missionDef(id) {
-  return MISSION_DEFS.find((def) => def.id === id) ?? null;
+  return MISSION_DEFS.find((def) => def.id === id) ?? CHRISTMAS_MISSION_DEFS.find((def) => def.id === id) ?? null;
 }
 
 export function missionLabel(mission) {
@@ -254,13 +300,14 @@ function makeMission(def, tier) {
  * Deal `count` missions, avoiding ids already in play. `random` is injected so
  * tests get deterministic rolls.
  */
-export function rollMissions(exclude = [], count = MISSION_SLOTS, tier = 0, random = Math.random) {
+export function rollMissions(exclude = [], count = MISSION_SLOTS, tier = 0, random = Math.random, christmas = false) {
   const taken = new Set(exclude);
-  const pool = MISSION_DEFS.filter((def) => !taken.has(def.id));
+  const table = christmas ? CHRISTMAS_MISSION_DEFS : MISSION_DEFS;
+  const pool = table.filter((def) => !taken.has(def.id));
   const chosen = [];
 
   // Fall back to repeats only if the pool genuinely runs dry.
-  const source = pool.length >= count ? pool.slice() : MISSION_DEFS.slice();
+  const source = pool.length >= count ? pool.slice() : table.slice();
   while (chosen.length < count && source.length > 0) {
     const index = Math.floor(random() * source.length) % source.length;
     const [def] = source.splice(index, 1);
@@ -269,15 +316,19 @@ export function rollMissions(exclude = [], count = MISSION_SLOTS, tier = 0, rand
   return chosen;
 }
 
-/** Top up a mission list to MISSION_SLOTS without disturbing existing entries. */
-export function ensureMissions(missions, tier = 0, random = Math.random) {
-  const valid = (missions ?? []).filter((m) => missionDef(m.id));
+/**
+ * Top up a mission list to MISSION_SLOTS without disturbing existing entries.
+ * Anything from the other table goes: the event's start and end both swap the set.
+ */
+export function ensureMissions(missions, tier = 0, random = Math.random, christmas = false) {
+  const valid = (missions ?? []).filter((m) => missionDef(m.id) && isChristmasMission(m.id) === christmas);
   if (valid.length >= MISSION_SLOTS) return valid.slice(0, MISSION_SLOTS);
   const extra = rollMissions(
     valid.map((m) => m.id),
     MISSION_SLOTS - valid.length,
     tier,
     random,
+    christmas,
   );
   return [...valid, ...extra];
 }

@@ -1,4 +1,4 @@
-import { MISSION_TIERS, allCleared, applyMetrics, dailyBonus, missionReward } from "./missions.js";
+import { MISSION_TIERS, allCleared, applyMetrics, missionReward, setBonus } from "./missions.js";
 import { dayKey } from "./daily.js";
 import {
   POWERUP_METRIC,
@@ -641,7 +641,7 @@ export class Run {
       // it was only escaping because it was added after the line that applied
       // the multiplier — which meant the one character built around missions
       // lost its perk on the largest mission payout of the day.
-      const bonus = dailyBonus(tier);
+      const bonus = setBonus(save.missions, tier);
       const coins = Math.round(bonus.coins * missionBonus);
       const xp = Math.round(bonus.xp * missionBonus);
       this.store.addCoins(coins);

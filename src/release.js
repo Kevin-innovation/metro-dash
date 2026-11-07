@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.90";
+export const VERSION = "6.00";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,18 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.00",
+    date: "2026-11-07",
+    kind: "major",
+    title: "크리스마스 미션과 금은동 순위표",
+    notes: [
+      "크리스마스 기간에는 미션이 크리스마스 미션으로 바뀝니다. 레벨과 상관없이 목표와 보상이 같습니다.",
+      "미션 하나에 코인 1,500~3,000, 세 개를 모두 깨면 4,000을 더 줍니다. 슈퍼 산타를 노려 보세요.",
+      "순위표 1·2·3등에 금·은·동 효과가 들어갔습니다.",
+      "코인 그림이 달처럼 보이던 것을 게임 코인 그림으로 바꿨습니다.",
+    ],
+  },
   {
     version: "5.90",
     date: "2026-11-07",

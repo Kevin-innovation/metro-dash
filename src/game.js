@@ -1572,7 +1572,7 @@ export class Game {
     // Paid before there is a run to report it with, so it rides the next one —
     // however many days from now that run turns out to be.
     this.setPendingClaim(this.pendingClaim.coins + reward, this.pendingClaim.xp);
-    this.screens.showToast(`${visit.streak}일 연속 출석 · 🪙 +${reward}`);
+    this.screens.showToast(`${visit.streak}일 연속 출석 · 코인 +${reward}`);
     this.audio.purchase();
   }
 
@@ -1612,11 +1612,14 @@ export class Game {
     const today = dayKey(Date.now());
     const tier = missionTier(save.xp, MISSION_TIERS);
 
+    // Read fresh rather than from this.christmas: this also runs while the game
+    // is booting, before the first run or title has decided that.
+    const christmas = christmasAt();
     if (save.missionDay !== today) {
-      save.missions = save.missionDay ? rollMissions([], MISSION_SLOTS, tier) : save.missions;
+      save.missions = save.missionDay ? rollMissions([], MISSION_SLOTS, tier, Math.random, christmas) : save.missions;
       save.missionDay = today;
     }
-    save.missions = ensureMissions(save.missions, tier);
+    save.missions = ensureMissions(save.missions, tier, Math.random, christmas);
     this.store.flush();
   }
 

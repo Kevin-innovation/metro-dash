@@ -2,7 +2,7 @@ import { BOARD_HINT_LONG, BOARD_LIMIT_NOTE } from "./input.js";
 import {
   allCleared,
   clearedCount,
-  dailyBonus,
+  setBonus,
   isComplete,
   missionDef,
   missionLabel,
@@ -29,6 +29,13 @@ import { DIAMOND_GOAL } from "./slots.js";
 import { QUALITY_PROFILES, QUALITY_TIERS, keyLabel } from "./settings.js";
 
 const $ = (id) => document.getElementById(id);
+
+/**
+ * The game's own coin, rather than the coin emoji: that draws differently on every
+ * device, and on a Mac it is a grey disc that reads as a moon. It also follows the
+ * event, so it is whatever the coins on the track are.
+ */
+const COIN = '<span class="coin-orb small inline" aria-hidden="true"></span>';
 
 export const escapeHtml = (value) =>
   String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -70,18 +77,18 @@ export function renderMissions(el, missions, tier = 0) {
             <span class="mission-count">${money(mission.progress)} / ${money(mission.target)}</span>
           </div>
           <div class="mission-track"><div class="mission-fill" style="width:${pct}%"></div></div>
-          <div class="mission-reward">🪙 ${money(pay.coins)} · XP ${money(pay.xp)}</div>
+          <div class="mission-reward">${COIN}${money(pay.coins)} · XP ${money(pay.xp)}</div>
         </li>`;
     })
     .join("");
 
   // Stated where the missions are, so the reason to finish the third one is
   // visible while looking at the third one.
-  const bonus = dailyBonus(tier);
+  const bonus = setBonus(missions, tier);
   el.insertAdjacentHTML(
     "beforeend",
     `<li class="mission-bonus${allCleared(missions) ? " done" : ""}">
-       3개 모두 달성 시 🪙 ${money(bonus.coins)} · XP ${money(bonus.xp)}
+       3개 모두 달성 시 ${COIN}${money(bonus.coins)} · XP ${money(bonus.xp)}
      </li>`,
   );
 }
@@ -589,7 +596,7 @@ export function renderShop(root, view, tab = "christmas") {
         </div>
         <button type="button" class="shop-buy" data-buy="upgrade" data-id="${item.id}"
           ${item.maxed || !item.affordable ? "disabled" : ""}>
-          ${item.maxed ? "MAX" : `🪙 ${money(item.cost)}`}
+          ${item.maxed ? "MAX" : `${COIN}${money(item.cost)}`}
         </button>
       </div>`,
     )
@@ -609,7 +616,7 @@ export function renderShop(root, view, tab = "christmas") {
       </div>
       <button type="button" class="shop-buy" data-buy="hoverboard" data-id="hoverboard"
         ${board.affordable ? "" : "disabled"}>${
-          board.owned >= board.max ? "보유 중" : `🪙 ${money(board.cost)}`
+          board.owned >= board.max ? "보유 중" : `${COIN}${money(board.cost)}`
         }</button>
     </div>
     <div class="shop-item" style="--accent:#14d4b8">
@@ -625,7 +632,7 @@ export function renderShop(root, view, tab = "christmas") {
       </div>
       <button type="button" class="shop-buy" data-buy="antidote" data-id="antidote"
         ${antidote.affordable ? "" : "disabled"}>${
-          antidote.owned >= antidote.max ? "보유 중" : `🪙 ${money(antidote.cost)}`
+          antidote.owned >= antidote.max ? "보유 중" : `${COIN}${money(antidote.cost)}`
         }</button>
     </div>`;
 
@@ -638,7 +645,7 @@ export function renderShop(root, view, tab = "christmas") {
         ? "착용하기"
         : character.cost === 0
           ? "무료"
-          : `🪙 ${money(character.cost)}`;
+          : `${COIN}${money(character.cost)}`;
     const effects =
       withEffects && character.effects
         ? `<div class="fx-chips">${character.effects

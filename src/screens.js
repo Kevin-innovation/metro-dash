@@ -30,6 +30,9 @@ import {
 
 const $ = (id) => document.getElementById(id);
 
+/** Gold, silver and bronze, by rank rather than by place on the page. */
+const podium = (rank) => (rank >= 1 && rank <= 3 ? ` rank-${rank}` : "");
+
 /** Per device on purpose: this is a nudge on one screen, not part of a profile. */
 const SEEN_NEW_KEY = "metdash-seen-new";
 
@@ -695,7 +698,7 @@ export class Screens {
           // What the name has earned over everything, beside what it did once.
           const level = row.level ? ` <em class="row-level">Lv.${row.level}</em>` : "";
           return `
-            <li class="leaderboard-row${mine ? " me" : ""}">
+            <li class="leaderboard-row${mine ? " me" : ""}${podium(row.rank)}">
               <span class="leaderboard-rank">${row.rank}</span>
               <span class="leaderboard-handle">${escapeHtml(row.handle)}${level}${where}</span>
               <span class="leaderboard-score">${row.best.toLocaleString()}</span>
@@ -747,7 +750,7 @@ export class Screens {
       list.innerHTML = rows
         .map(
           (row) => `
-            <li class="leaderboard-row${row.key === mineKey ? " me" : ""}">
+            <li class="leaderboard-row${row.key === mineKey ? " me" : ""}${podium(row.rank)}">
               <span class="leaderboard-rank">${row.rank}</span>
               <span class="leaderboard-handle">
                 ${escapeHtml(row.label)}
@@ -1464,7 +1467,7 @@ export class Screens {
     if (!list) return;
 
     const line = (row, mine) => `
-      <li class="leaderboard-row${mine ? " me" : ""}">
+      <li class="leaderboard-row${mine ? " me" : ""}${podium(row.rank)}">
         <span class="leaderboard-rank">${row.rank}</span>
         <span class="leaderboard-handle">
           ${escapeHtml(row.handle)}
@@ -1569,7 +1572,7 @@ export class Screens {
     box.innerHTML = `
       <p class="rank-up-title">LEVEL UP</p>
       <p class="rank-up-name">Lv.${top.level} ${escapeHtml(top.name)}</p>
-      <p class="rank-up-reward">🪙 +${promotion.coins.toLocaleString()}</p>`;
+      <p class="rank-up-reward"><span class="coin-orb small inline" aria-hidden="true"></span>+${promotion.coins.toLocaleString()}</p>`;
   }
 
   /** @returns {boolean} whether any mission was cleared, so the caller can cue audio */
@@ -1588,7 +1591,7 @@ export class Screens {
         .map((entry) => `<p class="mission-cleared-row">✓ ${missionLabel(entry)}</p>`)
         .join("")}
       ${result.reward.dailyBonus ? `<p class="mission-cleared-row daily">★ 오늘의 미션 3개 모두 달성!</p>` : ""}
-      <p class="mission-cleared-reward">🪙 +${result.reward.coins} · XP +${result.reward.xp}</p>`;
+      <p class="mission-cleared-reward"><span class="coin-orb small inline" aria-hidden="true"></span>+${result.reward.coins.toLocaleString()} · XP +${result.reward.xp.toLocaleString()}</p>`;
     return true;
   }
 

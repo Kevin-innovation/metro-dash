@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { perkFor } from "../src/characters.js";
+import { CHARACTERS, perkFor } from "../src/characters.js";
+import { christmasAt } from "../src/christmas.js";
+import { CHRISTMAS_DAILY_MAX_COINS } from "../src/missions.js";
 import { validateRun } from "../src/leaderboard-rules.js";
 import { rankAt, rankUpBetween, runXp } from "../src/progression.js";
 import { dayKey } from "../src/daily.js";
@@ -24,6 +26,8 @@ export const LEADERBOARD_LIMIT = 50;
 /** Rows read beyond the page, so filtered-out accounts do not shorten it. */
 const FILTER_MARGIN = 16;
 
+const MAX_MISSION_BONUS = CHARACTERS.reduce((best, c) => Math.max(best, c.perk.missionBonus ?? 1), 1);
+
 /**
  * Coins the browser may be paid in one day for things the server cannot check.
  *
@@ -38,6 +42,19 @@ const FILTER_MARGIN = 16;
  * farmed by submitting runs; a day's missions can only be finished once.
  */
 export const CLIENT_COINS_PER_DAY = 3900;
+
+/**
+ * The same during the Christmas event, whose missions pay far more: a full day of
+ * them with the mission character equipped, plus the streak. Only while it runs,
+ * so the wider allowance ends with the event that needs it.
+ */
+export const CHRISTMAS_CLIENT_COINS_PER_DAY = Math.ceil(
+  CHRISTMAS_DAILY_MAX_COINS * MAX_MISSION_BONUS + 350,
+);
+
+export function clientCoinsPerDay(now = Date.now()) {
+  return christmasAt(now) ? CHRISTMAS_CLIENT_COINS_PER_DAY : CLIENT_COINS_PER_DAY;
+}
 /** The same, for experience. Mission XP at the hardest step, plus the bonus. */
 export const CLIENT_XP_PER_DAY = 3000;
 
@@ -145,7 +162,7 @@ export const submit = mutation({
     const today = dayKey(now);
     const spentToday = player.payoutDay === today ? (player.payoutCoinsToday ?? 0) : 0;
     const spentXpToday = player.payoutDay === today ? (player.payoutXpToday ?? 0) : 0;
-    const claimCoins = clampClaim(args.claimedCoins, CLIENT_COINS_PER_DAY - spentToday);
+    const claimCoins = clampClaim(args.claimedCoins, clientCoinsPerDay(now) - spentToday);
     const claimXp = clampClaim(args.claimedXp, CLIENT_XP_PER_DAY - spentXpToday);
 
     patch.coins = Math.max(0, coinsOf(player) + runCoins + rankCoins + claimCoins);

@@ -5,7 +5,7 @@ import schema from "../convex/schema.js";
 import { api } from "../convex/_generated/api.js";
 import { CHARACTERS } from "../src/characters.js";
 import { maxDistanceIn } from "../src/leaderboard-rules.js";
-import { CLIENT_COINS_PER_DAY } from "../convex/scores.js";
+import { clientCoinsPerDay } from "../convex/scores.js";
 import { UPGRADE_COSTS } from "../src/shop.js";
 
 const modules = import.meta.glob("../convex/**/*.*s");
@@ -280,7 +280,7 @@ describe("only a validated run pays", () => {
     // Read off the column rather than off the balance: rank-ups are paid from
     // experience the server owns and are not part of this allowance.
     const player = await t.run(async (ctx) => await ctx.db.query("players").first());
-    expect(player.payoutCoinsToday).toBe(CLIENT_COINS_PER_DAY);
+    expect(player.payoutCoinsToday).toBe(clientCoinsPerDay());
   });
 
   it("refuses a negative or absurd claim without going backwards", async () => {

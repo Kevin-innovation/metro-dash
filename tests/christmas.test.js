@@ -35,6 +35,16 @@ import { SANTA_DROP_Y } from "../src/patterns.js";
 import { MAX_WHEEL_MULTIPLIER, maxDistanceIn, validateRun } from "../src/leaderboard-rules.js";
 import { JUMP_BONUS, MAX_COMBO_MULTIPLIER, MOUNT_BONUS, SLIDE_BONUS } from "../src/scoring.js";
 import { applyAction, createPlayer, resetPlayer, updatePlayer } from "../src/player.js";
+import {
+  CHRISTMAS_DAILY_MAX_COINS,
+  CHRISTMAS_MISSION_DEFS,
+  ensureMissions,
+  isChristmasMission,
+  missionReward,
+  rollMissions,
+  setBonus,
+} from "../src/missions.js";
+import { CLIENT_COINS_PER_DAY, clientCoinsPerDay } from "../convex/scores.js";
 import { makeRng } from "../src/rng.js";
 import { Run } from "../src/run.js";
 import { setCostume } from "../src/costumes.js";
@@ -758,6 +768,64 @@ describe("산타 습격", () => {
       const coins = caught * SANTA_DROP_COINS + Math.floor(distance * 0.25);
       expect(validateRun({ score: 0, distance, coins, seconds }), `catch ${caught}`).toEqual({ ok: true });
     }
+  });
+});
+
+describe("크리스마스 미션", () => {
+  const ids = (missions) => missions.map((mission) => mission.id);
+
+  it("이벤트에는 전용 미션만, 일반 때는 일반 미션만 나오고 서로 바뀐다", () => {
+    const event = rollMissions([], 3, 8, () => 0.3, true);
+    expect(ids(event).every(isChristmasMission)).toBe(true);
+    const normal = rollMissions([], 3, 8, () => 0.3);
+    expect(ids(normal).some(isChristmasMission)).toBe(false);
+
+    expect(ids(ensureMissions(normal, 8, () => 0.3, true)).every(isChristmasMission)).toBe(true);
+    expect(ids(ensureMissions(event, 8, () => 0.3)).some(isChristmasMission)).toBe(false);
+    // Already the right kind: left alone, with its progress.
+    const held = [{ ...event[0], progress: 1 }, event[1], event[2]];
+    expect(ensureMissions(held, 8, () => 0.3, true)).toEqual(held);
+  });
+
+  it("레벨과 상관없이 목표와 보상이 같고, 하루치로 슈퍼 산타에 닿을 수 있다", () => {
+    for (const tier of [0, 5, 10]) {
+      const [mission] = rollMissions([], 1, tier, () => 0, true);
+      const def = CHRISTMAS_MISSION_DEFS[0];
+      expect(mission.target).toBe(def.targets[0]);
+      expect(missionReward([{ ...mission, def }]).coins).toBe(def.coins);
+    }
+    expect(setBonus(rollMissions([], 3, 8, () => 0, true), 8).coins).toBe(4000);
+    expect(setBonus(rollMissions([], 3, 8, () => 0), 8).coins).toBeLessThan(4000);
+    // About a month of cleared days, at the cheapest set the table can deal.
+    const cheapest = [...CHRISTMAS_MISSION_DEFS].sort((a, b) => a.coins - b.coins).slice(0, 3);
+    const day = cheapest.reduce((sum, def) => sum + def.coins, 0) + 4000;
+    expect(characterById("supersanta").cost / day).toBeLessThan(40);
+  });
+
+  it("모든 미션이 실제 집계에 걸리고, 깨면 코인이 들어온다", () => {
+    const seen = new Set();
+    for (const def of CHRISTMAS_MISSION_DEFS) {
+      const s = store();
+      s.data.missions = [{ id: def.id, target: def.targets[0], progress: def.targets[0] - 1 }];
+      const run = new Run(s);
+      const before = s.data.coins;
+      Object.assign(run.metrics, { gifts: 1, spins: 1, santaDrops: 1, blizzardClears: 1, sneakers: 1, gates: 1, barriers: 1 });
+      for (let i = 0; i < 300; i++) run.addCoin();
+      run.seconds = 95;
+      run.scoreBonus = 400_000;
+      const { completed } = run.bank(false);
+      expect(completed.map((entry) => entry.id), def.id).toEqual([def.id]);
+      expect(s.data.coins - before, def.id).toBe(300 + def.coins);
+      seen.add(def.id);
+    }
+    expect(seen.size).toBe(CHRISTMAS_MISSION_DEFS.length);
+  });
+
+  it("서버 하루 한도는 이벤트 때만 늘고, 하루 최대치를 넉넉히 덮는다", () => {
+    const inEvent = Date.UTC(2026, 11, 1);
+    const after = Date.UTC(2027, 0, 2);
+    expect(clientCoinsPerDay(after)).toBe(CLIENT_COINS_PER_DAY);
+    expect(clientCoinsPerDay(inEvent)).toBeGreaterThan(CHRISTMAS_DAILY_MAX_COINS * 1.5);
   });
 });
 
