@@ -11,7 +11,6 @@ import {
 import {
   BLIZZARD,
   CHRISTMAS_EVENT_TO,
-  CHRISTMAS_SLOT_FACES,
   GIFT_FIRST_MAX,
   GIFT_FIRST_MIN,
   GIFT_GAP_MAX,
@@ -647,7 +646,7 @@ export function renderShop(root, view, tab = "christmas") {
             .join("")}</div>`
         : `<div class="shop-blurb">${escapeHtml(character.blurb)}</div>`;
     return `
-      <div class="shop-item character${character.equipped ? " equipped" : ""}">
+      <div class="shop-item character${character.equipped ? " equipped" : ""}${withEffects ? " with-fx" : ""}">
         <div class="shop-swatch" style="--a:#${character.palette.shirt
           .toString(16)
           .padStart(6, "0")};--b:#${character.palette.pack.toString(16).padStart(6, "0")}"></div>
@@ -718,24 +717,12 @@ function christmasRules() {
     month: "long",
     day: "numeric",
   });
-  const seconds = CHRISTMAS_SLOT_FACES.find((face) => face.effect.value)?.effect.seconds;
-  const odds = [...CHRISTMAS_SLOT_FACES]
-    .sort((a, b) => (a.effect.value ?? 0) - (b.effect.value ?? 0))
-    .map(
-      (face) => `
-      <div class="fx-odd${face.jackpot ? " jackpot" : ""}">
-        <b>${face.effect.value ? `×${face.effect.value}` : "꽝"}</b>
-        <span>${face.weight}%</span>
-      </div>`,
-    )
-    .join("");
-  const row = (icon, title, text, extra = "") => `
+  const row = (icon, title, text) => `
     <div class="fx-rule">
       <span class="fx-rule-icon" aria-hidden="true">${icon}</span>
       <div class="fx-rule-body">
         <strong>${title}</strong>
         <p>${text}</p>
-        ${extra}
       </div>
     </div>`;
   return `
@@ -748,17 +735,16 @@ function christmasRules() {
         `다이아몬드 대신 나옵니다. 하나만 먹어도 바로 룰렛이 돕니다. 플레이 ${GIFT_FIRST_MIN}~${GIFT_FIRST_MAX}초에 처음 나오고, 이후 ${GIFT_GAP_MIN}~${GIFT_GAP_MAX}초마다 나옵니다.`,
       )}
       ${row(
-        "🎰",
-        "선물 룰렛",
-        `당첨은 모두 ${seconds}초 유지됩니다. 꽝은 아무것도 바꾸지 않고, 당첨은 진행 중인 룰렛 배율을 교체합니다.`,
-        `<div class="fx-odds">${odds}</div>`,
-      )}
-      ${row(
         BLIZZARD.icon,
         "눈덩이와 눈보라",
         `까마귀 알 대신 ${HAZARD_FROM_SCORE / 10000}만 점부터 나옵니다. 먹으면 ${CROW_TIME}초 동안 눈보라가 몰아쳐 앞이 흐려집니다. 해독제로 막을 수 있습니다.`,
       )}
       ${row("🔴", "루돌프 코", "코인이 루돌프 코로 보입니다. 값과 자석·미션·상점 규칙은 그대로입니다.")}
+      ${row(
+        "🍪",
+        "크리스마스 장애물",
+        "컨테이너는 진저브레드 집과 쿠키맨으로, 바리케이드는 지팡이 사탕으로 바뀝니다. 버스와 열차도 장식을 달았습니다. 크기와 판정, 넘는 방법은 그대로입니다.",
+      )}
     </section>`;
 }
 

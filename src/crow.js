@@ -218,7 +218,10 @@ export function applyCrowGloom(world, veil, blizzard = false) {
   fog.far = fog.far * (1 - veil * 0.66);
   const colour = blizzard ? WHITEOUT : GLOOM;
   fog.color.lerp(colour, veil * 0.72);
-  world.scene.background.lerp(colour, veil * 0.6);
+  world.scene.background.lerp(colour, veil * (blizzard ? 0.72 : 0.6));
+  // Fog never reaches the dome. In a white-out it has to go as well, or the sky
+  // left between the fogged towers reads as something dark standing in the road.
+  if (blizzard && world.sky) world.sky.material.opacity = 1 - veil * 0.92;
 
   const dim = blizzard ? 0.35 : 1;
   world.hemi.intensity *= 1 - veil * 0.45 * dim;

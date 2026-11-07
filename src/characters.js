@@ -64,8 +64,8 @@ export const CHARACTERS = [
     blurb: "크리스마스 이벤트 기간 무료 · 썰매를 타고 달리고, 슈퍼 스니커즈를 먹으면 루돌프가 끌어 줍니다",
     isNew: true,
     effects: [
-      { text: "썰매를 타고 달림", event: true },
-      { text: "슈퍼 스니커즈 때 루돌프가 썰매를 끎", event: true },
+      { text: "썰매 타고 달리기", event: true },
+      { text: "스니커즈 때 루돌프", event: true },
     ],
     perk: {},
     palette: {
@@ -89,7 +89,7 @@ export const CHARACTERS = [
     event: "christmas",
     isNew: true,
     blurb: "크리스마스 한정 · 선물이 20% 더 자주 나옴 · 코인 +15%",
-    effects: [{ text: "선물이 20% 더 자주 나옴", event: true }, { text: "코인 +15%" }],
+    effects: [{ text: "선물 20% 더 자주", event: true }, { text: "코인 +15%" }],
     perk: { giftGap: 0.8, coinBonus: 1.15 },
     palette: {
       shirt: 0x16a34a,
@@ -108,7 +108,7 @@ export const CHARACTERS = [
     event: "christmas",
     isNew: true,
     blurb: "크리스마스 한정 · 눈보라 시야 흐림 -85% · 코인 +25%",
-    effects: [{ text: "눈보라 시야 흐림 -85%", event: true }, { text: "코인 +25%" }],
+    effects: [{ text: "눈보라 흐림 -85%", event: true }, { text: "코인 +25%" }],
     perk: { blizzardVeil: 0.15, coinBonus: 1.25 },
     palette: { shirt: 0xf1f5f9, trim: 0xdc2626, pack: 0xf97316, hair: 0x475569, streak: 0xf8fafc },
   },
@@ -119,7 +119,7 @@ export const CHARACTERS = [
     event: "christmas",
     isNew: true,
     blurb: "크리스마스 한정 · 슈퍼 스니커즈 +50% · 점수 +10%",
-    effects: [{ text: "슈퍼 스니커즈 +50%" }, { text: "점수 +10%" }],
+    effects: [{ text: "스니커즈 +50%" }, { text: "점수 +10%" }],
     perk: { sneakerTime: 1.5, scoreBonus: 1.1 },
     palette: { shirt: 0x8d5a2b, trim: 0x4e342e, pack: 0xff1744, hair: 0x4e342e, streak: 0xfacc15 },
   },
@@ -130,7 +130,7 @@ export const CHARACTERS = [
     event: "christmas",
     isNew: true,
     blurb: "크리스마스 한정 · 룰렛 꽝 2배, ×99도 2배 · 점수 +12%",
-    effects: [{ text: "룰렛 꽝 2배, ×99도 2배", event: true }, { text: "점수 +12%" }],
+    effects: [{ text: "꽝 2배 · ×99 2배", event: true }, { text: "점수 +12%" }],
     perk: { wheelRisk: 2, scoreBonus: 1.12 },
     palette: {
       shirt: 0x18181b,
@@ -149,7 +149,7 @@ export const CHARACTERS = [
     event: "christmas",
     isNew: true,
     blurb: "크리스마스 한정 · 룰렛이 꽝이면 판마다 한 번 재도전 · 코인 +30% · 점수 +22%",
-    effects: [{ text: "룰렛이 꽝이면 판마다 한 번 재도전", event: true }, { text: "슈퍼 스니커즈 때 루돌프 3마리" }, { text: "코인 +30%" }, { text: "점수 +22%" }],
+    effects: [{ text: "꽝이면 1회 재도전", event: true }, { text: "루돌프 3마리" }, { text: "코인 +30%" }, { text: "점수 +22%" }],
     perk: { wheelRetry: 1, coinBonus: 1.3, scoreBonus: 1.22 },
     palette: {
       shirt: 0xf59e0b,

@@ -17,7 +17,7 @@ import {
 } from "../src/christmas.js";
 import { MAX_CHARACTER_SCORE_BONUS, characterById, wearableCharacter } from "../src/characters.js";
 import { applyCrowGloom } from "../src/crow.js";
-import { EntityPool } from "../src/entities.js";
+import { EntityPool, makeOncoming } from "../src/entities.js";
 import { Game } from "../src/game.js";
 import { Interactions } from "../src/interactions.js";
 import { MAX_EVENT_MULTIPLIER } from "../src/events.js";
@@ -539,6 +539,64 @@ describe("크리스마스 캐릭터 5종", () => {
   });
 });
 
+describe("크리스마스 장애물", () => {
+  const sizeOf = (object) => {
+    object.updateMatrixWorld(true);
+    return new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+  };
+  const fakeScene = () => ({ add() {}, remove() {} });
+
+  it("모습만 바뀌고 판정 값과 크기는 그대로라 눈에 보이는 것이 판정과 어긋나지 않는다", () => {
+    const pool = new EntityPool(fakeScene());
+    for (const type of ["train", "bus", "barrier", "sign", "crate"]) {
+      // The container's skin is a canvas, so its size is written down instead.
+      const before =
+        type === "crate" ? new THREE.Vector3(1.45, 1.2, 1.35) : sizeOf(pool.spawn(type, 0, 10).mesh);
+      const plain = { ...SPEC[type] };
+      pool.setChristmas(true);
+      for (let i = 0; i < 12; i++) {
+        const festive = pool.spawn(type, 0, 10);
+        for (const key of ["length", "depth", "minY", "maxY", "lethal"]) {
+          expect(festive[key], `${type} ${key}`).toBe(plain[key]);
+        }
+        expect(festive.rideable, type).toBe(Boolean(plain.rideable));
+        expect(festive.roofY, type).toBe(plain.roofY ?? 0);
+        const after = sizeOf(festive.mesh);
+        // Trim may stand a little proud of the body, and no more than that.
+        expect(Math.abs(after.x - before.x), `${type} width`).toBeLessThan(0.4);
+        expect(Math.abs(after.y - before.y), `${type} height`).toBeLessThan(0.4);
+        expect(Math.abs(after.z - before.z), `${type} length`).toBeLessThan(0.4);
+      }
+      pool.clear();
+      pool.setChristmas(false);
+    }
+  });
+
+  it("지붕의 눈이 탑승 높이를 넘지 않아 발이 파묻히지 않는다", () => {
+    const pool = new EntityPool(fakeScene());
+    pool.setChristmas(true);
+    for (const type of ["train", "bus"]) {
+      const vehicle = pool.spawn(type, 0, 10);
+      const trim = vehicle.mesh.children.at(-1);
+      trim.geometry.computeBoundingBox();
+      expect(trim.geometry.boundingBox.max.y, type).toBeLessThanOrEqual(SPEC[type].roofY + 0.2);
+    }
+  });
+
+  it("마주 오는 버스의 전조등 표시도 그대로 동작한다", () => {
+    const pool = new EntityPool(fakeScene());
+    pool.setChristmas(true);
+    const bus = pool.spawn("bus", 0, 10);
+    makeOncoming(bus, 30);
+    expect(bus.mesh.rotation.y).toBe(Math.PI);
+    let lights = 0;
+    bus.mesh.traverse((child) => {
+      if (child.userData?.headlight) lights += 1;
+    });
+    expect(lights).toBe(2);
+  });
+});
+
 describe("상점의 크리스마스 탭과 NEW", () => {
   const render = (save, opts, tab) => {
     const root = { innerHTML: "" };
@@ -546,13 +604,13 @@ describe("상점의 크리스마스 탭과 NEW", () => {
     return root.innerHTML;
   };
 
-  it("이벤트 탭에 캐릭터와 실제 확률이, 일반 탭에 나머지가 나온다", () => {
+  it("이벤트 탭에 캐릭터와 효과가, 일반 탭에 나머지가 나온다", () => {
     const s = store();
     const event = render(s.data, { christmas: true }, "christmas");
-    for (const name of ["산타", "엘프", "슈퍼 산타", "선물 룰렛", "눈덩이와 눈보라"]) expect(event).toContain(name);
-    for (const face of CHRISTMAS_SLOT_FACES) expect(event).toContain(`${face.weight}%`);
+    for (const name of ["산타", "엘프", "슈퍼 산타", "눈덩이와 눈보라", "진저브레드"]) expect(event).toContain(name);
+    // The odds stay off this screen.
+    expect(event).not.toContain("선물 룰렛");
     expect(event).toContain("12월 31일");
-    expect(event).toContain("8초");
     expect(event).toContain('class="fx-chip event"');
     expect(event).not.toContain("파워업 강화");
 

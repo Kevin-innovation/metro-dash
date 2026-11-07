@@ -1,7 +1,17 @@
 import * as THREE from "three";
 import { BUILDING_COLORS, FOG_COLOR, MAX_SPEED, SEGMENT_COUNT, SEGMENT_LEN, START_SPEED } from "./config.js";
 import { LANE_WIDTHS, laneSet, laneX } from "./lanes.js";
-import { makeBallast, makeCloud, makeFacade, makeSky, makeWall, makeWood } from "./textures.js";
+import {
+  makeBallast,
+  makeCloud,
+  makeFacade,
+  makeNightFacade,
+  makeSky,
+  makeWall,
+  makeWallGlow,
+  makeWood,
+  tinted,
+} from "./textures.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { OPEN_CEILING, mixColor } from "./zones.js";
 import { chuseokAt } from "./chuseok.js";
@@ -25,6 +35,18 @@ const CHUSEOK_DECOR_SPACING = 36;
 const CHRISTMAS_TREE_COUNT = 16;
 const CHRISTMAS_TREE_SPACING = 36;
 const SNOW_GROUND = 0xdfe8f1;
+/** A winter night with the city's lights out. Bright enough to read the lane. */
+const NIGHT = {
+  sky: [0x050a18, 0x1b2b4a],
+  fogColor: 0x15213a,
+  hemiSky: 0xa9c0ee,
+  hemiGround: 0x46536e,
+  hemi: 1.05,
+  sun: 0.6,
+  ambient: 0.52,
+};
+const NIGHT_BLEND = 0.92;
+const NIGHT_TOWERS = ["#1c2536", "#232a3d", "#1a2433", "#2a2b3c", "#1f2a3a", "#262536"];
 /** Metres outside the road's edge. Clears the wall at every road width. */
 const TREE_MARGIN = 3.4;
 
@@ -420,22 +442,12 @@ export function createWorld(scene, quality) {
   };
 }
 
-/** Vertex colours, so a whole tree can be one mesh and so one draw call. */
-function tinted(geometry, hex, x = 0, y = 0, z = 0) {
-  const flat = geometry.index ? geometry.toNonIndexed() : geometry;
-  flat.translate(x, y, z);
-  const colour = new THREE.Color(hex);
-  const colours = new Float32Array(flat.attributes.position.count * 3);
-  for (let i = 0; i < colours.length; i += 3) colour.toArray(colours, i);
-  flat.setAttribute("color", new THREE.BufferAttribute(colours, 3));
-  return flat;
-}
-
 /**
  * The roadside trees.
  *
  * Self-lit, no shadows and two meshes each however many cones and bulbs are in
  * them. Built the first time the event is on, so a normal run allocates nothing.
+ * Every fourth one is a giant gingerbread man instead of a tree.
  */
 function makeChristmasTrees(scene) {
   const treeGeometry = mergeGeometries([
@@ -456,19 +468,100 @@ function makeChristmasTrees(scene) {
     );
   }
   const bulbGeometry = mergeGeometries(bulbs);
+  const icing = 0xfff7ed;
+  const cookie = 0xa8622c;
+  const gingerbread = mergeGeometries([
+    tinted(new THREE.SphereGeometry(0.62, 10, 8), cookie, 0, 2.95, 0),
+    tinted(new THREE.BoxGeometry(1.0, 1.25, 0.34), cookie, 0, 1.85, 0),
+    tinted(new THREE.BoxGeometry(2.3, 0.4, 0.34), cookie, 0, 2.2, 0),
+    tinted(new THREE.BoxGeometry(0.42, 1.2, 0.34), cookie, -0.34, 0.65, 0),
+    tinted(new THREE.BoxGeometry(0.42, 1.2, 0.34), cookie, 0.34, 0.65, 0),
+    // Icing on both faces, because the road passes it from behind as well.
+    ...[-1, 1].flatMap((face) => [
+      tinted(new THREE.BoxGeometry(0.34, 0.07, 0.04), icing, 0, 2.72, face * 0.56),
+      tinted(new THREE.SphereGeometry(0.08, 6, 5), 0xef4444, 0, 2.02, face * 0.2),
+      tinted(new THREE.SphereGeometry(0.08, 6, 5), 0x22c55e, 0, 1.68, face * 0.2),
+      tinted(new THREE.BoxGeometry(0.06, 0.4, 0.04), icing, -1.02, 2.2, face * 0.19),
+      tinted(new THREE.BoxGeometry(0.06, 0.4, 0.04), icing, 1.02, 2.2, face * 0.19),
+      tinted(new THREE.BoxGeometry(0.42, 0.06, 0.04), icing, -0.34, 0.16, face * 0.19),
+      tinted(new THREE.BoxGeometry(0.42, 0.06, 0.04), icing, 0.34, 0.16, face * 0.19),
+    ]),
+    tinted(new THREE.SphereGeometry(0.07, 6, 5), 0x1c1917, -0.22, 3.08, 0.56),
+    tinted(new THREE.SphereGeometry(0.07, 6, 5), 0x1c1917, 0.22, 3.08, 0.56),
+  ]);
   const treeMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
   const bulbMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
 
   const trees = [];
   for (let index = 0; index < CHRISTMAS_TREE_COUNT; index++) {
     const group = new THREE.Group();
-    group.add(new THREE.Mesh(treeGeometry, treeMaterial));
-    group.add(new THREE.Mesh(bulbGeometry, bulbMaterial));
+    if (index % 4 === 3) {
+      group.add(new THREE.Mesh(gingerbread, treeMaterial));
+    } else {
+      group.add(new THREE.Mesh(treeGeometry, treeMaterial));
+      group.add(new THREE.Mesh(bulbGeometry, bulbMaterial));
+    }
     group.scale.setScalar(0.92 + ((index * 5) % 4) * 0.1);
     scene.add(group);
     trees.push({ group, index, side: index % 2 === 0 ? -1 : 1, z: index * CHRISTMAS_TREE_SPACING, bulbMaterial });
   }
   return trees;
+}
+
+/**
+ * What stands on a Manhattan roof, in units of the tower's own width: an art-deco
+ * crown with a spire, a wooden water tank, a plain mast. One mesh each, drawn with
+ * no lights, and left off on the low tier.
+ */
+function makeRooftops() {
+  const stone = 0x18202e;
+  const snow = 0xdbe6f2;
+  const beacon = 0xff2a2a;
+  const crown = mergeGeometries([
+    tinted(new THREE.BoxGeometry(0.64, 0.24, 0.64), stone, 0, 0.12, 0),
+    tinted(new THREE.BoxGeometry(0.66, 0.02, 0.66), snow, 0, 0.25, 0),
+    tinted(new THREE.BoxGeometry(0.4, 0.22, 0.4), stone, 0, 0.36, 0),
+    tinted(new THREE.BoxGeometry(0.42, 0.02, 0.42), snow, 0, 0.48, 0),
+    tinted(new THREE.ConeGeometry(0.09, 0.62, 6), 0x2c3a50, 0, 0.8, 0),
+    tinted(new THREE.SphereGeometry(0.025, 6, 5), beacon, 0, 1.13, 0),
+  ]);
+  const legs = [-0.11, 0.11].flatMap((x) =>
+    [-0.11, 0.11].map((z) => tinted(new THREE.BoxGeometry(0.025, 0.18, 0.025), 0x0f1420, x, 0.09, z)),
+  );
+  const tank = mergeGeometries([
+    ...legs,
+    tinted(new THREE.CylinderGeometry(0.17, 0.17, 0.26, 10), 0x3d2a1e, 0, 0.31, 0),
+    tinted(new THREE.ConeGeometry(0.2, 0.13, 10), snow, 0, 0.5, 0),
+  ]);
+  const mast = mergeGeometries([
+    tinted(new THREE.BoxGeometry(0.5, 0.08, 0.5), stone, 0, 0.04, 0),
+    tinted(new THREE.BoxGeometry(0.52, 0.02, 0.52), snow, 0, 0.09, 0),
+    tinted(new THREE.BoxGeometry(0.02, 0.62, 0.02), 0x2c3a50, 0, 0.4, 0),
+    tinted(new THREE.BoxGeometry(0.14, 0.012, 0.012), 0x2c3a50, 0, 0.5, 0),
+    tinted(new THREE.SphereGeometry(0.02, 6, 5), beacon, 0, 0.72, 0),
+  ]);
+  return { kinds: [crown, tank, mast], material: new THREE.MeshBasicMaterial({ vertexColors: true }) };
+}
+
+/** A few hundred stars on the dome. One draw call, and nothing to light. */
+function makeStars(scene) {
+  const count = 220;
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const turn = (i * 2.399963) % (Math.PI * 2);
+    const up = 0.12 + ((i * 0.6180339) % 1) * 0.85;
+    const across = Math.sqrt(1 - up * up) * 225;
+    positions.set([Math.cos(turn) * across, up * 225, Math.sin(turn) * across], i * 3);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const stars = new THREE.Points(
+    geometry,
+    new THREE.PointsMaterial({ color: 0xdfe9ff, size: 1.6, sizeAttenuation: false, fog: false }),
+  );
+  stars.frustumCulled = false;
+  scene.add(stars);
+  return stars;
 }
 
 /** Evenly through the cycle at whatever the tier allows, rather than bunched. */
@@ -478,13 +571,19 @@ function treeAllowed(index, quality) {
   return Math.floor(((index + 1) * count) / CHRISTMAS_TREE_COUNT) > Math.floor((index * count) / CHRISTMAS_TREE_COUNT);
 }
 
+/** Rooftops cost a draw call per tower, so the lowest tier goes without. */
+const rooftopsAllowed = (quality) => (quality.decorationCount ?? 0) >= 10;
+
+/** How much taller a tower stands at Christmas: old Manhattan, not a suburb. */
+const towerScale = (index) => 1.7 + ((index * 5) % 4) * 0.48;
+
 /**
  * Dress the world for Christmas, or take it off again.
  *
- * Only surfaces change. Rails and lane lines stay separate meshes above the
- * floor, so snow can never cover them, and they darken here because the pale
- * steel that read well on brown ballast disappears against white. Obstacles are
- * not touched at all.
+ * A snowed-in New York with the power out. Only surfaces and scenery change.
+ * Rails and lane lines stay separate meshes above the floor, so snow can never
+ * cover them, and they darken here because the pale steel that read well on
+ * brown ballast disappears against white. Nothing the runner can touch moves.
  */
 export function setWorldChristmas(world, on) {
   if (world.christmas === on) return;
@@ -495,14 +594,33 @@ export function setWorldChristmas(world, on) {
     ballast.repeat.set(BALLAST_REPEAT[0], BALLAST_REPEAT[1]);
     const wall = makeWall(true);
     wall.repeat.set(WALL_REPEAT[0], WALL_REPEAT[1]);
+    const wallGlow = makeWallGlow();
+    wallGlow.repeat.set(WALL_REPEAT[0], WALL_REPEAT[1]);
     world.snowy = {
       ballast,
       wall,
+      wallGlow,
       wood: makeWood(true),
-      facades: BUILDING_COLORS.map((c, i) => makeFacade(i + 2, hexOf(c), true)),
+      // Unlit, so a lit window stays lit and a dark one stays dark however low
+      // the zone turns the lights. Also cheaper than what they replace.
+      towers: NIGHT_TOWERS.map(
+        (hex, i) => new THREE.MeshBasicMaterial({ map: makeNightFacade(i + 2, hex) }),
+      ),
     };
     world.trees = makeChristmasTrees(world.scene);
+    world.stars = makeStars(world.scene);
     world.twinkle = !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    const rooftops = makeRooftops();
+    world.buildings.forEach((building, i) => {
+      const { width, depth } = building.mesh.geometry.parameters;
+      const top = new THREE.Mesh(rooftops.kinds[i % rooftops.kinds.length], rooftops.material);
+      top.scale.set(width, width, Math.min(depth, width));
+      top.position.x = building.mesh.position.x;
+      world.scene.add(top);
+      building.rooftop = top;
+      building.dayMaterial = building.mesh.material;
+    });
   }
 
   const look = on ? world.snowy : world.plain;
@@ -510,12 +628,39 @@ export function setWorldChristmas(world, on) {
   track.map = look.ballast;
   wood.map = look.wood;
   wall.map = look.wall;
-  world.buildings.forEach((building, i) => {
-    building.mesh.material.map = look.facades[i % look.facades.length];
-  });
+  wall.emissiveMap = on ? world.snowy.wallGlow : null;
+  wall.emissive.setHex(on ? 0xffffff : 0x000000);
+  wall.needsUpdate = true;
   rail.color.setHex(on ? 0x36414b : 0xa8b4bd);
   line.color.setHex(on ? 0xd99a00 : 0xf2d64b);
   kerb.color.setHex(on ? 0xdfe9f2 : 0x8a8f96);
+
+  world.buildings.forEach((building, i) => {
+    const scale = on ? towerScale(i) : 1;
+    if (building.dayMaterial) {
+      building.mesh.material = on
+        ? world.snowy.towers[i % world.snowy.towers.length]
+        : building.dayMaterial;
+    }
+    building.mesh.scale.y = scale;
+    building.mesh.position.y = (building.h * scale) / 2 - 0.2;
+    if (building.rooftop) {
+      building.rooftop.position.y = building.h * scale - 0.2;
+      building.rooftop.visible = on && rooftopsAllowed(world.quality);
+    }
+  });
+
+  // Fades during a blizzard, so it has to draw before what hangs in front of it.
+  world.sky.material.transparent = on;
+  world.sky.material.needsUpdate = true;
+  world.sky.renderOrder = on ? -2 : 0;
+
+  // The sun is the moon tonight, and the key light is what comes off it.
+  world.sun.color.setHex(on ? 0xc4d6ff : 0xfff3dc);
+  world.sunBall.material.color.setHex(on ? 0xf2f5ff : 0xfff6d8);
+  world.sunBall.scale.setScalar(on ? 1.5 : 1);
+  for (const cloud of world.clouds) cloud.mesh.material.color.setHex(on ? 0x3c4a66 : 0xffffff);
+  if (world.stars) world.stars.visible = on;
   for (const tree of world.trees) tree.group.visible = on && treeAllowed(tree.index, world.quality);
 }
 
@@ -576,8 +721,27 @@ function makeClouds(scene) {
  *   shrank to match would close the world in around a runner who is standing
  *   still.
  */
-export function applyLookAtSpeed(world, look, quality, speed) {
+/** Any zone, as it looks with the lights out. Tunnels stay as dark as they were. */
+function winterNight(look) {
+  return {
+    ...look,
+    sky: [
+      mixColor(look.sky[0], NIGHT.sky[0], NIGHT_BLEND),
+      mixColor(look.sky[1], NIGHT.sky[1], NIGHT_BLEND),
+    ],
+    fogColor: mixColor(look.fogColor, NIGHT.fogColor, NIGHT_BLEND),
+    hemiSky: mixColor(look.hemiSky, NIGHT.hemiSky, NIGHT_BLEND),
+    hemiGround: mixColor(look.hemiGround, NIGHT.hemiGround, NIGHT_BLEND),
+    hemi: Math.min(look.hemi, NIGHT.hemi),
+    sun: Math.min(look.sun, NIGHT.sun),
+    ambient: Math.min(look.ambient, NIGHT.ambient),
+  };
+}
+
+export function applyLookAtSpeed(world, zoneLook, quality, speed) {
+  const look = world.christmas ? winterNight(zoneLook) : zoneLook;
   world.sky.material.map = skyFor(world, look.sky);
+  world.sky.material.opacity = 1;
   world.sky.material.needsUpdate = true;
 
   world.scene.fog.color.setHex(look.fogColor);
@@ -595,6 +759,7 @@ export function applyLookAtSpeed(world, look, quality, speed) {
   // The sun disc has no business hanging in a tunnel roof.
   world.sunBall.visible = look.ceiling === null;
   world.clouds.forEach((cloud) => (cloud.mesh.visible = look.ceiling === null));
+  if (world.stars) world.stars.visible = world.christmas && look.ceiling === null;
 
   const shell = world.shell;
   // The whole shell lives or dies with the roof. Fading the walls in separately
@@ -679,6 +844,7 @@ export function syncWorld(world, playerZ) {
 
   for (const building of world.buildings) {
     building.mesh.position.z = recycle(building, BUILDING_CYCLE, playerZ);
+    if (building.rooftop) building.rooftop.position.z = building.mesh.position.z;
   }
 
   for (const pole of world.poles) {
@@ -716,6 +882,11 @@ export function syncWorld(world, playerZ) {
     lamp.position.z = ((base % TUNNEL_LEN) + TUNNEL_LEN) % TUNNEL_LEN - TUNNEL_LEN / 2;
   }
   world.sunBall.position.copy(SUN_DIR).multiplyScalar(SUN_DISTANCE).setZ(playerZ + SUN_DISTANCE * 0.5);
+  if (world.christmas) {
+    // Down the avenue, between the towers, where the lens can actually find it.
+    world.sunBall.position.set(-30, 70, playerZ + 205);
+    if (world.stars) world.stars.position.z = playerZ;
+  }
 
   for (const cloud of world.clouds) {
     cloud.mesh.position.z = playerZ + 120 + cloud.offset;
@@ -740,6 +911,9 @@ export function applyWorldQuality(world, quality) {
   }
   for (const tree of world.trees ?? []) {
     tree.group.visible = world.christmas && treeAllowed(tree.index, quality);
+  }
+  for (const building of world.buildings) {
+    if (building.rooftop) building.rooftop.visible = world.christmas && rooftopsAllowed(quality);
   }
   return world;
 }

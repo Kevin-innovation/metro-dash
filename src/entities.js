@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { BUS_ROOF, SIGN_BOARD_BOTTOM, SIGN_BOARD_TOP, SIGN_TOP, TRAIN_COLORS } from "./config.js";
 import { laneX } from "./lanes.js";
 import { SPEC } from "./specs.js";
-import { makeContainerSkin } from "./textures.js";
+import { makeCandyStripes, makeContainerSkin, tinted } from "./textures.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { chuseokAt } from "./chuseok.js";
 
@@ -12,7 +12,7 @@ function lambert(color, extra = {}) {
   return new THREE.MeshLambertMaterial({ color, ...extra });
 }
 
-export function makeTrain(color = 0xff5252) {
+export function makeTrain(color = 0xff5252, windows = null) {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.85, 2.15, 11.5), lambert(color));
   body.position.y = 1.22;
@@ -26,7 +26,7 @@ export function makeTrain(color = 0xff5252) {
   [-4.2, -1.4, 1.4, 4.2].forEach((z) => {
     const win = new THREE.Mesh(
       new THREE.BoxGeometry(1.7, 0.55, 1.4),
-      lambert(0x81d4fa, { emissive: 0x224466, emissiveIntensity: 0.25 }),
+      windows ?? lambert(0x81d4fa, { emissive: 0x224466, emissiveIntensity: 0.25 }),
     );
     win.position.set(0, 1.75, z);
     g.add(win);
@@ -72,7 +72,7 @@ export function makeTrain(color = 0xff5252) {
   return g;
 }
 
-export function makeBus(color = 0xffc107) {
+export function makeBus(color = 0xffc107, windows = null) {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.78, 8.8), lambert(color));
   body.position.y = 1.12;
@@ -92,7 +92,7 @@ export function makeBus(color = 0xffc107) {
   [-2.6, 0, 2.6].forEach((z) => {
     const win = new THREE.Mesh(
       new THREE.BoxGeometry(1.76, 0.62, 1.7),
-      lambert(0x81d4fa, { emissive: 0x224466, emissiveIntensity: 0.28 }),
+      windows ?? lambert(0x81d4fa, { emissive: 0x224466, emissiveIntensity: 0.28 }),
     );
     win.position.set(0, 1.45, z);
     g.add(win);
@@ -743,10 +743,236 @@ const FACTORIES = {
   chuseokMoon: makeChuseokMoon,
 };
 
-/** Same entity and same rules, drawn differently while the event is on. */
+const bulbColours = [0xff4d4d, 0xffd54f, 0x4ade80, 0x60a5fa];
+const festiveMaterial = () => new THREE.MeshBasicMaterial({ vertexColors: true });
+let festiveLook = null;
+
+/** Parts shared by every Christmas obstacle ever pooled. */
+function festive() {
+  if (festiveLook) return festiveLook;
+  // Stripes are a canvas, so unit tests get the same shapes in plain white.
+  const candy = (repeatX, repeatY) => {
+    if (typeof document === "undefined") return lambert(0xffffff);
+    const map = makeCandyStripes();
+    map.repeat.set(repeatX, repeatY);
+    return lambert(0xffffff, { map, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.4 });
+  };
+  festiveLook = {
+    material: festiveMaterial(),
+    // Lit from inside, so a vehicle is the easiest thing to read on a dark road.
+    windows: lambert(0xffe7ad, { emissive: 0xffb74d, emissiveIntensity: 0.85 }),
+    candy: candy(3, 1),
+    candyPole: candy(0.5, 3.4),
+  };
+  return festiveLook;
+}
+
+/** A wreath with a bow, as parts to merge. Faces along Z. */
+function wreathParts(x, y, z, radius = 0.3) {
+  return [
+    tinted(new THREE.TorusGeometry(radius, radius * 0.32, 6, 14), 0x166534, x, y, z),
+    tinted(new THREE.BoxGeometry(radius * 0.7, radius * 0.42, 0.05), 0xdc2626, x, y - radius, z),
+  ];
+}
+
+/** Snow along a roof and a string of lights under each eave, as parts to merge. */
+function roofParts({ width, length, roofTop, eave, bulbs }) {
+  const parts = [tinted(new THREE.BoxGeometry(width, 0.06, length), 0xeef4fb, 0, roofTop + 0.03, 0)];
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < bulbs; i++) {
+      const z = -length / 2 + ((i + 0.5) / bulbs) * length;
+      parts.push(tinted(new THREE.SphereGeometry(0.075, 6, 5), bulbColours[i % 4], side * (width / 2 + 0.13), eave, z));
+    }
+  }
+  return parts;
+}
+
+const TRAIN_TRIM = () =>
+  mergeGeometries([
+    ...roofParts({ width: 1.66, length: 11.1, roofTop: 2.46, eave: 2.2, bulbs: 22 }),
+    ...wreathParts(0, 1.72, -5.93),
+    ...wreathParts(0, 1.72, 5.98),
+  ]);
+const BUS_TRIM = () =>
+  mergeGeometries([
+    ...roofParts({ width: 1.5, length: 8.2, roofTop: BUS_ROOF + 0.06, eave: BUS_ROOF - 0.14, bulbs: 16 }),
+    ...wreathParts(0, 1.5, -4.55),
+    ...wreathParts(0, 1.5, 4.55),
+  ]);
+let trainTrim = null;
+let busTrim = null;
+
+const CHRISTMAS_TRAINS = [0xb91c1c, 0x166534, 0xe8e4d8, 0x7f1d1d];
+const CHRISTMAS_BUSES = [0xdc2626, 0x15803d, 0xf1ece0, 0xb91c1c];
+
+function makeChristmasTrain() {
+  const look = festive();
+  const colour = CHRISTMAS_TRAINS[(Math.random() * CHRISTMAS_TRAINS.length) | 0];
+  const g = makeTrain(colour, look.windows);
+  trainTrim ??= TRAIN_TRIM();
+  g.add(new THREE.Mesh(trainTrim, look.material));
+  return g;
+}
+
+function makeChristmasBus() {
+  const look = festive();
+  const colour = CHRISTMAS_BUSES[(Math.random() * CHRISTMAS_BUSES.length) | 0];
+  const g = makeBus(colour, look.windows);
+  busTrim ??= BUS_TRIM();
+  g.add(new THREE.Mesh(busTrim, look.material));
+  return g;
+}
+
+/** The barricade as one long candy cane, hooked at both ends. Same height. */
+function makeCandyBarrier() {
+  const look = festive();
+  const g = new THREE.Group();
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.82, 0.38), look.candy);
+  bar.position.y = 0.5;
+  g.add(bar);
+  for (const side of [-1, 1]) {
+    const hook = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.05, 6, 12, Math.PI), look.candyPole);
+    hook.position.set(side * 0.82, 0.93, 0);
+    g.add(hook);
+  }
+  return g;
+}
+
+let gateTrim = null;
+
+/**
+ * The gate keeps its yellow board, which is the one thing it must never lose:
+ * that is what says "slide". Candy-cane posts, snow and a wreath go around it.
+ */
+function makeChristmasGate() {
+  const look = festive();
+  const g = makeSign();
+  for (const x of [-0.94, 0.94]) {
+    const wrap = new THREE.Mesh(new THREE.BoxGeometry(0.2, SIGN_TOP, 0.22), look.candyPole);
+    wrap.position.set(x, SIGN_TOP / 2, 0);
+    g.add(wrap);
+  }
+  if (!gateTrim) {
+    const bulbs = [];
+    for (let i = 0; i < 9; i++) {
+      for (const z of [-0.16, 0.16]) {
+        bulbs.push(
+          tinted(new THREE.SphereGeometry(0.06, 6, 5), bulbColours[i % 4], -0.8 + i * 0.2, SIGN_BOARD_TOP + 0.08, z),
+        );
+      }
+    }
+    gateTrim = mergeGeometries([
+      tinted(new THREE.BoxGeometry(2.2, 0.14, 0.34), 0xeef4fb, 0, SIGN_TOP + 0.05, 0),
+      ...wreathParts(0, SIGN_BOARD_TOP + 1.1, -0.14, 0.42),
+      ...wreathParts(0, SIGN_BOARD_TOP + 1.1, 0.14, 0.42),
+      ...bulbs,
+    ]);
+  }
+  g.add(new THREE.Mesh(gateTrim, look.material));
+  return g;
+}
+
+let cookieHouse = null;
+let cookieMan = null;
+const cookieMaterial = () => new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x3a1f0a, emissiveIntensity: 0.7 });
+let cookieLit = null;
+
+/** The container's footprint and height, in gingerbread. One mesh, shared. */
+function gingerbreadHouse() {
+  if (cookieHouse) return cookieHouse;
+  const dough = 0xb06a32;
+  const icing = 0xfff7ed;
+  const parts = [
+    tinted(new THREE.BoxGeometry(1.4, 0.78, 1.3), dough, 0, 0.39, 0),
+    // The roof: two iced slopes meeting on a ridge along Z.
+    ...[-1, 1].flatMap((side) => {
+      const slope = new THREE.BoxGeometry(0.84, 0.09, 1.44);
+      slope.rotateZ(side * -0.62);
+      const frosting = new THREE.BoxGeometry(0.88, 0.04, 1.48);
+      frosting.translate(0, 0.06, 0);
+      frosting.rotateZ(side * -0.62);
+      return [tinted(slope, 0x7c4420, side * 0.35, 0.99, 0), tinted(frosting, icing, side * 0.35, 0.99, 0)];
+    }),
+  ];
+  // The door and windows on both ends, because it can be met from either side.
+  for (const face of [-1, 1]) {
+    const z = face * 0.66;
+    parts.push(
+      tinted(new THREE.BoxGeometry(0.34, 0.5, 0.03), 0xdc2626, 0, 0.25, z),
+      tinted(new THREE.SphereGeometry(0.03, 5, 4), 0xfacc15, 0.1, 0.27, z + face * 0.02),
+      tinted(new THREE.BoxGeometry(1.4, 0.05, 0.03), icing, 0, 0.76, z),
+    );
+    for (const x of [-0.46, 0.46]) {
+      parts.push(
+        tinted(new THREE.BoxGeometry(0.28, 0.26, 0.03), 0xfde047, x, 0.44, z),
+        tinted(new THREE.BoxGeometry(0.03, 0.26, 0.04), icing, x, 0.44, z),
+        tinted(new THREE.BoxGeometry(0.28, 0.03, 0.04), icing, x, 0.44, z),
+      );
+    }
+  }
+  // Gumdrops along the ridge and the eaves.
+  [0xef4444, 0x22c55e, 0xfacc15, 0x3b82f6, 0xec4899].forEach((colour, i) => {
+    const z = -0.56 + i * 0.28;
+    parts.push(tinted(new THREE.SphereGeometry(0.075, 6, 5), colour, 0, 1.24, z));
+    for (const side of [-1, 1]) {
+      parts.push(tinted(new THREE.SphereGeometry(0.05, 5, 4), colour, side * 0.66, 0.84, z));
+    }
+  });
+  cookieHouse = mergeGeometries(parts);
+  return cookieHouse;
+}
+
+/**
+ * A gingerbread man on a slab of chocolate. The slab fills the container's
+ * footprint, so the thing still looks as deep as what it is to run into.
+ */
+function gingerbreadMan() {
+  if (cookieMan) return cookieMan;
+  const dough = 0xb06a32;
+  const icing = 0xfff7ed;
+  const parts = [
+    tinted(new THREE.BoxGeometry(1.45, 0.34, 1.35), 0x4a2511, 0, 0.17, 0),
+    tinted(new THREE.BoxGeometry(1.47, 0.05, 1.37), icing, 0, 0.34, 0),
+    tinted(new THREE.SphereGeometry(0.2, 10, 8), dough, 0, 1.07, 0),
+    tinted(new THREE.BoxGeometry(0.34, 0.42, 0.14), dough, 0, 0.72, 0),
+    tinted(new THREE.BoxGeometry(0.98, 0.14, 0.14), dough, 0, 0.84, 0),
+    tinted(new THREE.BoxGeometry(0.14, 0.26, 0.14), dough, -0.11, 0.48, 0),
+    tinted(new THREE.BoxGeometry(0.14, 0.26, 0.14), dough, 0.11, 0.48, 0),
+  ];
+  for (const face of [-1, 1]) {
+    const z = face * 0.08;
+    parts.push(
+      tinted(new THREE.SphereGeometry(0.035, 5, 4), 0xef4444, 0, 0.8, z),
+      tinted(new THREE.SphereGeometry(0.035, 5, 4), 0x22c55e, 0, 0.66, z),
+      tinted(new THREE.BoxGeometry(0.04, 0.14, 0.02), icing, -0.42, 0.84, z),
+      tinted(new THREE.BoxGeometry(0.04, 0.14, 0.02), icing, 0.42, 0.84, z),
+      tinted(new THREE.BoxGeometry(0.16, 0.025, 0.02), icing, 0, 1.0, face * 0.19),
+    );
+  }
+  cookieMan = mergeGeometries(parts);
+  return cookieMan;
+}
+
+/** The jump-over obstacle. Two houses for every cookie man. */
+function makeGingerbreadCrate() {
+  cookieLit ??= cookieMaterial();
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(Math.random() < 0.65 ? gingerbreadHouse() : gingerbreadMan(), cookieLit));
+  return g;
+}
+
+/**
+ * Same entity and same rules, drawn differently while the event is on. Nothing
+ * here touches SPEC, so nothing about a hitbox can change with the costume.
+ */
 const CHRISTMAS_FACTORIES = {
   coin: makeNoseCoin,
   crowEgg: makeSnowball,
+  train: makeChristmasTrain,
+  bus: makeChristmasBus,
+  barrier: makeCandyBarrier,
+  sign: makeChristmasGate,
+  crate: makeGingerbreadCrate,
 };
 
 export { SPEC };

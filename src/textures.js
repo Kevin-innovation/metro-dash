@@ -14,6 +14,20 @@ function canvasTexture(w, h, draw) {
   return tex;
 }
 
+/**
+ * A geometry with its colour in the vertices, ready to merge with others so a
+ * whole model can be one mesh and so one draw call.
+ */
+export function tinted(geometry, hex, x = 0, y = 0, z = 0) {
+  const flat = geometry.index ? geometry.toNonIndexed() : geometry;
+  flat.translate(x, y, z);
+  const colour = new THREE.Color(hex);
+  const colours = new Float32Array(flat.attributes.position.count * 3);
+  for (let i = 0; i < colours.length; i += 3) colour.toArray(colours, i);
+  flat.setAttribute("color", new THREE.BufferAttribute(colours, 3));
+  return flat;
+}
+
 /** Deterministic value noise, so a texture looks the same every session. */
 function hash(x, y) {
   const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
@@ -209,6 +223,59 @@ export function makeFacade(seed = 1, hex = "#51607a", snow = false) {
   });
 }
 
+/**
+ * A tower in a city with the lights out, for the Christmas skyline.
+ *
+ * Many small floors, because the towers are drawn far taller than the daytime
+ * ones, and hardly anyone home: most windows are dark glass and only a few are
+ * lit. Painted in its final night colours, since these towers are drawn unlit.
+ */
+export function makeNightFacade(seed = 1, hex = "#1c2536") {
+  return canvasTexture(256, 512, (ctx, w, h) => {
+    ctx.fillStyle = hex;
+    ctx.fillRect(0, 0, w, h);
+
+    const cols = 7;
+    const rows = 26;
+    const bw = 22;
+    const bh = 12;
+    const gapX = (w - cols * bw) / (cols + 1);
+    const gapY = (h - rows * bh) / (rows + 1);
+    for (let r = 0; r < rows; r++) {
+      const y = gapY + r * (bh + gapY);
+      for (let c = 0; c < cols; c++) {
+        const x = gapX + c * (bw + gapX);
+        const lit = hash(seed * 5 + r, c + 9) > 0.93;
+        ctx.fillStyle = lit ? (hash(c, r + seed) > 0.5 ? "#ffd98a" : "#ffc266") : "#0b111c";
+        ctx.fillRect(x, y, bw, bh);
+      }
+    }
+
+    // Stone bands every few floors, the way the old Manhattan blocks are built.
+    ctx.fillStyle = "rgba(170,190,220,0.08)";
+    for (let y = 40; y < h; y += 96) ctx.fillRect(0, y, w, 6);
+
+    snowCap(ctx, w, seed, 10, 7);
+  });
+}
+
+/** Barber-pole red and white, tiling in both directions. For candy canes. */
+export function makeCandyStripes() {
+  return canvasTexture(64, 64, (ctx, w, h) => {
+    ctx.fillStyle = "#fff5f5";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#e11d2e";
+    for (let i = -1; i < 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * w, h);
+      ctx.lineTo(i * w + w / 2, h);
+      ctx.lineTo(i * w + w, 0);
+      ctx.lineTo(i * w + w / 2, 0);
+      ctx.fill();
+    }
+  });
+}
+
 /** A white band with an uneven lower edge, drooping over the top of a surface. */
 function snowCap(ctx, w, seed, depth, droop) {
   ctx.fillStyle = "#eef4fa";
@@ -266,21 +333,34 @@ export function makeWall(snow = false) {
     if (snow) {
       snowCap(ctx, w, 3, 9, 7);
       // String lights along the wall, in the texture so they cost no draw calls.
-      const bulbs = ["#ff5252", "#ffd54f", "#66bb6a", "#4fc3f7"];
       ctx.strokeStyle = "rgba(30,41,59,0.8)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, 42);
       ctx.lineTo(w, 42);
       ctx.stroke();
-      for (let i = 0; i < 8; i++) {
-        ctx.fillStyle = bulbs[i % bulbs.length];
-        ctx.beginPath();
-        // Narrower than tall: this texture is stretched along the wall.
-        ctx.ellipse(16 + i * 32, 48, 4, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      wallBulbs(ctx);
     }
+  });
+}
+
+function wallBulbs(ctx) {
+  const bulbs = ["#ff5252", "#ffd54f", "#66bb6a", "#4fc3f7"];
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = bulbs[i % bulbs.length];
+    ctx.beginPath();
+    // Narrower than tall: this texture is stretched along the wall.
+    ctx.ellipse(16 + i * 32, 48, 4, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** Only the bulbs, on black: what still shows on the wall once it is dark out. */
+export function makeWallGlow() {
+  return canvasTexture(256, 128, (ctx, w, h) => {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, w, h);
+    wallBulbs(ctx);
   });
 }
 

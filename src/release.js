@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.50";
+export const VERSION = "5.60";
 
 /**
  * Which season the board is playing.
@@ -77,12 +77,24 @@ export function seasonAt(ms = Date.now()) {
  */
 export const CHANGELOG = [
   {
+    version: "5.60",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "불 꺼진 뉴욕의 크리스마스 밤",
+    notes: [
+      "크리스마스 에디션의 배경이 눈 덮인 뉴욕의 밤으로 바뀌었습니다. 불 꺼진 고층 빌딩 사이로 달과 별이 보입니다.",
+      "컨테이너는 진저브레드 집과 쿠키맨으로, 바리케이드는 지팡이 사탕으로 바뀌었습니다. 크기와 판정은 그대로입니다.",
+      "버스와 열차는 지붕에 눈이 쌓이고 전구와 리스를 달았습니다. 게이트의 노란 판은 그대로입니다.",
+      "길가에 거대한 진저브레드맨이 섰습니다.",
+    ],
+  },
+  {
     version: "5.50",
     date: "2026-11-07",
     kind: "minor",
     title: "상점에 크리스마스 에디션 탭",
     notes: [
-      "상점에 크리스마스 에디션 탭이 생겼습니다. 한정 캐릭터와 이벤트 효과, 룰렛 확률을 한곳에서 볼 수 있습니다.",
+      "상점에 크리스마스 에디션 탭이 생겼습니다. 한정 캐릭터와 이벤트 효과를 한곳에서 볼 수 있습니다.",
       "캐릭터 효과 중 🎄 표시는 이벤트 기간에만 적용되고, 나머지는 끝나도 유지됩니다.",
       "새 캐릭터에 NEW 표시가 붙습니다. 상점 버튼의 NEW는 상점을 열어 보면 사라집니다.",
     ],
