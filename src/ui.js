@@ -8,7 +8,17 @@ import {
   missionLabel,
   missionPay,
 } from "./missions.js";
-import { BLIZZARD } from "./christmas.js";
+import {
+  BLIZZARD,
+  CHRISTMAS_EVENT_TO,
+  CHRISTMAS_SLOT_FACES,
+  GIFT_FIRST_MAX,
+  GIFT_FIRST_MIN,
+  GIFT_GAP_MAX,
+  GIFT_GAP_MIN,
+} from "./christmas.js";
+import { CROW_TIME } from "./config.js";
+import { HAZARD_FROM_SCORE } from "./spawner.js";
 import { CROW } from "./crow.js";
 import { CHANGELOG } from "./release.js";
 import { POWERUPS, POWERUP_IDS, POWERUP_METRIC } from "./powerups.js";
@@ -554,7 +564,7 @@ export function renderSettings(root, settings, activeTier) {
     </div>`;
 }
 
-export function renderShop(root, view) {
+export function renderShop(root, view, tab = "christmas") {
   if (!root) return;
 
   const upgrades = view.upgrades
@@ -617,31 +627,42 @@ export function renderShop(root, view) {
         }</button>
     </div>`;
 
-  const characters = view.characters
-    .map((character) => {
-      const label = character.equipped
-        ? "착용 중"
-        : character.owned
-          ? "착용하기"
-          : character.cost === 0
-            ? "무료"
-            : `🪙 ${money(character.cost)}`;
-      return `
+  // One card for both tabs. The event tab lists a runner's effects as chips, so
+  // what lasts and what stops with the event can be told apart at a glance.
+  const characterCard = (character, withEffects = false) => {
+    const label = character.equipped
+      ? "착용 중"
+      : character.owned
+        ? "착용하기"
+        : character.cost === 0
+          ? "무료"
+          : `🪙 ${money(character.cost)}`;
+    const effects =
+      withEffects && character.effects
+        ? `<div class="fx-chips">${character.effects
+            .map(
+              (effect) =>
+                `<span class="fx-chip${effect.event ? " event" : ""}">${effect.event ? "🎄 " : ""}${escapeHtml(effect.text)}</span>`,
+            )
+            .join("")}</div>`
+        : `<div class="shop-blurb">${escapeHtml(character.blurb)}</div>`;
+    return `
       <div class="shop-item character${character.equipped ? " equipped" : ""}">
         <div class="shop-swatch" style="--a:#${character.palette.shirt
           .toString(16)
           .padStart(6, "0")};--b:#${character.palette.pack.toString(16).padStart(6, "0")}"></div>
         <div class="shop-body">
-          <div class="shop-title">${escapeHtml(character.name)}</div>
-          <div class="shop-blurb">${escapeHtml(character.blurb)}</div>
+          <div class="shop-title">${escapeHtml(character.name)}${
+            character.isNew ? ' <span class="new-tag">NEW</span>' : ""
+          }</div>
+          ${effects}
         </div>
         <button type="button" class="shop-buy" data-buy="character" data-id="${character.id}"
           ${character.equipped || !character.affordable ? "disabled" : ""}>${label}</button>
       </div>`;
-    })
-    .join("");
+  };
 
-  root.innerHTML = `
+  const general = `
     <section class="shop-section">
       <h3>파워업 강화</h3>
       ${upgrades}
@@ -652,7 +673,92 @@ export function renderShop(root, view) {
     </section>
     <section class="shop-section">
       <h3>캐릭터</h3>
-      ${characters}
+      ${view.characters
+        .filter((character) => !view.christmas || !character.event)
+        .map((character) => characterCard(character))
+        .join("")}
+    </section>`;
+
+  if (!view.christmas) {
+    root.innerHTML = general;
+    return;
+  }
+
+  const onChristmas = tab === "christmas";
+  const tabButton = (id, text) => `
+    <button type="button" class="shop-tab${tab === id ? " on" : ""}" role="tab"
+      aria-selected="${tab === id}" data-shop-tab="${id}">${text}</button>`;
+  root.innerHTML = `
+    <div class="shop-tabs" role="tablist" aria-label="상점 구분">
+      ${tabButton("christmas", "🎄 크리스마스 에디션")}
+      ${tabButton("general", "강화 · 아이템 · 캐릭터")}
+    </div>
+    ${
+      onChristmas
+        ? `<section class="shop-section">
+            <h3>크리스마스 캐릭터</h3>
+            <p class="fx-legend">🎄 표시 효과는 이벤트 기간에만 적용됩니다. 나머지는 계속 유지됩니다. 산 캐릭터는 이벤트가 끝나도 쓸 수 있습니다.</p>
+            ${view.characters
+              .filter((character) => character.event)
+              .map((character) => characterCard(character, true))
+              .join("")}
+          </section>
+          ${christmasRules()}`
+        : general
+    }`;
+}
+
+/**
+ * What the event changes, written from the same numbers the game plays by, so
+ * this list cannot end up describing a different wheel.
+ */
+function christmasRules() {
+  const ends = new Date(CHRISTMAS_EVENT_TO - 1).toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+  });
+  const seconds = CHRISTMAS_SLOT_FACES.find((face) => face.effect.value)?.effect.seconds;
+  const odds = [...CHRISTMAS_SLOT_FACES]
+    .sort((a, b) => (a.effect.value ?? 0) - (b.effect.value ?? 0))
+    .map(
+      (face) => `
+      <div class="fx-odd${face.jackpot ? " jackpot" : ""}">
+        <b>${face.effect.value ? `×${face.effect.value}` : "꽝"}</b>
+        <span>${face.weight}%</span>
+      </div>`,
+    )
+    .join("");
+  const row = (icon, title, text, extra = "") => `
+    <div class="fx-rule">
+      <span class="fx-rule-icon" aria-hidden="true">${icon}</span>
+      <div class="fx-rule-body">
+        <strong>${title}</strong>
+        <p>${text}</p>
+        ${extra}
+      </div>
+    </div>`;
+  return `
+    <section class="shop-section">
+      <h3>이벤트 효과</h3>
+      ${row("📅", "기간", `${ends}까지 진행합니다.`)}
+      ${row(
+        "🎁",
+        "선물 상자",
+        `다이아몬드 대신 나옵니다. 하나만 먹어도 바로 룰렛이 돕니다. 플레이 ${GIFT_FIRST_MIN}~${GIFT_FIRST_MAX}초에 처음 나오고, 이후 ${GIFT_GAP_MIN}~${GIFT_GAP_MAX}초마다 나옵니다.`,
+      )}
+      ${row(
+        "🎰",
+        "선물 룰렛",
+        `당첨은 모두 ${seconds}초 유지됩니다. 꽝은 아무것도 바꾸지 않고, 당첨은 진행 중인 룰렛 배율을 교체합니다.`,
+        `<div class="fx-odds">${odds}</div>`,
+      )}
+      ${row(
+        BLIZZARD.icon,
+        "눈덩이와 눈보라",
+        `까마귀 알 대신 ${HAZARD_FROM_SCORE / 10000}만 점부터 나옵니다. 먹으면 ${CROW_TIME}초 동안 눈보라가 몰아쳐 앞이 흐려집니다. 해독제로 막을 수 있습니다.`,
+      )}
+      ${row("🔴", "루돌프 코", "코인이 루돌프 코로 보입니다. 값과 자석·미션·상점 규칙은 그대로입니다.")}
     </section>`;
 }
 

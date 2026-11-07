@@ -28,10 +28,10 @@ import { makeRng } from "../src/rng.js";
 import { Run } from "../src/run.js";
 import { setCostume } from "../src/costumes.js";
 import { SaveStore, hasProgress, normalizeSave } from "../src/save.js";
-import { purchase, shopView } from "../src/shop.js";
+import { purchase, shopView, unseenNewCharacters } from "../src/shop.js";
 import { SPEC } from "../src/specs.js";
 import { HAZARD_FROM_SCORE, Spawner } from "../src/spawner.js";
-import { renderRunTally } from "../src/ui.js";
+import { renderRunTally, renderShop } from "../src/ui.js";
 
 const store = () => new SaveStore({ getItem: () => null, setItem: () => {} });
 
@@ -536,6 +536,52 @@ describe("크리스마스 캐릭터 5종", () => {
     expect(game.wheelQueue).toEqual([]);
     expect(game.state).toBe("playing");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("상점의 크리스마스 탭과 NEW", () => {
+  const render = (save, opts, tab) => {
+    const root = { innerHTML: "" };
+    renderShop(root, shopView(save, opts), tab);
+    return root.innerHTML;
+  };
+
+  it("이벤트 탭에 캐릭터와 실제 확률이, 일반 탭에 나머지가 나온다", () => {
+    const s = store();
+    const event = render(s.data, { christmas: true }, "christmas");
+    for (const name of ["산타", "엘프", "슈퍼 산타", "선물 룰렛", "눈덩이와 눈보라"]) expect(event).toContain(name);
+    for (const face of CHRISTMAS_SLOT_FACES) expect(event).toContain(`${face.weight}%`);
+    expect(event).toContain("12월 31일");
+    expect(event).toContain("8초");
+    expect(event).toContain('class="fx-chip event"');
+    expect(event).not.toContain("파워업 강화");
+
+    const general = render(s.data, { christmas: true }, "general");
+    expect(general).toContain("파워업 강화");
+    expect(general).toContain("네온");
+    expect(general).not.toContain("슈퍼 산타");
+
+    const off = render(s.data);
+    expect(off).not.toContain("shop-tab");
+    expect(off).not.toContain("슈퍼 산타");
+    expect(off).toContain("네온");
+  });
+
+  it("NEW는 안 산 새 캐릭터에만, 상점 버튼은 안 본 것이 있을 때만 붙는다", () => {
+    const s = store();
+    s.data.coins = 100000;
+    expect(render(s.data, { christmas: true }, "christmas").match(/new-tag/g)).toHaveLength(6);
+    expect(render(s.data, { christmas: true }, "general")).not.toContain("new-tag");
+
+    const fresh = unseenNewCharacters(s.data, [], { christmas: true });
+    expect(fresh).toContain("supersanta");
+    expect(unseenNewCharacters(s.data, fresh, { christmas: true })).toEqual([]);
+    // Nothing to nudge about when none of it is for sale.
+    expect(unseenNewCharacters(s.data, [])).toEqual([]);
+
+    purchase(s, "character", "elf", { christmas: true });
+    expect(shopView(s.data, { christmas: true }).characters.find((c) => c.id === "elf").isNew).toBe(false);
+    expect(unseenNewCharacters(s.data, [], { christmas: true })).not.toContain("elf");
   });
 });
 

@@ -9,7 +9,7 @@ import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { SPEED_STEP_SECONDS, nextStepIn, speedStepAt } from "./pace.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
-import { purchase, shopView } from "./shop.js";
+import { purchase, shopView, unseenNewCharacters } from "./shop.js";
 import { VERSION, previousSeason, seasonAt } from "./release.js";
 import { CHUSEOK_EVENT_NAME, chuseokAt } from "./chuseok.js";
 import { BLIZZARD, CHRISTMAS_TITLE } from "./christmas.js";
@@ -29,6 +29,9 @@ import {
 } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
+
+/** Per device on purpose: this is a nudge on one screen, not part of a profile. */
+const SEEN_NEW_KEY = "metdash-seen-new";
 
 /**
  * Every piece of DOM the game touches.
@@ -140,6 +143,15 @@ export class Screens {
     const shopList = $("shop-list");
     if (shopList) {
       shopList.addEventListener("click", (event) => {
+        const tab = event.target.closest("[data-shop-tab]");
+        if (tab) {
+          this.shopTab = tab.dataset.shopTab;
+          this.drawShop();
+          // The list scrolls on a desktop, the overlay on a phone.
+          shopList.scrollTop = 0;
+          $("shop-screen").scrollTop = 0;
+          return;
+        }
         const button = event.target.closest("[data-buy]");
         if (button && !button.disabled) a.buy(button.dataset.buy, button.dataset.id);
       });
@@ -994,9 +1006,27 @@ export class Screens {
     this.rainbowTimer = setTimeout(() => flash.classList.remove("on"), 1100);
   }
 
+  /** Draw the shop for the save it was last given, on whichever tab is open. */
+  drawShop(save = this.shopSave) {
+    this.shopSave = save;
+    renderShop($("shop-list"), shopView(save, { christmas: this.christmas }), this.shopTab);
+  }
+
   openShop(save) {
-    renderShop($("shop-list"), shopView(save, { christmas: this.christmas }));
+    this.shopTab = "christmas";
+    this.drawShop(save);
     $("shop-screen").classList.remove("hidden");
+    // Opening the shop is what it was asking for, so the button can stop asking.
+    this.seenNew = [
+      ...this.seenCharacters(),
+      ...unseenNewCharacters(save, this.seenCharacters(), { christmas: this.christmas }),
+    ];
+    try {
+      localStorage.setItem(SEEN_NEW_KEY, JSON.stringify(this.seenNew));
+    } catch {
+      /* Private mode. The button simply asks again next visit. */
+    }
+    this.refreshShopBadge(save);
   }
 
   closeShop() {
@@ -1034,8 +1064,30 @@ export class Screens {
     renderSettings($("settings-list"), settings, tier);
   }
 
+  /** Runner ids this device has already opened the shop on. */
+  seenCharacters() {
+    if (this.seenNew) return this.seenNew;
+    try {
+      const stored = JSON.parse(localStorage.getItem(SEEN_NEW_KEY));
+      this.seenNew = Array.isArray(stored) ? stored : [];
+    } catch {
+      this.seenNew = [];
+    }
+    return this.seenNew;
+  }
+
+  /** The NEW on the shop button, for anything on offer not looked at yet. */
+  refreshShopBadge(save) {
+    const button = $("btn-shop");
+    if (!button) return;
+    const fresh = unseenNewCharacters(save, this.seenCharacters(), { christmas: this.christmas }).length > 0;
+    button.classList.toggle("has-new", fresh);
+    if (fresh) button.setAttribute("aria-label", "상점 · 강화, 새 캐릭터 있음");
+    else button.removeAttribute("aria-label");
+  }
+
   refreshShop(save) {
-    renderShop($("shop-list"), shopView(save, { christmas: this.christmas }));
+    this.drawShop(save);
   }
 
   /** @returns {{ ok: boolean, reason?: string }} */
@@ -1061,6 +1113,7 @@ export class Screens {
   // --- persistent profile --------------------------------------------------
 
   refreshProfile(save) {
+    this.refreshShopBadge(save);
     // Days in a row, where the player sees it before deciding to play rather
     // than after. A streak nobody can see is not a streak.
     const streakEl = $("streak-chip");

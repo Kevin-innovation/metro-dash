@@ -115,6 +115,29 @@ export function profileWorth(save) {
   return Math.max(0, Math.floor(save?.coins ?? 0)) + spent;
 }
 
+/** Outside the event, an event skin shows only for someone who paid for it. */
+function offered(character, save, christmas) {
+  return (
+    !character.event ||
+    christmas ||
+    (character.cost > 0 && save.characters.includes(character.id))
+  );
+}
+
+/**
+ * Runners worth a NEW on the shop button: flagged, on offer, not yet owned, and
+ * not already looked at. `seen` is the ids the player has opened the shop on.
+ */
+export function unseenNewCharacters(save, seen = [], { christmas = false } = {}) {
+  return CHARACTERS.filter(
+    (character) =>
+      character.isNew &&
+      offered(character, save, christmas) &&
+      !save.characters.includes(character.id) &&
+      !seen.includes(character.id),
+  ).map((character) => character.id);
+}
+
 /**
  * Everything the shop screen needs to render, derived from the save profile.
  * Returning plain data keeps the DOM layer dumb and the pricing testable.
@@ -140,17 +163,13 @@ export function shopView(save, { christmas = false } = {}) {
   });
 
   const worn = wearableCharacter(save.character, christmas);
-  // Outside the event, an event skin shows only for someone who paid for it.
-  const offered = (character) =>
-    !character.event ||
-    christmas ||
-    (character.cost > 0 && save.characters.includes(character.id));
-  const characters = CHARACTERS.filter(offered).map((character) => {
+  const characters = CHARACTERS.filter((character) => offered(character, save, christmas)).map((character) => {
     const owned = save.characters.includes(character.id);
     return {
       ...character,
       blurb: christmas ? character.blurb.replace("까마귀", "눈보라") : character.blurb,
       owned,
+      isNew: Boolean(character.isNew) && !owned,
       equipped: worn === character.id,
       affordable: owned || save.coins >= character.cost,
     };

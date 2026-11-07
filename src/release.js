@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "5.40";
+export const VERSION = "5.50";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "5.50",
+    date: "2026-11-07",
+    kind: "minor",
+    title: "상점에 크리스마스 에디션 탭",
+    notes: [
+      "상점에 크리스마스 에디션 탭이 생겼습니다. 한정 캐릭터와 이벤트 효과, 룰렛 확률을 한곳에서 볼 수 있습니다.",
+      "캐릭터 효과 중 🎄 표시는 이벤트 기간에만 적용되고, 나머지는 끝나도 유지됩니다.",
+      "새 캐릭터에 NEW 표시가 붙습니다. 상점 버튼의 NEW는 상점을 열어 보면 사라집니다.",
+    ],
+  },
   {
     version: "5.40",
     date: "2026-11-07",

@@ -2490,6 +2490,208 @@ kbd {
   margin-bottom: 12px;
 }
 
+/* NEW on the shop button. Hung off the corner so the label does not move, and
+   the button keeps its own clipping out of the way. */
+#btn-shop.has-new {
+  position: relative;
+  overflow: visible;
+}
+
+#btn-shop.has-new::before {
+  content: "NEW";
+  position: absolute;
+  top: -9px;
+  left: -7px;
+  z-index: 1;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff4b56, #d90f1f);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  box-shadow:
+    0 2px 0 #7f0a14,
+    0 0 12px rgba(255, 60, 70, 0.7);
+  transform: rotate(-8deg);
+  animation: newBadge 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes newBadge {
+  to {
+    transform: rotate(-8deg) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #btn-shop.has-new::before {
+    animation: none;
+  }
+}
+
+.new-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ff4b56, #d90f1f);
+  color: #fff;
+  font-size: 0.62em;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  vertical-align: 0.14em;
+}
+
+.shop-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 5px;
+  border-radius: 14px;
+  background: #0b1420;
+  box-shadow: 0 6px 12px rgba(5, 10, 18, 0.65);
+}
+
+.shop-tab {
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+  color: #a9c0d2;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  transform: none;
+}
+
+.shop-tab:hover {
+  color: #fff;
+  transform: none;
+}
+
+.shop-tab:focus-visible {
+  outline: 2px solid #fcd34d;
+  outline-offset: 1px;
+}
+
+.shop-tab.on,
+.shop-tab.on:hover {
+  border-color: rgba(252, 211, 77, 0.65);
+  background: linear-gradient(180deg, #16733a, #0f4f29);
+  color: #fff7d6;
+}
+
+.fx-legend {
+  margin: 0 0 10px;
+  text-align: left;
+  color: #a9c0d2;
+  font-size: 12.5px;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.fx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.fx-chip {
+  padding: 2px 7px;
+  border: 1px solid rgba(252, 211, 77, 0.38);
+  border-radius: 7px;
+  background: rgba(252, 211, 77, 0.1);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.fx-chip.event {
+  border-color: rgba(74, 222, 128, 0.42);
+  background: rgba(34, 197, 94, 0.13);
+  color: #bbf7d0;
+}
+
+.fx-rule {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 178, 204, 0.16);
+  border-radius: 14px;
+  background: rgba(8, 15, 25, 0.72);
+}
+
+.fx-rule-icon {
+  flex: none;
+  width: 26px;
+  font-size: 19px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.fx-rule-body {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.fx-rule-body strong {
+  color: #f8fafc;
+  font-size: 14.5px;
+}
+
+.fx-rule-body p {
+  margin: 2px 0 0;
+  color: #a9c0d2;
+  font-size: 12.5px;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.fx-odds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.fx-odd {
+  padding: 4px 2px;
+  border-radius: 8px;
+  background: rgba(148, 178, 204, 0.1);
+  text-align: center;
+}
+
+.fx-odd b {
+  display: block;
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.fx-odd span {
+  color: #a9c0d2;
+  font-size: 11.5px;
+}
+
+.fx-odd.jackpot {
+  background: rgba(252, 211, 77, 0.2);
+}
+
+.fx-odd.jackpot b {
+  color: #fcd34d;
+}
+
 .shop-section h3 {
   margin: 14px 0 8px;
   text-align: left;

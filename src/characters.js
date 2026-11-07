@@ -22,6 +22,11 @@ export const DEFAULT_CHARACTER = "runner";
  * off the original eleven. The ten after 허수아비 are the ones that may buy a
  * modest score bonus — they cost more, and the bonus climbs with the price.
  *
+ * `isNew` puts a NEW tag on a runner in the shop and on the shop button. Set it
+ * when a runner is added, and take it off the last ones when it has been up long
+ * enough. `effects` is the event tab's list: `event: true` marks one that only
+ * does anything while the event runs.
+ *
  * `scoreBonus` multiplies everything the run scores, so it is bounded on the
  * server the same way the combo is — see MAX_MULTIPLIER in
  * leaderboard-rules.js. Nothing may be added here that is not folded in there.
@@ -57,6 +62,11 @@ export const CHARACTERS = [
     cost: 0,
     event: "christmas",
     blurb: "크리스마스 이벤트 기간 무료 · 썰매를 타고 달리고, 슈퍼 스니커즈를 먹으면 루돌프가 끌어 줍니다",
+    isNew: true,
+    effects: [
+      { text: "썰매를 타고 달림", event: true },
+      { text: "슈퍼 스니커즈 때 루돌프가 썰매를 끎", event: true },
+    ],
     perk: {},
     palette: {
       shirt: 0xc62828,
@@ -77,7 +87,9 @@ export const CHARACTERS = [
     name: "엘프",
     cost: 60000,
     event: "christmas",
+    isNew: true,
     blurb: "크리스마스 한정 · 선물이 20% 더 자주 나옴 · 코인 +15%",
+    effects: [{ text: "선물이 20% 더 자주 나옴", event: true }, { text: "코인 +15%" }],
     perk: { giftGap: 0.8, coinBonus: 1.15 },
     palette: {
       shirt: 0x16a34a,
@@ -94,7 +106,9 @@ export const CHARACTERS = [
     name: "눈사람",
     cost: 90000,
     event: "christmas",
+    isNew: true,
     blurb: "크리스마스 한정 · 눈보라 시야 흐림 -85% · 코인 +25%",
+    effects: [{ text: "눈보라 시야 흐림 -85%", event: true }, { text: "코인 +25%" }],
     perk: { blizzardVeil: 0.15, coinBonus: 1.25 },
     palette: { shirt: 0xf1f5f9, trim: 0xdc2626, pack: 0xf97316, hair: 0x475569, streak: 0xf8fafc },
   },
@@ -103,7 +117,9 @@ export const CHARACTERS = [
     name: "루돌프",
     cost: 120000,
     event: "christmas",
+    isNew: true,
     blurb: "크리스마스 한정 · 슈퍼 스니커즈 +50% · 점수 +10%",
+    effects: [{ text: "슈퍼 스니커즈 +50%" }, { text: "점수 +10%" }],
     perk: { sneakerTime: 1.5, scoreBonus: 1.1 },
     palette: { shirt: 0x8d5a2b, trim: 0x4e342e, pack: 0xff1744, hair: 0x4e342e, streak: 0xfacc15 },
   },
@@ -112,7 +128,9 @@ export const CHARACTERS = [
     name: "블랙 산타",
     cost: 180000,
     event: "christmas",
+    isNew: true,
     blurb: "크리스마스 한정 · 룰렛 꽝 2배, ×99도 2배 · 점수 +12%",
+    effects: [{ text: "룰렛 꽝 2배, ×99도 2배", event: true }, { text: "점수 +12%" }],
     perk: { wheelRisk: 2, scoreBonus: 1.12 },
     palette: {
       shirt: 0x18181b,
@@ -129,7 +147,9 @@ export const CHARACTERS = [
     name: "슈퍼 산타",
     cost: 300000,
     event: "christmas",
+    isNew: true,
     blurb: "크리스마스 한정 · 룰렛이 꽝이면 판마다 한 번 재도전 · 코인 +30% · 점수 +22%",
+    effects: [{ text: "룰렛이 꽝이면 판마다 한 번 재도전", event: true }, { text: "슈퍼 스니커즈 때 루돌프 3마리" }, { text: "코인 +30%" }, { text: "점수 +22%" }],
     perk: { wheelRetry: 1, coinBonus: 1.3, scoreBonus: 1.22 },
     palette: {
       shirt: 0xf59e0b,
