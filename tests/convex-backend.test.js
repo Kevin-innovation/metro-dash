@@ -1202,6 +1202,25 @@ describe("admin 학교 도구", () => {
     expect(await t.query(api.players.load, { token: b.token })).toMatchObject({ schoolLabel: "DIS (대구국제학교)" });
   });
 
+  it("관리자 목록은 리더보드가 읽는 이번 주 · 이번 시즌 점수를 보여 준다", async () => {
+    const t = backend();
+    const now = await signUp(t, "이번주", "1234", "d1");
+    await t.mutation(api.scores.submit, { token: now.token, ...plausibleRun({ score: 5000 }) });
+    await signUp(t, "지난시즌", "1234", "d2");
+    // A best written in an earlier season, as an account that has not played since.
+    await t.run(async (ctx) => {
+      const player = await ctx.db
+        .query("players")
+        .withIndex("by_handleKey", (q) => q.eq("handleKey", "지난시즌"))
+        .unique();
+      await ctx.db.patch(player._id, { best: 900000, bestSeason: seasonAt() - 1, weekKey: "w1", weekBest: 900000 });
+    });
+
+    const rows = await t.query(api.admin.list, { adminKey: ADMIN_KEY });
+    expect(rows.find((row) => row.handle === "이번주")).toMatchObject({ weekBest: 5000, best: 5000 });
+    expect(rows.find((row) => row.handle === "지난시즌")).toMatchObject({ weekBest: 0, best: 0 });
+  });
+
   it("관리자 목록에 학교가 함께 보인다", async () => {
     const t = backend();
     const { token } = await signUp(t, "소속있음");
@@ -1310,6 +1329,7 @@ describe("admin gate", () => {
         "lockedUntil",
         "school",
         "updatedAt",
+        "weekBest",
       ].sort(),
     );
   });

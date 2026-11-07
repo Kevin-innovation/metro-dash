@@ -137,9 +137,10 @@ function renderSchools() {
 
 function renderPlayers() {
   const filter = $("admin-search").value.trim().toLowerCase();
-  const rows = filter
-    ? players.filter((p) => `${p.handle} ${p.school}`.toLowerCase().includes(filter))
-    : players;
+  // In the order of the board players open first: this week, then the season.
+  const rows = [
+    ...(filter ? players.filter((p) => `${p.handle} ${p.school}`.toLowerCase().includes(filter)) : players),
+  ].sort((a, b) => b.weekBest - a.weekBest || b.best - a.best);
 
   const root = $("admin-players");
   if (!rows.length) {
@@ -157,8 +158,10 @@ function renderPlayers() {
         <summary class="admin-row-main">
           <span class="admin-handle">${handle}${locked ? ' <em class="locked">잠김</em>' : ""}${
             row.flagged ? ' <em class="locked">저장 거절됨</em>' : ""
-          } <b class="admin-score">${row.best.toLocaleString()}점</b></span>
-          <span class="admin-meta">${row.school ? escapeHtml(row.school) : "학교 없음"} · 코인 ${(
+          } <b class="admin-score">이번 주 ${row.weekBest.toLocaleString()}점</b></span>
+          <span class="admin-meta">이번 시즌 최고 ${row.best.toLocaleString()}점 · ${
+            row.school ? escapeHtml(row.school) : "학교 없음"
+          } · 코인 ${(
             row.coins ?? 0
           ).toLocaleString()}</span>
           <span class="admin-meta">최근 ${row.updatedAt ? ago(row.updatedAt) : "—"} · 가입 ${when(row.createdAt)}${

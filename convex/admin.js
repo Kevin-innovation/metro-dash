@@ -58,9 +58,15 @@ export const list = query({
 
     // No PIN or token in the response: staff need to find an account, not to
     // sign in as one.
+    //
+    // The two figures the boards rank by, read the way the boards read them:
+    // this week's best (the board players open first) and this season's, which
+    // is zero for a best left over from an earlier season.
+    const week = weekKey(Date.now());
     return players.map((player) => ({
       handle: player.handle,
-      best: player.best,
+      best: bestOf(player),
+      weekBest: player.weekKey === week ? (player.weekBest ?? 0) : 0,
       coins: coinsOf(player),
       /** True once a save was refused for claiming more than it could earn. */
       flagged: Boolean(player.flagged),
