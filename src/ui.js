@@ -785,7 +785,7 @@ function christmasRules() {
         `판 도중 산타가 나타나 3초를 세고 황금 선물을 떨어뜨립니다. 달리던 레인으로 떨어지니, "지금 점프!"가 뜨면 뛰어서 낚아채세요. 코인 +${SANTA_DROP_COINS.toLocaleString()}입니다.`,
       )}
       ${row("🧝", "도둑 요정 추격", `요정이 레인을 바꾸며 달아나면서 선물 ${ELF_GIFTS}개를 흘립니다. 하나에 코인 +${ELF_GIFT_COINS}, 모두 주우면 자루를 떨어뜨려 코인 +${ELF_SACK_COINS.toLocaleString()}.`)}
-      ${row("🏔️", "눈사태 탈출", `뒤에서 눈사태가 밀려오고 ${TRACK_EVENT_SECONDS.avalanche}초 동안 빨라집니다. 끝까지 버티면 코인 +${AVALANCHE_COINS.toLocaleString()}.`)}
+      ${row("🏔️", "눈사태 탈출", `눈사태에 쫓겨 ${TRACK_EVENT_SECONDS.avalanche}초 동안 빨라집니다. 눈사태에는 닿지 않으니, 평소 장애물에 부딪히지 않고 끝까지 달리면 코인 +${AVALANCHE_COINS.toLocaleString()}.`)}
       ${row("🧊", "빙판 구간", `${TRACK_EVENT_SECONDS.ice}초 동안 레인을 바꿀 때 미끄럽습니다. 빙판에서 장애물을 넘을 때마다 코인 +${ICE_CLEAR_COINS}.`)}
       ${row("🌌", "오로라 타임", `콤보 ${AURORA_COMBO}을 넘기면 오로라가 뜨고 ${AURORA_SECONDS}초 동안 코인이 ${1 + AURORA_COIN_BONUS}배가 됩니다. 콤보가 끊기면 바로 끝납니다.`)}
       ${row("🌃", "콤보로 켜지는 도시", "콤보가 오르면 벽 전구, 건물 창문, 거리 트리 순으로 불이 켜집니다. 콤보가 끊기면 다시 어두워져요.")}

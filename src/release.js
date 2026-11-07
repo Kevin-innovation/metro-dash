@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.40";
+export const VERSION = "6.41";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.41",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "눈사태 안내",
+    notes: [
+      "눈사태 때 무엇을 해야 하는지 멘트로 분명히 알려 줍니다. 눈사태에는 닿지 않아요. 평소 장애물에 부딪히지 않고 10초를 달리면 코인 1,000을 받습니다.",
+      "눈사태가 끝나기 전 3·2·1을 세어 줍니다.",
+    ],
+  },
   {
     version: "6.40",
     date: "2026-11-07",

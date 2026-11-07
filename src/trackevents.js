@@ -19,12 +19,14 @@ import { tinted } from "./textures.js";
 
 const ANNOUNCE = {
   elf: "🧝 도둑 요정이 선물 자루를 훔쳐 달아나요!",
-  avalanche: "🏔️ 눈사태가 몰려와요! 끝까지 달리세요!",
+  avalanche: "🏔️ 눈사태가 뒤에서 몰려와요! 곧 빨라져요",
   ice: "🧊 앞에 빙판이 나타나요! 미끄러워요!",
 };
 const STARTED = {
   elf: "🎁 요정이 흘리는 선물을 주우세요!",
-  avalanche: `⚡ 눈사태 탈출! ${TRACK_EVENT_SECONDS.avalanche}초만 버티세요`,
+  // The snow itself never touches anyone. What there is to avoid is the same
+  // obstacles as always, coming faster, and the line has to say so.
+  avalanche: `⚡ ${TRACK_EVENT_SECONDS.avalanche}초간 빨라져요! 장애물에 안 부딪히면 코인 +${AVALANCHE_COINS.toLocaleString()}`,
   ice: `🧊 장애물을 넘으면 코인 +${ICE_CLEAR_COINS}`,
 };
 
@@ -305,6 +307,7 @@ export class TrackEventStage {
     else if (event?.type === "end") this.end(event.kind);
 
     if (this.director.phase === "active" && this.director.kind === "elf") this.advanceChase(dt);
+    if (this.director.phase === "active" && this.director.kind === "avalanche") this.countAvalanche();
   }
 
   advanceAurora(dt) {
@@ -357,6 +360,7 @@ export class TrackEventStage {
       this.dropped = 0;
       this.dropIn = ELF_FIRST_DROP;
     } else if (kind === "avalanche") {
+      this.waveCount = null;
       g.run.setSpeedScale(AVALANCHE_SPEED, TRACK_EVENT_SECONDS.avalanche);
       if (!reducedMotion()) {
         g.fovPunch = Math.max(g.fovPunch, 0.8);
@@ -404,6 +408,15 @@ export class TrackEventStage {
       (item) =>
         item.lethal && !item.taken && item.lane === lane && Math.abs(item.z - z) < item.length / 2 + GIFT_CLEARANCE,
     );
+  }
+
+  /** The last three seconds out loud, so holding on feels like getting somewhere. */
+  countAvalanche() {
+    const left = Math.ceil(this.director.t);
+    if (left > 3 || left === this.waveCount) return;
+    this.waveCount = left;
+    this.game.audio.tick();
+    this.game.screens.showRaid(String(left), true);
   }
 
   /** Drop what it is carrying, then bolt for another lane to make them chase it. */
