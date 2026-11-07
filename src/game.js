@@ -290,7 +290,11 @@ export class Game {
       submitSchool: (input) => this.submitSchool(input),
     });
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    // Watched rather than left to the window's resize event, which says nothing
+    // when the stylesheet lands after this first measurement. On a slow phone that
+    // froze the camera at the height of the unstyled page, ten thousand pixels,
+    // and the whole track came out stretched sideways until the page was reloaded.
+    new ResizeObserver(() => this.resize()).observe(root);
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && this.state === "playing") this.pause(true);
     });

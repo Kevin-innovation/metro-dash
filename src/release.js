@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.20";
+export const VERSION = "6.21";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,15 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.21",
+    date: "2026-11-07",
+    kind: "fix",
+    title: "휴대폰 화면이 옆으로 늘어나던 문제",
+    notes: [
+      "느린 인터넷에서 게임을 열면 트랙이 옆으로 크게 늘어나고 건물이 사라지던 문제를 고쳤습니다.",
+    ],
+  },
   {
     version: "6.20",
     date: "2026-11-07",
