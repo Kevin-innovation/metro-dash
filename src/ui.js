@@ -494,19 +494,13 @@ export function renderHud(state) {
 /**
  * What the run met, under what it scored.
  *
- * The rows the track decides are always shown, zero included — 「다이아몬드 2 ·
- * 룰렛 0」 is the run telling you it was one stone short, which is a thing worth
- * knowing and is invisible if the line is hidden for being zero.
- *
- * The two consumables are the exception. Those are things you brought with you
- * rather than things the track handed out, and a player who owns neither would
- * be shown two permanent zeros explaining nothing about the run they just had.
- * They appear the moment one is spent.
+ * Only what actually happened. Rows of zeros made the card taller than a phone
+ * screen and told the player nothing about the run they just had.
  */
 const TALLY_ROWS = [
-  { key: "diamonds", icon: "💎", label: "다이아몬드", always: true, christmas: false },
-  { key: "gifts", icon: "🎁", label: "선물", always: true, christmas: true },
-  { key: "spins", icon: "🎰", label: "룰렛", suffix: "회", always: true },
+  { key: "diamonds", icon: "💎", label: "다이아몬드", christmas: false },
+  { key: "gifts", icon: "🎁", label: "선물", christmas: true },
+  { key: "spins", icon: "🎰", label: "룰렛", suffix: "회" },
   // Each power-up by name rather than one 「파워업 14」.
   //
   // Run has counted them separately since the missions needed to single one
@@ -519,30 +513,27 @@ const TALLY_ROWS = [
     key: POWERUP_METRIC[id],
     icon: POWERUPS[id].icon,
     label: POWERUPS[id].name,
-    always: true,
   })),
-  { key: "nearMisses", icon: "💨", label: "아슬아슬", always: true },
-  { key: "crows", icon: "🐦‍⬛", label: "까마귀", always: true, christmas: false },
-  { key: "crows", icon: BLIZZARD.icon, label: BLIZZARD.name, always: true, christmas: true },
-  { key: "blizzardClears", icon: "🌬️", label: "눈보라 돌파", always: true, christmas: true },
-  { key: "santaDrops", icon: "🎅", label: "산타 선물", always: true, christmas: true },
-  { key: "gates", icon: "🚧", label: "게이트", always: true },
-  { key: "boards", icon: "🛹", label: "호버보드", always: false },
-  { key: "antidotes", icon: "💊", label: "해독제", always: false },
+  { key: "nearMisses", icon: "💨", label: "아슬아슬" },
+  { key: "crows", icon: "🐦‍⬛", label: "까마귀", christmas: false },
+  { key: "crows", icon: BLIZZARD.icon, label: BLIZZARD.name, christmas: true },
+  { key: "blizzardClears", icon: "🌬️", label: "눈보라 돌파", christmas: true },
+  { key: "santaDrops", icon: "🎅", label: "산타 선물", christmas: true },
+  { key: "boards", icon: "🛹", label: "호버보드" },
+  { key: "antidotes", icon: "💊", label: "해독제" },
 ];
 
 export function renderRunTally(root, metrics = {}, christmas = false) {
   if (!root) return;
   const rows = TALLY_ROWS.filter(
     (row) =>
-      (row.christmas === undefined || row.christmas === christmas) &&
-      (row.always || (metrics[row.key] ?? 0) > 0),
+      (row.christmas === undefined || row.christmas === christmas) && (metrics[row.key] ?? 0) > 0,
   );
   root.innerHTML = rows
     .map((row) => {
       const value = Math.max(0, Math.floor(metrics[row.key] ?? 0));
       return `
-      <div class="tally${value > 0 ? " on" : ""}">
+      <div class="tally">
         <span class="tally-icon" aria-hidden="true">${row.icon}</span>
         <span class="tally-label">${escapeHtml(row.label)}</span>
         <strong class="tally-value">${value.toLocaleString()}${row.suffix ?? ""}</strong>

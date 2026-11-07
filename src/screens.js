@@ -190,14 +190,6 @@ export class Screens {
       if (tab) tab.onclick = () => a.setBoardRange(range);
     }
 
-    const boardList = $("leaderboard-list");
-    if (boardList) {
-      boardList.addEventListener("click", (event) => {
-        const flag = event.target.closest("[data-report]");
-        if (flag && !flag.disabled) a.reportHandle(flag.dataset.report, flag);
-      });
-    }
-
     const schoolBtn = $("btn-school");
     if (schoolBtn) schoolBtn.onclick = () => this.openSchool();
     const schoolClose = $("btn-school-close");
@@ -671,14 +663,6 @@ export class Screens {
       list.innerHTML = rows
         .map((row) => {
           const mine = row.handle === myHandle;
-          // No flag on your own row, and none at all for a signed-out viewer:
-          // a report has to be attributable to be worth acting on.
-          const flag =
-            myHandle && !mine
-              ? `<button type="button" class="report-flag" data-report="${escapeHtml(
-                  row.handle,
-                )}" title="닉네임 신고" aria-label="${escapeHtml(row.handle)} 신고">🚩</button>`
-              : `<span class="report-flag" aria-hidden="true"></span>`;
           // The school under the name, where there is one. A player who has not
           // picked yet simply has a one-line row.
           const where = row.school
@@ -691,7 +675,6 @@ export class Screens {
               <span class="leaderboard-rank">${row.rank}</span>
               <span class="leaderboard-handle">${escapeHtml(row.handle)}${level}${where}</span>
               <span class="leaderboard-score">${row.best.toLocaleString()}</span>
-              ${flag}
             </li>`;
         })
         .join("");
@@ -708,7 +691,6 @@ export class Screens {
                standing.level ? ` <em class="row-level">Lv.${standing.level}</em>` : ""
              }</span>
              <span class="leaderboard-score">${standing.best.toLocaleString()}</span>
-             <span class="report-flag" aria-hidden="true"></span>
            </li>`,
         );
       }
@@ -1458,7 +1440,6 @@ export class Screens {
           <em class="row-school">Lv.${row.level}${row.school ? ` · ${escapeHtml(row.school)}` : ""}</em>
         </span>
         <span class="leaderboard-score">${row.xp.toLocaleString()}<em class="score-unit">XP</em></span>
-        <span class="report-flag" aria-hidden="true"></span>
       </li>`;
 
     if (!rows?.length) {
@@ -1475,7 +1456,6 @@ export class Screens {
                <em class="row-school">Lv.${standing.level}</em>
              </span>
              <span class="leaderboard-score">${standing.xp.toLocaleString()}<em class="score-unit">XP</em></span>
-             <span class="report-flag" aria-hidden="true"></span>
            </li>`,
         );
       }

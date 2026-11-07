@@ -68,64 +68,40 @@ export const list = query({
       lockedUntil: player.lockedUntil,
       failedAttempts: player.failedAttempts,
       createdAt: player.createdAt,
+      updatedAt: player.updatedAt,
     }));
   },
 });
 
 /**
- * Open reports, newest first, grouped by who was reported.
- *
- * Grouped rather than listed one per row: five reports about one nickname is
- * one thing to look at, not five.
+ * Who has been around lately: the newest runs, and the accounts that saved most
+ * recently. A save is written whenever a signed-in browser syncs, so its time is
+ * the closest thing to a last visit the server has.
  */
-export const reports = query({
+export const recent = query({
   args: { adminKey: v.string() },
   handler: async (ctx, { adminKey }) => {
     requireAdmin(adminKey);
-    const open = await ctx.db
-      .query("reports")
-      .withIndex("by_status", (q) => q.eq("status", "open"))
-      .order("desc")
-      .take(200);
-
-    const byTarget = new Map();
-    for (const row of open) {
-      const entry = byTarget.get(row.targetHandle) ?? {
-        handle: row.targetHandle,
-        count: 0,
-        reporters: [],
-        latest: 0,
-      };
-      entry.count += 1;
-      if (entry.reporters.length < 5) entry.reporters.push(row.reporterHandle);
-      entry.latest = Math.max(entry.latest, row.createdAt);
-      byTarget.set(row.targetHandle, entry);
-    }
-
-    return [...byTarget.values()].sort((a, b) => b.count - a.count || b.latest - a.latest);
-  },
-});
-
-/** Mark every open report about a nickname as dealt with. */
-export const resolveReports = mutation({
-  args: { adminKey: v.string(), handle: v.string() },
-  handler: async (ctx, { adminKey, handle }) => {
-    requireAdmin(adminKey);
-    const player = await byHandle(ctx, handle);
-    if (!player) throw new ConvexError("그런 닉네임이 없습니다");
-
-    const open = await ctx.db
-      .query("reports")
-      .withIndex("by_target", (q) => q.eq("targetId", player._id))
-      .collect();
-    let resolved = 0;
-    for (const row of open) {
-      if (row.status === "open") {
-        await ctx.db.patch(row._id, { status: "resolved" });
-        resolved += 1;
-      }
-    }
-    return { ok: true, resolved };
+    const runs = await ctx.db.query("scores").order("desc").take(50);
+    const seen = await ctx.db.query("players").withIndex("by_updatedAt").order("desc").take(50);
+    return {
+      runs: runs.map((run) => ({
+        handle: run.handle,
+        school: run.school ?? "",
+        score: run.score,
+        distance: run.distance,
+        seconds: run.seconds,
+        createdAt: run.createdAt,
+      })),
+      players: seen
+        .filter((player) => player.role !== "admin")
+        .map((player) => ({
+          handle: player.handle,
+          school: player.school ? schoolLabel(player.school) : "",
+          best: bestOf(player),
+          updatedAt: player.updatedAt,
+        })),
+    };
   },
 });
 
@@ -214,15 +190,6 @@ export const rename = mutation({
       .withIndex("by_player", (q) => q.eq("playerId", player._id))
       .collect();
     for (const run of runs) await ctx.db.patch(run._id, { handle: check.handle });
-
-    // The reports that prompted this are answered by the rename itself.
-    const open = await ctx.db
-      .query("reports")
-      .withIndex("by_target", (q) => q.eq("targetId", player._id))
-      .collect();
-    for (const row of open) {
-      if (row.status === "open") await ctx.db.patch(row._id, { status: "resolved" });
-    }
 
     return { ok: true, from: player.handle, to: check.handle, runsUpdated: runs.length };
   },
@@ -374,13 +341,38 @@ export const mergeSchools = mutation({
 
     // Carrying the label too, since it cannot be rebuilt from the parts alone.
     const school = { region: to.region, level: to.level, name: to.name, label: to.label };
+    const fromLabel = schoolLabel(from);
+    const toLabel = schoolLabel(to);
     for (const player of members) {
-      await ctx.db.patch(player._id, { school, schoolKey: to.key, updatedAt: Date.now() });
+      await ctx.db.patch(player._id, { school, schoolKey: to.key });
+      // The runs carry the school name too, and a closing week ranks schools
+      // from those alone — left alone, the hall would split the school again.
+      const runs = await ctx.db
+        .query("scores")
+        .withIndex("by_player", (q) => q.eq("playerId", player._id))
+        .collect();
+      for (const run of runs) {
+        if (run.school === fromLabel) await ctx.db.patch(run._id, { school: toLabel });
+      }
     }
 
+    // The season total is the members' season bests, summed the way adjustSchool
+    // reads it; the week's figures move over as they stand, or this week's
+    // school board would lose everything the merged school had scored.
+    const season = seasonAt();
+    const week = weekKey(Date.now());
+    const seasonTotal = (row) => ((row.totalSeason ?? 0) === season ? row.total : 0);
+    const weekly = (row) =>
+      row.weekKey === week
+        ? { total: row.weekTotal ?? 0, members: row.weekMembers ?? 0 }
+        : { total: 0, members: 0 };
     await ctx.db.patch(to._id, {
       members: to.members + members.length,
-      total: to.total + members.reduce((sum, player) => sum + player.best, 0),
+      totalSeason: season,
+      total: seasonTotal(to) + members.reduce((sum, player) => sum + bestOf(player, season), 0),
+      weekKey: week,
+      weekTotal: weekly(to).total + weekly(from).total,
+      weekMembers: weekly(to).members + weekly(from).members,
       updatedAt: Date.now(),
     });
     await ctx.db.delete(from._id);
@@ -591,7 +583,8 @@ export const recomputeSchools = mutation({
       const key = schoolKey(school);
       const entry = tally.get(key) ?? { school, members: 0, total: 0, ids: [] };
       entry.members += 1;
-      entry.total += player.best;
+      // This season's best only, the same figure every delta moves the total by.
+      entry.total += bestOf(player);
       entry.ids.push(player._id);
       tally.set(key, entry);
     }
@@ -605,6 +598,7 @@ export const recomputeSchools = mutation({
         name: entry.school.name,
         label: entry.school.label,
         members: entry.members,
+        totalSeason: seasonAt(),
         total: entry.total,
         updatedAt: Date.now(),
       });

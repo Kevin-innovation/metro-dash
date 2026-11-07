@@ -25,8 +25,7 @@ const SEED = () => {
     .map(
       ([h, school], i) => `<li class="leaderboard-row"><span class="leaderboard-rank">${i + 1}</span>
         <span class="leaderboard-handle">${h}${school ? `<em class="row-school">${school}</em>` : ""}</span>
-        <span class="leaderboard-score">${(14200 - i * 1130).toLocaleString()}</span>
-        <button type="button" class="report-flag">🚩</button></li>`,
+        <span class="leaderboard-score">${(14200 - i * 1130).toLocaleString()}</span></li>`,
     )
     .join("");
 
@@ -49,7 +48,7 @@ const SEED = () => {
   for (const [id, text] of [
     ["my-standing", "내 순위 5위 · 9,680점"],
     ["my-school-standing", "서울대학교사범대학부설초 · 1위 · 41,200점"],
-    ["report-note", "신고했어요. 선생님이 확인합니다"],
+    ["report-note", "대구동중 로 등록했어요"],
   ]) {
     const el = document.getElementById(id);
     el.textContent = text;

@@ -303,7 +303,6 @@ export class Game {
       closeLeaderboard: () => this.closeLeaderboard(),
       setBoardRange: (range) => this.setBoardRange(range),
       turnBoardPage: (column, direction) => this.turnBoardPage(column, direction),
-      reportHandle: (handle, button) => this.reportHandle(handle, button),
       submitSchool: (input) => this.submitSchool(input),
     });
     this.resize();
@@ -564,23 +563,6 @@ export class Game {
     // arrived, rather than having to count.
     if (carried > 0) {
       this.screens.showToast(`이 기기에서 번 코인 ${carried.toLocaleString()}개를 계정에 더했어요`);
-    }
-  }
-
-  /** Report a nickname from the leaderboard. */
-  async reportHandle(handle, button) {
-    if (button) button.disabled = true;
-    try {
-      const result = await this.cloud.report(handle);
-      this.screens.showReportNote(
-        result?.alreadyReported
-          ? "이미 신고한 닉네임이에요"
-          : "신고했어요. 선생님이 확인합니다",
-      );
-      this.audio.purchase();
-    } catch (error) {
-      if (button) button.disabled = false;
-      this.screens.showReportNote(cloudMessage(error));
     }
   }
 

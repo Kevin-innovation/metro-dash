@@ -390,11 +390,6 @@ export class Cloud {
     return result;
   }
 
-  async report(handle) {
-    if (!this.signedIn) throw new Error("로그인해야 신고할 수 있어요");
-    return await this.mutation("reports:report", { token: this.session.token, handle });
-  }
-
   /** @param {"week"|"all"} range which board to read. */
   async leaderboard(limit = 20, range = "week") {
     return await this.query("scores:top", { limit, range });

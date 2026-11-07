@@ -6,6 +6,7 @@ import { api } from "../convex/_generated/api.js";
 import { FREE_ATTEMPTS, MAX_ACCOUNTS_PER_DEVICE, maxDistanceIn } from "../src/leaderboard-rules.js";
 import { rankAt } from "../src/progression.js";
 import { MAX_SESSIONS } from "../convex/session.js";
+import { seasonAt } from "../src/release.js";
 
 /**
  * The backend, run against an in-memory Convex.
@@ -1041,6 +1042,14 @@ describe("admin 학교 도구", () => {
     expect(await t.query(api.schools.top, {})).toEqual([
       expect.objectContaining({ label: "대구계성중", total: 4000, members: 2 }),
     ]);
+    // This week's board keeps what the merged school scored.
+    expect(await t.query(api.schools.top, { range: "week" })).toEqual([
+      expect.objectContaining({ label: "대구계성중", total: 4000, members: 2 }),
+    ]);
+    // The runs follow, or a closing week would split the school again.
+    const recent = await t.query(api.admin.recent, { adminKey: ADMIN_KEY });
+    expect(recent.runs.map((run) => run.school)).toEqual(["대구계성중", "대구계성중"]);
+    expect(recent.players.map((row) => row.handle).sort()).toEqual(["오타학교", "정상학교"]);
     // And the moved player now reads as being at the merged school.
     expect(await t.query(api.players.load, { token: a.token })).toMatchObject({
       schoolLabel: "대구계성중",
@@ -1108,6 +1117,7 @@ describe("admin 학교 도구", () => {
           .unique();
         await ctx.db.patch(player._id, {
           best,
+          bestSeason: seasonAt(),
           school: { region: "대구", level: "초", name, label },
           schoolKey: key,
         });
@@ -1156,6 +1166,7 @@ describe("admin 학교 도구", () => {
           .unique();
         await ctx.db.patch(player._id, {
           best,
+          bestSeason: seasonAt(),
           school: { region: "대구", level, name, label },
           schoolKey: key,
         });
@@ -1274,74 +1285,6 @@ describe("scores:top 의 소속", () => {
   });
 });
 
-// --- reporting --------------------------------------------------------------
-
-describe("reports:report", () => {
-  it("files a report an admin can then see", async () => {
-    const t = backend();
-    const reporter = await signUp(t, "신고자", "1234", "d1");
-    await signUp(t, "나쁜놈", "1234", "d2");
-
-    const result = await t.mutation(api.reports.report, {
-      token: reporter.token,
-      handle: "나쁜놈",
-    });
-    expect(result).toEqual({ ok: true, alreadyReported: false });
-
-    const open = await t.query(api.admin.reports, { adminKey: ADMIN_KEY });
-    expect(open).toEqual([
-      expect.objectContaining({ handle: "나쁜놈", count: 1, reporters: ["신고자"] }),
-    ]);
-  });
-
-  it("counts one report per reporter however many times they press it", async () => {
-    const t = backend();
-    const reporter = await signUp(t, "연타쟁이", "1234", "d1");
-    await signUp(t, "대상자", "1234", "d2");
-
-    await t.mutation(api.reports.report, { token: reporter.token, handle: "대상자" });
-    const again = await t.mutation(api.reports.report, { token: reporter.token, handle: "대상자" });
-    expect(again).toEqual({ ok: true, alreadyReported: true });
-
-    const open = await t.query(api.admin.reports, { adminKey: ADMIN_KEY });
-    expect(open[0].count).toBe(1);
-  });
-
-  it("groups separate reporters onto one row", async () => {
-    const t = backend();
-    const one = await signUp(t, "목격자일", "1234", "d1");
-    const two = await signUp(t, "목격자이", "1234", "d2");
-    await signUp(t, "지목당함", "1234", "d3");
-
-    await t.mutation(api.reports.report, { token: one.token, handle: "지목당함" });
-    await t.mutation(api.reports.report, { token: two.token, handle: "지목당함" });
-
-    const open = await t.query(api.admin.reports, { adminKey: ADMIN_KEY });
-    expect(open).toHaveLength(1);
-    expect(open[0].count).toBe(2);
-  });
-
-  it("refuses a self-report and an unknown target", async () => {
-    const t = backend();
-    const { token } = await signUp(t, "혼자놀기");
-
-    await expect(t.mutation(api.reports.report, { token, handle: "혼자놀기" })).rejects.toThrow(
-      /자기 자신/,
-    );
-    await expect(t.mutation(api.reports.report, { token, handle: "유령" })).rejects.toThrow(
-      /없어요/,
-    );
-  });
-
-  it("refuses a report from someone not signed in", async () => {
-    const t = backend();
-    await signUp(t, "대상자");
-    await expect(
-      t.mutation(api.reports.report, { token: "not-a-token", handle: "대상자" }),
-    ).rejects.toThrow(/세션/);
-  });
-});
-
 // --- teacher tools ----------------------------------------------------------
 
 describe("admin gate", () => {
@@ -1366,6 +1309,7 @@ describe("admin gate", () => {
         "handle",
         "lockedUntil",
         "school",
+        "updatedAt",
       ].sort(),
     );
   });
@@ -1460,13 +1404,11 @@ describe("admin:recordRun", () => {
 });
 
 describe("admin:rename", () => {
-  it("carries the player's runs and clears the reports that prompted it", async () => {
+  it("carries the player's runs", async () => {
     const t = backend();
-    const reporter = await signUp(t, "신고자", "1234", "d1");
     const bad = await signUp(t, "욕쟁이", "1234", "d2");
 
     await t.mutation(api.scores.submit, { token: bad.token, ...plausibleRun({ score: 5000 }) });
-    await t.mutation(api.reports.report, { token: reporter.token, handle: "욕쟁이" });
 
     const result = await t.mutation(api.admin.rename, {
       adminKey: ADMIN_KEY,
@@ -1478,7 +1420,6 @@ describe("admin:rename", () => {
     // The board reads the denormalised copy, so it has to move too.
     const board = await t.query(api.scores.top, {});
     expect(board[0]).toMatchObject({ handle: "착한이", best: 5000 });
-    expect(await t.query(api.admin.reports, { adminKey: ADMIN_KEY })).toHaveLength(0);
 
     // Same account, still signed in.
     expect(await t.query(api.players.load, { token: bad.token })).toMatchObject({
@@ -1543,43 +1484,20 @@ describe("admin:unlock", () => {
 });
 
 describe("admin:remove", () => {
-  it("takes the account, its runs and its reports with it", async () => {
+  it("takes the account and its runs with it", async () => {
     const t = backend();
-    const reporter = await signUp(t, "신고자", "1234", "d1");
     const bad = await signUp(t, "퇴출자", "1234", "d2");
 
     await t.mutation(api.scores.submit, { token: bad.token, ...plausibleRun() });
-    await t.mutation(api.reports.report, { token: reporter.token, handle: "퇴출자" });
 
     const result = await t.mutation(api.admin.remove, { adminKey: ADMIN_KEY, handle: "퇴출자" });
-    expect(result).toMatchObject({ runsRemoved: 1, reportsRemoved: 1 });
+    expect(result).toMatchObject({ runsRemoved: 1 });
 
     expect(await t.query(api.scores.top, {})).toHaveLength(0);
-    expect(await t.query(api.admin.reports, { adminKey: ADMIN_KEY })).toHaveLength(0);
     await expect(t.query(api.players.load, { token: bad.token })).rejects.toThrow(/세션/);
 
     // And the nickname is free again.
     expect(await t.query(api.players.available, { handle: "퇴출자" })).toEqual({ ok: true });
-  });
-});
-
-describe("admin:resolveReports", () => {
-  it("clears the queue without touching the account", async () => {
-    const t = backend();
-    const reporter = await signUp(t, "오해한이", "1234", "d1");
-    await signUp(t, "결백한이", "1234", "d2");
-    await t.mutation(api.reports.report, { token: reporter.token, handle: "결백한이" });
-
-    const result = await t.mutation(api.admin.resolveReports, {
-      adminKey: ADMIN_KEY,
-      handle: "결백한이",
-    });
-    expect(result).toMatchObject({ resolved: 1 });
-    expect(await t.query(api.admin.reports, { adminKey: ADMIN_KEY })).toHaveLength(0);
-    expect(await t.query(api.players.available, { handle: "결백한이" })).toMatchObject({
-      ok: false,
-      reason: "taken",
-    });
   });
 });
 

@@ -503,7 +503,6 @@
             </section>
           </div>
           <p id="report-note" class="report-note hidden"></p>
-          <p class="report-hint">이상한 닉네임이 보이면 🚩 를 눌러 알려 주세요</p>
           <button id="btn-leaderboard-close" type="button" class="ghost">닫기</button>
         </div>
       </div>
@@ -613,7 +612,7 @@
                   <strong id="break-bonus">0</strong>
                 </div>
                 <div class="total">
-                  <span>합계</span>
+                  <span>합계 <em id="new-best" class="new-best hidden">최고 기록!</em></span>
                   <strong id="final-score">0</strong>
                 </div>
               </div>
@@ -665,25 +664,29 @@
               <div id="rank-up" class="rank-up hidden"></div>
               <div id="mission-cleared" class="mission-cleared hidden"></div>
 
-              <!-- Where that run put you. Filled in once the server has taken
-                   the score, which is the only moment a rank means anything. -->
-              <div id="over-ranks" class="over-ranks hidden">
-                <div class="over-rank">
-                  <span class="over-rank-label">개인</span>
-                  <strong id="over-rank-me" class="over-rank-value">…</strong>
+              <!-- Where that run put you, beside what you hold — one row, so the
+                   card fits a phone screen without scrolling. The ranks are
+                   filled in once the server has taken the score. -->
+              <div class="over-facts">
+                <div id="over-ranks" class="over-ranks hidden">
+                  <div class="over-rank">
+                    <span class="over-rank-label">개인</span>
+                    <strong id="over-rank-me" class="over-rank-value">…</strong>
+                  </div>
+                  <div class="over-rank">
+                    <span class="over-rank-label">학교</span>
+                    <strong id="over-rank-school" class="over-rank-value">…</strong>
+                  </div>
                 </div>
                 <div class="over-rank">
-                  <span class="over-rank-label">학교</span>
-                  <strong id="over-rank-school" class="over-rank-value">…</strong>
+                  <span class="over-rank-label">시즌 최고</span>
+                  <strong id="over-best" class="over-rank-value">0</strong>
+                </div>
+                <div class="over-rank">
+                  <span class="over-rank-label">보유 코인</span>
+                  <strong id="over-bank" class="over-rank-value">0</strong>
                 </div>
               </div>
-
-              <p class="best-line over-best">내 이번 시즌 최고 점수 <strong id="over-best">0</strong></p>
-              <p id="new-best" class="new-best hidden">새 최고 기록!</p>
-
-              <p class="bank-line">
-                보유 코인 <span class="coin-orb small"></span><strong id="over-bank">0</strong>
-              </p>
 
               </div>
 
@@ -698,11 +701,8 @@
                    width of nothing in the middle of the card. Content fills it;
                    a smaller gap only moves it.
 
-                   Its own block rather than part of the outcome above, so that
-                   on a phone — where the two columns become one stack — it can
-                   be ordered *after* the buttons. Ten rows of detail between
-                   the score and 「다시 달리기」 pushed the one thing everybody
-                   presses off the bottom of the screen.
+                   On a phone only what actually happened is shown, as small
+                   chips, so the whole card fits one screen without scrolling.
 
                    Built from the run's own tally in ui.js, so a metric added to
                    Run shows up here by being named rather than by being marked

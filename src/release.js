@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.50";
+export const VERSION = "6.51";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,17 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.51",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "결과 화면 한눈에",
+    notes: [
+      "📱 휴대폰에서 게임이 끝나면 점수, 기록, 미션, 순위, 버튼까지 스크롤 없이 한 화면에 보입니다.",
+      "✨ 「이번 판에 만난 것」에는 실제로 만난 것만 나옵니다.",
+      "🚩 쓰지 않던 닉네임 신고 버튼을 없앴습니다.",
+    ],
+  },
   {
     version: "6.50",
     date: "2026-11-07",

@@ -10,7 +10,7 @@ import {
 
 /**
  * The flows that need a server: signing up, claiming a school, the two
- * leaderboards, reporting a nickname.
+ * leaderboards.
  *
  * These create real accounts on the development deployment and remove them
  * afterwards. Skipped when the deployment or the admin key is not configured,
@@ -108,7 +108,7 @@ test("리더보드가 개인과 학교를 함께 보여준다", async ({ page })
   }
 });
 
-test("자기 자신에게는 신고 버튼이 붙지 않는다", async ({ page }) => {
+test("리더보드에 신고 버튼이 없다", async ({ page }) => {
   const handle = freshHandle("마");
   try {
     await openGame(page);
@@ -118,12 +118,8 @@ test("자기 자신에게는 신고 버튼이 붙지 않는다", async ({ page }
     await expect(page.locator("#leaderboard-screen")).toBeVisible();
     await page.waitForTimeout(2500);
 
-    // A report has to be attributable, so the button is a button only on other
-    // people's rows; own row gets an inert placeholder that holds the column.
-    const own = page.locator(".leaderboard-row.me");
-    if (await own.count()) {
-      await expect(own.locator("button.report-flag")).toHaveCount(0);
-    }
+    // Reporting was removed: no row carries a flag any more.
+    await expect(page.locator(".report-flag")).toHaveCount(0);
   } finally {
     await deleteAccount(handle);
   }

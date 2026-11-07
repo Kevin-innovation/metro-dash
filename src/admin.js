@@ -38,6 +38,15 @@ function when(ms) {
   ).padStart(2, "0")}`;
 }
 
+/** 「3분 전」, falling back to the date once it is more than a day old. */
+function ago(ms) {
+  const minutes = Math.floor((Date.now() - ms) / 60000);
+  if (minutes < 1) return "방금";
+  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 24 * 60) return `${Math.floor(minutes / 60)}시간 전`;
+  return when(ms);
+}
+
 async function call(kind, name, args = {}) {
   return await client[kind](name, { adminKey, ...args });
 }
@@ -46,30 +55,43 @@ async function call(kind, name, args = {}) {
 
 let players = [];
 let schools = [];
+/** The school picked to be folded into another, while staff choose the target. */
+let merging = null;
 
-function renderReports(rows) {
-  const root = $("admin-reports");
-  if (!rows.length) {
-    root.innerHTML = `<p class="admin-empty">신고된 닉네임이 없습니다.</p>`;
-    return;
-  }
-  root.innerHTML = rows
-    .map(
-      (row) => `
-      <div class="admin-row flagged">
+function renderRuns(rows) {
+  $("admin-runs").innerHTML = rows.length
+    ? rows
+        .map(
+          (row) => `
+      <div class="admin-row">
         <div class="admin-row-main">
-          <span class="admin-handle">${escapeHtml(row.handle)}</span>
-          <span class="admin-meta">신고 ${row.count}건 · ${when(row.latest)}</span>
-          <span class="admin-meta">신고자: ${row.reporters.map(escapeHtml).join(", ")}</span>
-        </div>
-        <div class="admin-actions">
-          <button data-act="rename" data-handle="${escapeHtml(row.handle)}">개명</button>
-          <button data-act="remove" data-handle="${escapeHtml(row.handle)}" class="danger">삭제</button>
-          <button data-act="resolve" data-handle="${escapeHtml(row.handle)}">문제없음</button>
+          <span class="admin-handle">${escapeHtml(row.handle)} <b class="admin-score">${row.score.toLocaleString()}점</b></span>
+          <span class="admin-meta">${ago(row.createdAt)} · ${Math.floor(row.distance).toLocaleString()}m · ${Math.floor(
+            row.seconds,
+          )}초${row.school ? ` · ${escapeHtml(row.school)}` : ""}</span>
         </div>
       </div>`,
-    )
-    .join("");
+        )
+        .join("")
+    : `<p class="admin-empty">아직 기록된 판이 없습니다.</p>`;
+}
+
+function renderSeen(rows) {
+  $("admin-seen").innerHTML = rows.length
+    ? rows
+        .map(
+          (row) => `
+      <div class="admin-row">
+        <div class="admin-row-main">
+          <span class="admin-handle">${escapeHtml(row.handle)} <b class="admin-when">${ago(row.updatedAt)}</b></span>
+          <span class="admin-meta">이번 시즌 최고 ${row.best.toLocaleString()}점${
+            row.school ? ` · ${escapeHtml(row.school)}` : ""
+          }</span>
+        </div>
+      </div>`,
+        )
+        .join("")
+    : `<p class="admin-empty">아직 접속 기록이 없습니다.</p>`;
 }
 
 function renderSchools() {
@@ -79,25 +101,29 @@ function renderSchools() {
     return;
   }
   root.innerHTML = schools
-    .map(
-      (row) => `
-      <div class="admin-row admin-player-row">
+    .map((row) => {
+      const picked = merging === row.key;
+      const action = !merging
+        ? `<button data-act="merge" data-key="${escapeHtml(row.key)}">합치기</button>`
+        : picked
+          ? `<button data-act="cancel">취소</button>`
+          : `<button data-act="into" data-key="${escapeHtml(row.key)}" class="go">여기로</button>`;
+      return `
+      <div class="admin-row${picked ? " picked" : ""}">
         <div class="admin-row-main">
           <span class="admin-handle">${escapeHtml(row.label)}</span>
           <span class="admin-meta">${row.members}명 · ${row.total.toLocaleString()}점</span>
         </div>
-        <div class="admin-actions">
-          <button data-act="merge" data-key="${escapeHtml(row.key)}">합치기</button>
-        </div>
-      </div>`,
-    )
+        <div class="admin-actions">${action}</div>
+      </div>`;
+    })
     .join("");
 }
 
 function renderPlayers() {
   const filter = $("admin-search").value.trim().toLowerCase();
   const rows = filter
-    ? players.filter((p) => p.handle.toLowerCase().includes(filter))
+    ? players.filter((p) => `${p.handle} ${p.school}`.toLowerCase().includes(filter))
     : players;
 
   const root = $("admin-players");
@@ -110,46 +136,43 @@ function renderPlayers() {
   root.innerHTML = rows
     .map((row) => {
       const locked = row.lockedUntil > now;
+      const handle = escapeHtml(row.handle);
       return `
-      <div class="admin-row">
-        <div class="admin-row-main">
-          <span class="admin-handle">${escapeHtml(row.handle)}${
-            locked ? ' <em class="locked">잠김</em>' : ""
+      <details class="admin-row admin-player">
+        <summary class="admin-row-main">
+          <span class="admin-handle">${handle}${locked ? ' <em class="locked">잠김</em>' : ""}${
+            row.flagged ? ' <em class="locked">저장 거절됨</em>' : ""
+          } <b class="admin-score">${row.best.toLocaleString()}점</b></span>
+          <span class="admin-meta">${row.school ? escapeHtml(row.school) : "학교 없음"} · 코인 ${(
+            row.coins ?? 0
+          ).toLocaleString()}</span>
+          <span class="admin-meta">최근 ${row.updatedAt ? ago(row.updatedAt) : "—"} · 가입 ${when(row.createdAt)}${
+            row.failedAttempts ? ` · 비번 실패 ${row.failedAttempts}회` : ""
           }</span>
-          <span class="admin-meta">최고 ${row.best.toLocaleString()}점 · 코인 ${(row.coins ?? 0).toLocaleString()} · ${
-            row.school ? escapeHtml(row.school) : "학교 없음"
-          } · 가입 ${when(row.createdAt)}${
-            row.failedAttempts ? ` · 실패 ${row.failedAttempts}회` : ""
-          }${row.flagged ? ' · <em class="locked">저장 거절됨</em>' : ""}</span>
-        </div>
+        </summary>
         <div class="admin-actions">
-          <button data-act="school" data-handle="${escapeHtml(row.handle)}">학교 ${
-            row.school ? "변경" : "지정"
-          }</button>
-          ${
-            row.school
-              ? `<button data-act="unschool" data-handle="${escapeHtml(row.handle)}">학교 지우기</button>`
-              : ""
-          }
-          <button data-act="coins" data-handle="${escapeHtml(row.handle)}">코인</button>
-          <button data-act="score" data-handle="${escapeHtml(row.handle)}">점수 기록</button>
-          <button data-act="pin" data-handle="${escapeHtml(row.handle)}">비번 초기화</button>
-          ${locked ? `<button data-act="unlock" data-handle="${escapeHtml(row.handle)}">잠금 해제</button>` : ""}
-          <button data-act="rename" data-handle="${escapeHtml(row.handle)}">개명</button>
-          <button data-act="remove" data-handle="${escapeHtml(row.handle)}" class="danger">삭제</button>
+          <button data-act="school" data-handle="${handle}">학교 ${row.school ? "변경" : "지정"}</button>
+          ${row.school ? `<button data-act="unschool" data-handle="${handle}">학교 지우기</button>` : ""}
+          <button data-act="coins" data-handle="${handle}">코인</button>
+          <button data-act="score" data-handle="${handle}">점수 기록</button>
+          <button data-act="pin" data-handle="${handle}">비번 초기화</button>
+          ${locked ? `<button data-act="unlock" data-handle="${handle}">잠금 해제</button>` : ""}
+          <button data-act="rename" data-handle="${handle}">개명</button>
+          <button data-act="remove" data-handle="${handle}" class="danger">삭제</button>
         </div>
-      </div>`;
+      </details>`;
     })
     .join("");
 }
 
 async function refresh() {
-  const [reports, list, schoolRows] = await Promise.all([
-    call("query", "admin:reports"),
+  const [recent, list, schoolRows] = await Promise.all([
+    call("query", "admin:recent"),
     call("query", "admin:list", { limit: 200 }),
     call("query", "admin:schools"),
   ]);
-  renderReports(reports);
+  renderRuns(recent.runs);
+  renderSeen(recent.players);
   schools = schoolRows;
   renderSchools();
   players = list;
@@ -242,9 +265,6 @@ async function act(kind, handle) {
     } else if (kind === "unschool") {
       await call("mutation", "admin:clearSchool", { handle });
       toast(`${handle} 의 학교를 지웠습니다. 본인이 다시 정할 수 있습니다`);
-    } else if (kind === "resolve") {
-      await call("mutation", "admin:resolveReports", { handle });
-      toast(`${handle} 신고를 처리 완료로 표시했습니다`);
     }
     await refresh();
   } catch (error) {
@@ -285,21 +305,18 @@ $("admin-signout").addEventListener("click", () => {
 
 $("admin-search").addEventListener("input", renderPlayers);
 
-async function mergeSchool(fromKey) {
+async function mergeSchool(fromKey, toKey) {
   const from = schools.find((row) => row.key === fromKey);
-  const others = schools.filter((row) => row.key !== fromKey);
-  if (!others.length) return toast("합칠 상대가 없습니다", "bad");
-
-  const menu = others.map((row, i) => `${i + 1}. ${row.label} (${row.members}명)`).join("\n");
-  const pick = prompt(`「${from.label}」 을(를) 어느 학교로 합칠까요?\n\n${menu}`, "");
-  const target = others[Number(pick) - 1];
-  if (!target) return;
+  const target = schools.find((row) => row.key === toKey);
+  merging = null;
+  renderSchools();
+  if (!from || !target) return;
   if (!confirm(`${from.label} (${from.members}명) 을 ${target.label} 로 합칩니다. 되돌릴 수 없습니다.`)) {
     return;
   }
 
   try {
-    const result = await call("mutation", "admin:mergeSchools", { fromKey, toKey: target.key });
+    const result = await call("mutation", "admin:mergeSchools", { fromKey, toKey });
     toast(`${result.from} → ${result.to} · ${result.moved}명 이동`);
     await refresh();
   } catch (error) {
@@ -318,14 +335,31 @@ $("admin-recompute").addEventListener("click", async () => {
 });
 
 $("admin-schools").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-act='merge']");
-  if (button) mergeSchool(button.dataset.key);
+  const button = event.target.closest("[data-act]");
+  if (!button) return;
+  if (button.dataset.act === "merge") {
+    merging = button.dataset.key;
+    renderSchools();
+    toast("남길 학교의 「여기로」를 누르세요");
+  } else if (button.dataset.act === "cancel") {
+    merging = null;
+    renderSchools();
+  } else if (button.dataset.act === "into") {
+    mergeSchool(merging, button.dataset.key);
+  }
 });
 
-for (const id of ["admin-reports", "admin-players"]) {
-  $(id).addEventListener("click", (event) => {
-    const button = event.target.closest("[data-act]");
-    if (button) act(button.dataset.act, button.dataset.handle);
+$("admin-players").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-act]");
+  if (button) act(button.dataset.act, button.dataset.handle);
+});
+
+for (const tab of document.querySelectorAll("[data-tab]")) {
+  tab.addEventListener("click", () => {
+    for (const other of document.querySelectorAll("[data-tab]")) other.classList.toggle("on", other === tab);
+    for (const pane of document.querySelectorAll("[data-pane]")) {
+      pane.classList.toggle("hidden", pane.dataset.pane !== tab.dataset.tab);
+    }
   });
 }
 
