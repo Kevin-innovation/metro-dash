@@ -207,8 +207,13 @@ export function spinChristmas(rng = Math.random, risk = 1) {
   return { face: CHRISTMAS_SLOT_FACES[index], index };
 }
 
-/** How often a spin that is not ×99 is made to crawl past it first. */
-export const WHEEL_TEASE_CHANCE = 0.5;
+/**
+ * How often a spin that is not ×99 is made to crawl past it first.
+ *
+ * One in ten. At one in two it stopped being a thrill and became the wheel
+ * taunting the player every other spin.
+ */
+export const WHEEL_TEASE_CHANCE = 0.1;
 
 /** ×99 always gets the slow walk, or the slow walk would give away that it missed. */
 export function wheelTeases(face, rng = Math.random) {

@@ -946,8 +946,8 @@ export class Screens {
         path.ms,
       );
       this.slotTeaseTimer = setTimeout(() => {
+        // The slow walk says it on its own; a caption on top of it was a taunt.
         screen.dataset.tease = "on";
-        if (title) title.textContent = "👑 ×99 ...?!";
         options.onTease?.();
       }, path.crawlAt);
     }
@@ -971,8 +971,7 @@ export class Screens {
     const land = () => {
       cancelAnimationFrame(this.slotTickFrame);
       delete screen.dataset.tease;
-      const nearly = teasing && !face.jackpot ? "😱 ×99 아깝다! " : "";
-      result.textContent = `${nearly}${face.icon} ${face.label}${face.detail ? ` · ${face.detail}` : ""}`;
+      result.textContent = `${face.icon} ${face.label}${face.detail ? ` · ${face.detail}` : ""}`;
       result.className = `slots-result on slot-${face.tone}`;
       if (face.jackpot) screen.dataset.jackpot = "on";
       this.slotDoneTimer = setTimeout(() => {

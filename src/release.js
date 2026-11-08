@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.57";
+export const VERSION = "6.58";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,13 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.58",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "룰렛 순하게",
+    notes: ["🎰 룰렛이 ×99 앞에서 뜸 들이는 연출이 훨씬 드물어졌고, 「×99 아깝다!」 같은 문구는 없앴습니다."],
+  },
   {
     version: "6.57",
     date: "2026-11-08",
