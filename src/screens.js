@@ -46,14 +46,8 @@ const podium = (rank) => (rank >= 1 && rank <= 3 ? ` rank-${rank}` : "");
 /** The combo line's moves: a pop per step, a flash per rung, a shake when it breaks. */
 const COMBO_MOVES = {
   punch: [[{ transform: "scale(0.75)" }, { transform: "scale(1.15)", offset: 0.55 }, { transform: "scale(1)" }], 280],
-  tier: [
-    [
-      { transform: "scale(0.6)", filter: "brightness(2.2)" },
-      { transform: "scale(1.35)", filter: "brightness(1.6)", offset: 0.45 },
-      { transform: "scale(1)", filter: "brightness(1)" },
-    ],
-    500,
-  ],
+  // Transform only, like the others, so none of the three costs a repaint.
+  tier: [[{ transform: "scale(0.6)" }, { transform: "scale(1.4)", offset: 0.45 }, { transform: "scale(1)" }], 500],
   break: [
     [
       { transform: "translateX(0)" },
