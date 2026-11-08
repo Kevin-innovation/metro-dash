@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { classEconomy } from "../src/economy.js";
 import { seasonAt } from "../src/release.js";
 import { restingScaleZ } from "../src/entities.js";
 import { SPEC } from "../src/specs.js";
@@ -399,5 +400,30 @@ describe("차량 메시는 충돌 박스 길이로 그려진다", () => {
     for (const type of ["coin", "barrier", "sign", "crate", "diamond"]) {
       expect(restingScaleZ(type), type).toBe(1);
     }
+  });
+});
+
+describe("관리자 경제 탭 계산", () => {
+  const row = (over) => ({
+    handle: "학생", school: "", coins: 0, ledger: null, flagged: false, runs: 0, runCoins: 0, earned: 0,
+    character: "runner", characters: ["runner"], cosmetics: [], upgrades: {}, hoverboards: 0, antidotes: 0,
+    ...over,
+  });
+
+  it("가진 물건을 현재 가격으로 나누고, 설명 안 되는 나머지는 소모품 · 기타로 둔다", () => {
+    const { students, totals, owners } = classEconomy([
+      // 번 100,000 · 보유 10,000 · 네온 2,500 + 자석 Lv.3 (500+1,200) + 왕관 40,000 = 44,200
+      row({ handle: "가", coins: 10000, ledger: 100000, runCoins: 70000, characters: ["runner", "neon"], upgrades: { magnet: 3 }, cosmetics: ["hat-crown"] }),
+      // 서버 기록이 없는 계정은 기기 기록으로, 그것도 가진 것보다 적으면 가진 것만큼으로 본다.
+      row({ handle: "나", coins: 500, earned: 1000, characters: ["runner", "neon"] }),
+    ]);
+    const [a, b] = students;
+    expect(a.spent).toEqual({ characters: 2500, upgrades: 1700, cosmetics: 40000, other: 45800, total: 90000 });
+    expect(a.income).toEqual({ runs: 70000, other: 30000 });
+    expect(b.earned).toBe(3000);
+    expect(b.spent.total).toBe(2500);
+    expect(totals).toMatchObject({ coins: 10500, earned: 103000, spent: 92500, buyers: 2, students: 2 });
+    expect(owners.characters[0]).toMatchObject({ id: "neon", count: 2, coins: 5000 });
+    expect(owners.cosmetics).toEqual([expect.objectContaining({ id: "hat-crown", count: 1 })]);
   });
 });

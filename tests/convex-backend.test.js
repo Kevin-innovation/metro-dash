@@ -1221,6 +1221,20 @@ describe("admin 학교 도구", () => {
     expect(rows.find((row) => row.handle === "지난시즌")).toMatchObject({ weekBest: 0, best: 0 });
   });
 
+  it("경제 탭은 학생마다 보유 코인과 가진 물건을 돌려주고, 관리자 계정은 뺀다", async () => {
+    const t = backend();
+    await signUp(t, "부자");
+    await t.mutation(api.admin.grantCoins, { adminKey: ADMIN_KEY, handle: "부자", coins: 5000 });
+    await t.mutation(api.admin.createStaff, { adminKey: ADMIN_KEY, handle: "운영자", pin: "1234" });
+
+    const rows = await t.query(api.admin.economy, { adminKey: ADMIN_KEY });
+    expect(rows.map((row) => row.handle)).toEqual(["부자"]);
+    expect(rows[0]).toMatchObject({ coins: 5000, characters: expect.any(Array), cosmetics: expect.any(Array) });
+    expect(rows[0]).not.toHaveProperty("pin");
+    expect(rows[0]).not.toHaveProperty("token");
+    await expect(t.query(api.admin.economy, { adminKey: "wrong" })).rejects.toThrow(/관리자 키/);
+  });
+
   it("관리자 목록에 학교가 함께 보인다", async () => {
     const t = backend();
     const { token } = await signUp(t, "소속있음");

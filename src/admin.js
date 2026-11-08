@@ -5,6 +5,10 @@ import { ConvexClient } from "convex/browser";
 import "./style.css";
 import { escapeHtml } from "./ui.js";
 import { GENERAL_LEVEL, LEVELS, REGIONS, TEACHER, validateSchool, TEACHER_DISPLAY } from "./school.js";
+import { classEconomy } from "./economy.js";
+import { characterById } from "./characters.js";
+import { cosmeticById } from "./cosmetics.js";
+import { POWERUPS, POWERUP_IDS, POWERUP_MAX_LEVEL } from "./powerups.js";
 
 /**
  * Teacher tools, as a page rather than a set of CLI commands.
@@ -93,6 +97,178 @@ function renderRuns(rows) {
         })
         .join("")
     : `<p class="admin-empty">아직 기록된 판이 없습니다.</p>`;
+}
+
+// --- economy ----------------------------------------------------------------
+
+let economy = null;
+let economySort = "coins";
+
+const n = (value) => Math.round(value).toLocaleString();
+const pct = (part, whole) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : "0%");
+
+/** A 100% bar in up to four parts, each named and numbered beside it, never by colour alone. */
+function stack(parts) {
+  const total = parts.reduce((sum, part) => sum + part.value, 0);
+  const segments = parts
+    .filter((part) => part.value > 0)
+    .map(
+      (part) =>
+        `<span class="econ-seg" style="flex:${part.value};background:var(--econ-${part.slot})" title="${escapeHtml(
+          part.label,
+        )} ${n(part.value)} (${pct(part.value, total)})"></span>`,
+    )
+    .join("");
+  const legend = parts
+    .map(
+      (part) => `
+      <li><i style="background:var(--econ-${part.slot})"></i>${escapeHtml(part.label)}
+        <b>${n(part.value)}</b><span>${pct(part.value, total)}</span></li>`,
+    )
+    .join("");
+  return `<div class="econ-stack">${segments || `<span class="econ-seg empty"></span>`}</div><ul class="econ-legend">${legend}</ul>`;
+}
+
+/** One measure per row, longest first, the number written beside the bar. */
+function bars(rows, format = n, scale = 0) {
+  const top = Math.max(1, scale, ...rows.map((row) => row.value));
+  return `<ul class="econ-bars">${rows
+    .map(
+      (row) => `
+      <li title="${escapeHtml(row.label)} · ${format(row.value)}${row.note ? ` · ${escapeHtml(row.note)}` : ""}">
+        <span class="econ-bar-label">${escapeHtml(row.label)}</span>
+        <span class="econ-bar-track"><span class="econ-bar" style="width:${((row.value / top) * 100).toFixed(1)}%"></span></span>
+        <span class="econ-bar-value">${format(row.value)}${row.note ? `<em>${escapeHtml(row.note)}</em>` : ""}</span>
+      </li>`,
+    )
+    .join("")}</ul>`;
+}
+
+const tile = (label, value, note = "") =>
+  `<div class="econ-tile"><span>${label}</span><b>${value}</b>${note ? `<em>${note}</em>` : ""}</div>`;
+
+/** What one student owns, by name, for their expanded row. */
+function holdings(student) {
+  const chips = (list) => (list.length ? list.map((text) => `<span class="econ-chip">${text}</span>`).join("") : `<span class="econ-none">없음</span>`);
+  const characters = student.characters
+    .map((id) => characterById(id))
+    .filter((c) => c && c.cost > 0)
+    .map((c) => `${escapeHtml(c.name)} <small>${n(c.cost)}</small>`);
+  const cosmetics = student.cosmetics
+    .map((id) => cosmeticById(id))
+    .filter(Boolean)
+    .map((c) => `${c.icon ?? ""} ${escapeHtml(c.name)} <small>${n(c.cost)}</small>`);
+  const upgrades = POWERUP_IDS.filter((id) => (student.upgrades[id] ?? 1) > 1).map(
+    (id) => `${POWERUPS[id].icon} ${escapeHtml(POWERUPS[id].name)} Lv.${student.upgrades[id]}`,
+  );
+  const consumables = [
+    student.hoverboards ? `🛹 호버보드 ${student.hoverboards}` : "",
+    student.antidotes ? `💊 해독제 ${student.antidotes}` : "",
+  ].filter(Boolean);
+  return `
+    ${stack([
+      { label: "캐릭터", value: student.spent.characters, slot: 1 },
+      { label: "강화", value: student.spent.upgrades, slot: 2 },
+      { label: "꾸미기", value: student.spent.cosmetics, slot: 3 },
+      { label: "소모품 · 기타", value: student.spent.other, slot: 4 },
+    ])}
+    <p class="econ-sub">캐릭터</p><div class="econ-chips">${chips(characters)}</div>
+    <p class="econ-sub">강화</p><div class="econ-chips">${chips(upgrades)}</div>
+    <p class="econ-sub">꾸미기</p><div class="econ-chips">${chips(cosmetics)}</div>
+    <p class="econ-sub">지금 가진 소모품</p><div class="econ-chips">${chips(consumables)}</div>`;
+}
+
+const SORTS = {
+  coins: ["보유 코인", (s) => s.coins],
+  earned: ["번 코인", (s) => s.earned],
+  spent: ["쓴 코인", (s) => s.spent.total],
+  items: ["아이템 수", (s) => s.itemCount],
+};
+
+function renderStudents() {
+  const root = $("econ-students");
+  if (!root || !economy) return;
+  const key = SORTS[economySort][1];
+  root.innerHTML = [...economy.students]
+    .sort((a, b) => key(b) - key(a))
+    .map(
+      (student) => `
+      <details class="admin-row admin-player">
+        <summary class="admin-row-main">
+          <span class="admin-handle">${escapeHtml(student.handle)} <b class="admin-score">보유 ${n(student.coins)}</b>${
+            student.flagged ? ' <em class="locked">저장 거절됨</em>' : ""
+          }</span>
+          <span class="admin-meta">번 ${n(student.earned)} · 쓴 ${n(student.spent.total)} · 아이템 ${student.itemCount}개 · ${student.runs}판${
+            student.school ? ` · ${escapeHtml(student.school)}` : ""
+          }</span>
+        </summary>
+        ${holdings(student)}
+      </details>`,
+    )
+    .join("");
+}
+
+function renderEconomy(rows) {
+  const root = $("admin-economy");
+  if (!rows.length) {
+    root.innerHTML = `<p class="admin-empty">아직 학생이 없습니다.</p>`;
+    return;
+  }
+  economy = classEconomy(rows);
+  const { totals, owners } = economy;
+  const richest = [...economy.students].sort((a, b) => b.coins - a.coins);
+
+  root.innerHTML = `
+    <div class="econ-tiles">
+      ${tile("지금 남은 코인", n(totals.coins), `1인 평균 ${n(totals.coins / totals.students)}`)}
+      ${tile("지금까지 번 코인", n(totals.earned))}
+      ${tile("지금까지 쓴 코인", n(totals.spent), `번 코인의 ${pct(totals.spent, totals.earned)}`)}
+      ${tile("한 번이라도 산 학생", `${totals.buyers} / ${totals.students}명`)}
+    </div>
+
+    <h3 class="econ-title">코인은 어디서 들어왔나</h3>
+    ${stack([
+      { label: "판에서 주운 코인", value: totals.income.runs, slot: 1 },
+      { label: "미션 · 출석 · 레벨업 · 이벤트 · 관리자 지급", value: totals.income.other, slot: 2 },
+    ])}
+
+    <h3 class="econ-title">코인은 어디에 썼나</h3>
+    ${stack([
+      { label: "캐릭터", value: totals.spending.characters, slot: 1 },
+      { label: "강화", value: totals.spending.upgrades, slot: 2 },
+      { label: "꾸미기", value: totals.spending.cosmetics, slot: 3 },
+      { label: "소모품 · 기타", value: totals.spending.other, slot: 4 },
+    ])}
+    <p class="admin-note small">소모품 · 기타는 쓴 코인 중 지금 가진 물건으로 설명되지 않는 부분입니다. 판에서 써 버린 호버보드 · 해독제, 가격이 바뀐 물건 등이 여기 들어갑니다.</p>
+
+    <h3 class="econ-title">보유 코인 순위</h3>
+    ${bars(richest.slice(0, 15).map((s) => ({ label: s.handle, value: s.coins })))}
+
+    <h3 class="econ-title">많이 팔린 캐릭터</h3>
+    ${owners.characters.length ? bars(owners.characters.map((c) => ({ label: c.name, value: c.count, note: `${n(c.coins)}코인` })), (v) => `${v}명`) : `<p class="admin-empty">아직 산 캐릭터가 없습니다.</p>`}
+
+    <h3 class="econ-title">많이 팔린 꾸미기</h3>
+    ${owners.cosmetics.length ? bars(owners.cosmetics.slice(0, 15).map((c) => ({ label: `${c.icon} ${c.name}`, value: c.count, note: `${n(c.coins)}코인` })), (v) => `${v}명`) : `<p class="admin-empty">아직 산 꾸미기가 없습니다.</p>`}
+
+    <h3 class="econ-title">강화 평균 레벨</h3>
+    ${bars(owners.upgrades.map((u) => ({ label: `${u.icon} ${u.name}`, value: u.average, note: `강화한 학생 ${u.raised}명 · 최대 ${u.maxed}명` })), (v) => `Lv.${v.toFixed(1)}`, POWERUP_MAX_LEVEL)}
+
+    <h3 class="econ-title">지금 가진 소모품</h3>
+    <div class="econ-tiles">
+      ${tile("🛹 호버보드", `${n(totals.hoverboards)}개`)}
+      ${tile("💊 해독제", `${n(totals.antidotes)}개`)}
+    </div>
+
+    <div class="admin-head-row econ-students-head">
+      <h3 class="econ-title">학생별</h3>
+      <select id="econ-sort" aria-label="정렬">
+        ${Object.entries(SORTS)
+          .map(([id, [label]]) => `<option value="${id}"${id === economySort ? " selected" : ""}>${label} 순</option>`)
+          .join("")}
+      </select>
+    </div>
+    <div id="econ-students" class="admin-list"></div>`;
+  renderStudents();
 }
 
 function renderSeen(rows) {
@@ -188,11 +364,13 @@ function renderPlayers() {
 }
 
 async function refresh() {
-  const [recent, list, schoolRows] = await Promise.all([
+  const [recent, list, schoolRows, money] = await Promise.all([
     call("query", "admin:recent"),
     call("query", "admin:list", { limit: 200 }),
     call("query", "admin:schools"),
+    call("query", "admin:economy"),
   ]);
+  renderEconomy(money);
   renderRuns(recent.runs);
   renderSeen(recent.players);
   schools = schoolRows;
@@ -372,6 +550,12 @@ $("admin-schools").addEventListener("click", (event) => {
   } else if (button.dataset.act === "into") {
     mergeSchool(merging, button.dataset.key);
   }
+});
+
+$("admin-economy").addEventListener("change", (event) => {
+  if (event.target.id !== "econ-sort") return;
+  economySort = event.target.value;
+  renderStudents();
 });
 
 $("admin-players").addEventListener("click", (event) => {

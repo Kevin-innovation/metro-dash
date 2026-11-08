@@ -80,6 +80,52 @@ export const list = query({
 });
 
 /**
+ * Everything the economy tab draws from, one row per student.
+ *
+ * Purchases are not logged anywhere, so what was bought is read off what each
+ * save owns; the balance is the server's, and `ledger` is the server's own
+ * running total of everything the account was ever credited. The profile
+ * figures (runs, coins picked up in runs) are the browser's, which is fine for
+ * a picture of the class and is labelled as such on the page.
+ *
+ * Reads the player table only — one document per student, not one per run — so
+ * it does not grow with how much the class plays.
+ */
+export const economy = query({
+  args: { adminKey: v.string() },
+  handler: async (ctx, { adminKey }) => {
+    requireAdmin(adminKey);
+    const count = (value) => Math.max(0, Math.floor(Number(value) || 0));
+    const strings = (list) => (Array.isArray(list) ? list.filter((item) => typeof item === "string") : []);
+    const players = await ctx.db.query("players").collect();
+    return players
+      .filter((player) => player.role !== "admin")
+      .map((player) => {
+        const profile = player.profile ?? {};
+        const upgrades = {};
+        for (const [id, level] of Object.entries(profile.upgrades ?? {})) upgrades[id] = count(level);
+        return {
+          handle: player.handle,
+          school: player.school ? schoolLabel(player.school) : "",
+          coins: coinsOf(player),
+          ledger: typeof player.coinLedger === "number" ? count(player.coinLedger) : null,
+          flagged: Boolean(player.flagged),
+          runs: count(profile.runs),
+          runCoins: count(profile.totalCoins),
+          earned: count(profile.earned),
+          character: typeof profile.character === "string" ? profile.character : "",
+          characters: strings(profile.characters),
+          cosmetics: strings(profile.cosmetics),
+          upgrades,
+          hoverboards: count(profile.hoverboards),
+          antidotes: count(profile.antidotes),
+          updatedAt: player.updatedAt,
+        };
+      });
+  },
+});
+
+/**
  * Who has been around lately: the newest runs, and the accounts that saved most
  * recently. A save is written whenever a signed-in browser syncs, so its time is
  * the closest thing to a last visit the server has.

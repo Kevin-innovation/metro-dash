@@ -40,6 +40,7 @@
           <button type="button" data-tab="seen">최근 접속</button>
           <button type="button" data-tab="schools">학교</button>
           <button type="button" data-tab="players">플레이어</button>
+          <button type="button" data-tab="economy">경제</button>
         </nav>
 
         <div data-pane="runs">
@@ -58,6 +59,14 @@
             <button id="admin-recompute" type="button" class="admin-ghost">합계 재계산</button>
           </div>
           <div id="admin-schools" class="admin-list"></div>
+        </div>
+
+        <div data-pane="economy" class="hidden">
+          <p class="admin-note small">
+            구매 기록은 따로 남지 않아서, 학생이 <strong>지금 가진 것</strong>을 현재 가격으로 계산합니다.
+            번 코인은 서버 기록, 판 수와 판에서 주운 코인은 학생 기기의 기록입니다.
+          </p>
+          <div id="admin-economy"></div>
         </div>
 
         <div data-pane="players" class="hidden">
