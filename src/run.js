@@ -17,6 +17,8 @@ import { perkFor } from "./characters.js";
 import { maxCoinsFor } from "./leaderboard-rules.js";
 import {
   COIN_BASE,
+  COIN_COMBO_BUDGET,
+  COIN_COMBO_TOPUP,
   NEAR_MISS_BONUS,
   clearBonus,
   comboWindowAt,
@@ -118,6 +120,8 @@ export class Run {
     this.combo = 0;
     this.comboMax = 0;
     this.comboT = 0;
+    /** Seconds coins may still add to the chain before the next clear. */
+    this.coinComboLeft = 0;
     this.distance = 0;
     /** Seconds survived and metres ridden on roofs, both single-run goals. */
     this.seconds = 0;
@@ -205,6 +209,7 @@ export class Run {
     // Read off the clock rather than taken as a constant: the opening deals
     // fewer things to hit than the window assumes. See comboWindowAt.
     this.comboT = comboWindowAt(this.seconds) * this.comboScale;
+    this.coinComboLeft = COIN_COMBO_BUDGET;
     if (this.combo > this.comboMax) this.comboMax = this.combo;
   }
 
@@ -296,6 +301,13 @@ export class Run {
   /** @returns {number} points awarded, for the floating "+N" readout */
   addCoin() {
     this.coins += 1;
+    // A little more time on a running chain; see COIN_COMBO_BUDGET.
+    if (this.combo > 0 && this.coinComboLeft > 0) {
+      const window = comboWindowAt(this.seconds) * this.comboScale;
+      const before = this.comboT;
+      this.comboT = Math.min(window, this.comboT + Math.min(COIN_COMBO_TOPUP, this.coinComboLeft));
+      this.coinComboLeft -= this.comboT - before;
+    }
     // Flat. Combo, the wheel and the section do not touch a coin — those
     // multiply the run (distance, roofs, clears). Coins are the shop.
     this.scoreCoins += COIN_BASE;

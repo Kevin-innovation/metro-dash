@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.56";
+export const VERSION = "6.57";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.57",
+    date: "2026-11-08",
+    kind: "fix",
+    title: "콤보 UP",
+    notes: [
+      "🪙 콤보가 이어지는 동안 코인을 먹으면 콤보 막대가 조금 채워집니다. 콤보 숫자는 넘기 · 슬라이드 · 지붕으로만 올라요.",
+      "💡 판 초반, 콤보가 없을 때 무엇으로 콤보를 올리는지 알려 줍니다.",
+    ],
+  },
   {
     version: "6.56",
     date: "2026-11-08",

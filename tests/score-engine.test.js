@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   COIN_BASE,
+  COIN_COMBO_BUDGET,
+  COIN_COMBO_TOPUP,
   COMBO_WINDOW,
   COMBO_WINDOW_OPEN,
   COMBO_WINDOW_TIGHTENS_BY,
@@ -51,6 +53,32 @@ describe("clears feed the combo", () => {
     expect(run.combo).toBe(3);
     run.addCoin();
     expect(run.combo).toBe(3);
+  });
+
+  it("tops up a running chain's timer from coins, within a budget per clear", () => {
+    const run = new Run(store());
+    // No chain, nothing to top up.
+    run.addCoin();
+    expect(run.comboT).toBe(0);
+
+    run.addClear("jump");
+    const full = run.comboT;
+    run.comboT = 0.5;
+    run.addCoin();
+    expect(run.comboT).toBeCloseTo(0.5 + COIN_COMBO_TOPUP);
+
+    // A whole coin line cannot carry the chain past the budget.
+    for (let i = 0; i < 40; i++) run.addCoin();
+    expect(run.comboT).toBeCloseTo(0.5 + COIN_COMBO_BUDGET);
+    expect(run.comboT).toBeLessThanOrEqual(full);
+    expect(run.combo).toBe(1);
+
+    // The next clear refills the window and the budget.
+    run.addClear("slide");
+    expect(run.comboT).toBe(full);
+    run.comboT = 0.2;
+    run.addCoin();
+    expect(run.comboT).toBeCloseTo(0.2 + COIN_COMBO_TOPUP);
   });
 
   it("pays the verb it just asked for, at the multiplier before the bump", () => {

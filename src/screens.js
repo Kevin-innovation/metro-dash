@@ -63,6 +63,8 @@ const COMBO_MOVES = {
 
 /** A chain shorter than this ending is not worth announcing. */
 const COMBO_BREAK_WORTH_SAYING = 3;
+/** How far into a run the combo line says what raises it, while it is empty. */
+const COMBO_HINT_SECONDS = 30;
 /** How long 「콤보 끊김」 stays up. */
 const COMBO_BREAK_MS = 1000;
 /** Coins closer together than this are one streak. */
@@ -1291,6 +1293,7 @@ export class Screens {
       comboLeft:
         game.run.combo > 0 ? game.run.comboT / (comboWindowAt(game.run.seconds) * game.run.comboScale) : 0,
       comboBroken: this.feelCombo(game),
+      comboHint: game.run.seconds < COMBO_HINT_SECONDS,
       scoreRate: this.scoreRate(game),
       powerups: game.run.powerups,
       durations,

@@ -288,6 +288,7 @@ function hudNodes() {
       comboTier: null,
       comboLow: null,
       comboBroken: null,
+      comboHint: null,
       scoreRate: null,
       scoreRateHot: null,
       boards: null,
@@ -403,6 +404,9 @@ function renderRunStats(el, state) {
   }
 }
 
+/** What raises the combo, shown in its place while there is none early in a run. */
+const COMBO_HINT = "넘기 · 슬라이드 · 지붕 = 콤보 UP!";
+
 /**
  * The chain under the score: how long it is, what rung it is on, and how long
  * is left before it breaks — or, for a second after it does, that it broke.
@@ -411,19 +415,26 @@ function renderCombo(el, state) {
   const last = el.last;
   const tier = comboTier(state.combo);
   const broken = state.comboBroken ?? 0;
+  const hint = !broken && state.combo < 1 && state.comboHint;
   const text = broken
     ? `콤보 끊김 · ${broken}`
     : state.combo >= 1
       ? tier.label
         ? `${state.combo} · ${tier.label} ×${tier.multiplier}`
         : `${state.combo} COMBO`
-      : "";
+      : hint
+        ? COMBO_HINT
+        : "";
   if (text !== last.combo) {
     // Shown and hidden by visibility, not display: the line keeps its space
     // either way so nothing below it moves.
     el.combo.classList.toggle("on", Boolean(text));
     if (text && el.comboText) el.comboText.textContent = text;
     last.combo = text;
+  }
+  if (Boolean(hint) !== last.comboHint) {
+    el.combo.classList.toggle("hint", Boolean(hint));
+    last.comboHint = Boolean(hint);
   }
   if (Boolean(broken) !== last.comboBroken) {
     el.combo.classList.toggle("broken", Boolean(broken));

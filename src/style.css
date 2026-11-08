@@ -606,6 +606,16 @@ html.christmas-event .coin-orb.inline {
   --combo-colour: #ff6b6b;
 }
 
+/* The hint is a reminder, not a readout: smaller, dimmer, and no bar under it. */
+.combo.hint {
+  --combo-colour: rgba(226, 242, 255, 0.88);
+  font-size: clamp(12px, 3vw, 16px);
+}
+
+.combo.hint .combo-track {
+  visibility: hidden;
+}
+
 /* Under the score: how fast it is climbing. Quiet until something multiplies. */
 .score-rate {
   margin-top: 2px;

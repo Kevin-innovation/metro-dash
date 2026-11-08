@@ -97,6 +97,19 @@ export const COMBO_WINDOW_OPEN = 3.6;
 export const COMBO_WINDOW_TIGHTENS_BY = 60;
 
 /**
+ * What a coin does for the combo: tops up the time left on the chain, and
+ * nothing else — the count still only climbs on a clear.
+ *
+ * Budgeted per clear rather than per coin. Coin lines run nearly the whole
+ * track, so an uncapped top-up would keep a chain alive on coins alone and the
+ * multiplier would stop meaning that obstacles were being dealt with. With a
+ * budget, a coin line can carry a chain a little further between two clears
+ * and no further.
+ */
+export const COIN_COMBO_TOPUP = 0.12;
+export const COIN_COMBO_BUDGET = 0.6;
+
+/**
  * How long a combo survives a quiet stretch at time `t` into the run.
  *
  * Straight line: this is compensation for a thin opening, and the opening
