@@ -68,21 +68,25 @@ function renderRuns(rows) {
   const line = (run) =>
     `${ago(run.createdAt)} · ${Math.floor(run.distance).toLocaleString()}m · ${Math.floor(run.seconds)}초`;
 
+  // Headed by the best of the player's recent runs rather than the latest: the
+  // latest is as often as not a two-second stumble, and that is not who they are.
   $("admin-runs").innerHTML = byPlayer.size
     ? [...byPlayer.values()]
-        .map(([latest, ...older]) => {
+        .map((runs) => {
+          const [latest] = runs;
+          const best = runs.reduce((top, run) => (run.score > top.score ? run : top));
           const head = `
-          <span class="admin-handle">${escapeHtml(latest.handle)} <b class="admin-score">${latest.score.toLocaleString()}점</b>${
-            older.length ? ` <em class="admin-count">+${older.length}판</em>` : ""
-          }</span>
-          <span class="admin-meta">${line(latest)}${latest.school ? ` · ${escapeHtml(latest.school)}` : ""}</span>`;
-          if (!older.length) return `<div class="admin-row"><div class="admin-row-main">${head}</div></div>`;
+          <span class="admin-handle">${escapeHtml(latest.handle)} <b class="admin-score">최고 ${best.score.toLocaleString()}점</b> <em class="admin-count">${runs.length}판</em></span>
+          <span class="admin-meta">마지막 판 ${ago(latest.createdAt)}${latest.school ? ` · ${escapeHtml(latest.school)}` : ""}</span>`;
           return `
       <details class="admin-row admin-player">
         <summary class="admin-row-main">${head}</summary>
         <ul class="admin-runs">
-          ${older
-            .map((run) => `<li><b class="admin-score">${run.score.toLocaleString()}점</b> <span class="admin-meta">${line(run)}</span></li>`)
+          ${runs
+            .map(
+              (run) =>
+                `<li><b class="admin-score">${run === best ? "★ " : ""}${run.score.toLocaleString()}점</b> <span class="admin-meta">${line(run)}</span></li>`,
+            )
             .join("")}
         </ul>
       </details>`;
