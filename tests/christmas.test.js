@@ -202,7 +202,7 @@ describe("선물 룰렛 확률표", () => {
     expect(hit.frames[3].at).toBeGreaterThan(39.4);
   });
 
-  it("×99는 언제나 슬로우를 거쳐 들어오고, 나머지는 절반만 그렇다", () => {
+  it("×99는 언제나 슬로우를 거쳐 들어오고, 나머지는 열 번에 한 번만 그렇다", () => {
     const jackpot = CHRISTMAS_SLOT_FACES.find((face) => face.jackpot);
     const plain = CHRISTMAS_SLOT_FACES.find((face) => face.effect.value === 2);
     expect(wheelTeases(jackpot, () => 0.999)).toBe(true);
