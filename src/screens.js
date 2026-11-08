@@ -7,6 +7,7 @@ import { loadSchoolNames } from "./school-list.js";
 import { MISSION_TIERS, missionLabel } from "./missions.js";
 import { POWERUP_IDS, powerupDuration } from "./powerups.js";
 import { SPEED_STEP_SECONDS, nextStepIn, speedStepAt } from "./pace.js";
+import { COMBO_TIERS, comboTier, comboWindowAt } from "./scoring.js";
 import { missionTier, runXp } from "./progression.js";
 import { weekRemainingLabel } from "./week.js";
 import { hasNewCharacters, purchase, shopView } from "./shop.js";
@@ -42,6 +43,40 @@ const podium = (rank) => (rank >= 1 && rank <= 3 ? ` rank-${rank}` : "");
  * Keeping all of it behind one object means the Game only ever deals in game
  * state, and nothing in the simulation needs to know an element id.
  */
+/** The combo line's moves: a pop per step, a flash per rung, a shake when it breaks. */
+const COMBO_MOVES = {
+  punch: [[{ transform: "scale(0.75)" }, { transform: "scale(1.15)", offset: 0.55 }, { transform: "scale(1)" }], 280],
+  tier: [
+    [
+      { transform: "scale(0.6)", filter: "brightness(2.2)" },
+      { transform: "scale(1.35)", filter: "brightness(1.6)", offset: 0.45 },
+      { transform: "scale(1)", filter: "brightness(1)" },
+    ],
+    500,
+  ],
+  break: [
+    [
+      { transform: "translateX(0)" },
+      { transform: "translateX(-8px)" },
+      { transform: "translateX(7px)" },
+      { transform: "translateX(-5px)" },
+      { transform: "translateX(3px)" },
+      { transform: "translateX(0)" },
+    ],
+    450,
+  ],
+};
+
+/** A chain shorter than this ending is not worth announcing. */
+const COMBO_BREAK_WORTH_SAYING = 3;
+/** How long 「콤보 끊김」 stays up. */
+const COMBO_BREAK_MS = 1000;
+/** Coins closer together than this are one streak. */
+const COIN_STREAK_MS = 650;
+/** The score-rate readout: one sample this often, this many kept. */
+const RATE_SAMPLE_SECONDS = 0.25;
+const RATE_SAMPLES = 9;
+
 export class Screens {
   /**
    * @param {object} actions callbacks the buttons fire
@@ -1169,6 +1204,86 @@ export class Screens {
     $("pace-chip").textContent = text;
   }
 
+  /**
+   * The moments the combo changes, played back as feeling: a pop on every step,
+   * a flash and a rising chord on every rung, and a shake and a low note when
+   * the chain breaks. Read off the run every frame rather than wired into the
+   * rules, so the scoring stays untouched.
+   *
+   * @returns {number} the length of a chain that has just broken, while its
+   *   notice is still up; 0 otherwise
+   */
+  feelCombo(game) {
+    const run = game.run;
+    const now = performance.now();
+    // A new run starts its clock again; whatever the last one ended on is not
+    // a chain that broke.
+    if (run.seconds < (this.hudSeconds ?? 0)) {
+      this.hudCombo = run.combo;
+      this.comboBrokenUntil = 0;
+    }
+    this.hudSeconds = run.seconds;
+    const prev = this.hudCombo ?? 0;
+    const combo = run.combo;
+    const el = $("combo");
+    if (combo > prev) {
+      this.comboBrokenUntil = 0;
+      const tier = comboTier(combo);
+      if (tier !== comboTier(prev) && tier.multiplier > 1) {
+        this.moveCombo(el, "tier");
+        game.audio.comboUp(COMBO_TIERS.indexOf(tier));
+      } else {
+        this.moveCombo(el, "punch");
+      }
+    } else if (combo === 0 && prev >= COMBO_BREAK_WORTH_SAYING) {
+      this.comboBroken = prev;
+      this.comboBrokenUntil = now + COMBO_BREAK_MS;
+      this.moveCombo(el, "break");
+      game.audio.comboBreak();
+    }
+    this.hudCombo = combo;
+    return now < (this.comboBrokenUntil ?? 0) ? this.comboBroken : 0;
+  }
+
+  /**
+   * One of the combo line's three moves, through the animation API rather than
+   * a class: they follow each other quickly, and a class swapped mid-animation
+   * fires a cancel that strips the class that replaced it.
+   */
+  moveCombo(el, move) {
+    this.comboMove?.cancel();
+    if (!el?.animate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const [keyframes, duration] = COMBO_MOVES[move];
+    this.comboMove = el.animate(keyframes, { duration, easing: "ease-out" });
+  }
+
+  /**
+   * Points a second over the last couple of seconds, sampled four times a
+   * second into a fixed handful of slots so a frame allocates nothing.
+   */
+  scoreRate(game) {
+    const { seconds, score } = game.run;
+    const rate = (this.rate ??= { t: [], s: [], next: 0, value: 0 });
+    if (seconds < rate.next - RATE_SAMPLE_SECONDS) {
+      rate.t.length = 0;
+      rate.s.length = 0;
+      rate.next = 0;
+      rate.value = 0;
+    }
+    if (seconds >= rate.next) {
+      rate.t.push(seconds);
+      rate.s.push(score);
+      if (rate.t.length > RATE_SAMPLES) {
+        rate.t.shift();
+        rate.s.shift();
+      }
+      rate.next = seconds + RATE_SAMPLE_SECONDS;
+      const span = seconds - rate.t[0];
+      if (span > 0.2) rate.value = (score - rate.s[0]) / span;
+    }
+    return rate.value;
+  }
+
   syncHud(game) {
     const durations = {};
     for (const id of POWERUP_IDS) durations[id] = powerupDuration(id, game.store.upgradeLevel(id));
@@ -1179,6 +1294,10 @@ export class Screens {
       score: game.run.score,
       coins: game.run.coins,
       combo: game.run.combo,
+      comboLeft:
+        game.run.combo > 0 ? game.run.comboT / (comboWindowAt(game.run.seconds) * game.run.comboScale) : 0,
+      comboBroken: this.feelCombo(game),
+      scoreRate: this.scoreRate(game),
       powerups: game.run.powerups,
       durations,
       boarding: game.player.boarding,
@@ -1282,8 +1401,13 @@ export class Screens {
   }
 
   flashCoinGain(gain) {
+    // Coins taken in quick succession count up, so a line of them reads as one
+    // haul building rather than the same +10 over and over.
+    const now = performance.now();
+    this.coinStreak = now - (this.coinStreakAt ?? 0) < COIN_STREAK_MS ? (this.coinStreak ?? 0) + 1 : 1;
+    this.coinStreakAt = now;
     const gainEl = $("coin-gain");
-    gainEl.textContent = `+${gain}`;
+    gainEl.textContent = this.coinStreak >= 3 ? `+${gain}  ×${this.coinStreak}` : `+${gain}`;
     gainEl.classList.remove("hidden");
     replayAnimation(gainEl, "pop");
     clearTimeout(this.gainTimer);

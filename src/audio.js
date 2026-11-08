@@ -243,6 +243,20 @@ export class AudioBus {
     rasp(0.16, 760, 300);
   }
 
+  /** A combo reaching a new rung: a rising chord, higher for each rung. */
+  comboUp(rung = 1) {
+    const root = 523 * 2 ** ((Math.max(1, rung) - 1) * 2 / 12);
+    this.beep(root, 0.09, "triangle", 0.3);
+    setTimeout(() => this.beep(root * 1.26, 0.09, "triangle", 0.28), 55);
+    setTimeout(() => this.beep(root * 1.5, 0.18, "triangle", 0.3), 110);
+  }
+
+  /** A chain lost: two falling notes, low and short so it stings without startling. */
+  comboBreak() {
+    this.beep(392, 0.1, "sawtooth", 0.16);
+    setTimeout(() => this.beep(262, 0.2, "triangle", 0.26), 80);
+  }
+
   nearMiss() {
     this.beep(1500, 0.05, "triangle", 0.22);
   }

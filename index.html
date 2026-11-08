@@ -131,9 +131,16 @@
               <div class="speed-read"><strong id="speed-value">20</strong><span>m/s</span></div>
             </div>
             <div id="score">0</div>
+            <!-- How fast the score is climbing right now, so a run that is going
+                 well can be seen going well. Gold while something multiplies. -->
+            <div id="score-rate" class="score-rate">초당 +0</div>
             <!-- No `hidden` here: the combo line is shown and hidden by
-                 visibility so its space is always reserved. -->
-            <div id="combo" class="combo">COMBO x2</div>
+                 visibility so its space is always reserved. The bar under it is
+                 the time left before the chain breaks. -->
+            <div id="combo" class="combo">
+              <span id="combo-text">COMBO</span>
+              <div class="combo-track"><div id="combo-fill" class="combo-fill"></div></div>
+            </div>
             <div id="coin-gain" class="coin-gain hidden">+10</div>
           </div>
           <button id="btn-pause" type="button" aria-label="일시정지">II</button>

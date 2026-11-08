@@ -537,25 +537,89 @@ html.christmas-event .coin-orb.inline {
    below it up and down with every combo, which on a moving screen reads as the
    HUD twitching. */
 .combo {
+  --combo-colour: #e2f2ff;
   visibility: hidden;
   min-height: 1.1em;
-  margin-top: 6px;
-  color: var(--gold);
+  margin-top: 4px;
+  color: var(--combo-colour);
   font-family: var(--font-numeric);
-  font-size: clamp(22px, 5vw, 34px);
+  font-size: clamp(16px, 4.2vw, 26px);
   letter-spacing: 0.04em;
+  white-space: nowrap;
   text-shadow:
     0 3px 0 #041018,
-    0 0 16px rgba(255, 210, 74, 0.55);
+    0 0 16px color-mix(in srgb, var(--combo-colour) 55%, transparent);
+}
+
+/* One colour per rung, climbing from white to gold to red to violet, so the
+   rung can be read out of the corner of an eye without reading the word. */
+.combo[data-tier="1"],
+.run-stat strong[data-tier="1"] {
+  --combo-colour: #ffd24a;
+}
+
+.combo[data-tier="2"],
+.run-stat strong[data-tier="2"] {
+  --combo-colour: #ff9f43;
+}
+
+.combo[data-tier="3"],
+.run-stat strong[data-tier="3"] {
+  --combo-colour: #ff5a5f;
+}
+
+.combo[data-tier="4"],
+.run-stat strong[data-tier="4"] {
+  --combo-colour: #f472b6;
+}
+
+.combo[data-tier="5"],
+.run-stat strong[data-tier="5"] {
+  --combo-colour: #c084fc;
 }
 
 .combo.on {
   visibility: visible;
 }
 
-.combo.combo-punch {
-  animation: comboPunch 0.28s ease-out;
+/* The time left before the chain breaks, draining. Red when it is nearly gone. */
+.combo-track {
+  width: 70%;
+  height: 4px;
+  margin: 3px auto 0;
+  border-radius: 2px;
+  background: rgba(226, 242, 255, 0.16);
+  overflow: hidden;
 }
+
+.combo-fill {
+  height: 100%;
+  background: var(--combo-colour);
+  transform-origin: left center;
+}
+
+.combo.low .combo-fill {
+  background: #ff5a5f;
+}
+
+.combo.broken {
+  --combo-colour: #ff6b6b;
+}
+
+/* Under the score: how fast it is climbing. Quiet until something multiplies. */
+.score-rate {
+  margin-top: 2px;
+  font-family: var(--font-numeric);
+  font-size: clamp(11px, 2.6vw, 14px);
+  letter-spacing: 0.04em;
+  color: rgba(226, 242, 255, 0.6);
+  text-shadow: 0 1px 0 #041018;
+}
+
+.score-rate.hot {
+  color: var(--gold);
+}
+
 
 /* Floats under the score instead of sitting in the stack: it appears for half
    a second on every coin, and in flow that was half a second of the whole
@@ -626,8 +690,9 @@ html.christmas-event .coin-orb.inline {
   0% {
     transform: scale(1);
   }
-  40% {
-    transform: scale(1.12);
+  35% {
+    transform: scale(1.22);
+    box-shadow: 0 0 18px rgba(255, 210, 74, 0.75);
   }
   100% {
     transform: scale(1);
@@ -4727,15 +4792,16 @@ body.admin {
 
 .run-stat-label {
   flex: 1;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   color: rgba(226, 242, 255, 0.5);
 }
 
 .run-stat strong {
+  --combo-colour: rgba(226, 242, 255, 0.95);
   font-family: var(--font-numeric);
-  font-size: 17px;
-  color: rgba(226, 242, 255, 0.95);
+  font-size: 22px;
+  color: var(--combo-colour);
   text-shadow: 0 1px 0 #041018;
 }
 
@@ -4744,8 +4810,8 @@ body.admin {
 .run-stat em {
   font-style: normal;
   font-family: var(--font-numeric);
-  font-size: 13px;
-  color: rgba(226, 242, 255, 0.35);
+  font-size: 15px;
+  color: rgba(226, 242, 255, 0.45);
   transition: color 160ms linear;
 }
 
@@ -4756,12 +4822,16 @@ body.admin {
 
 @media (max-width: 480px) {
   .run-stats {
-    min-width: 92px;
+    min-width: 104px;
     padding: 6px 8px;
   }
 
+  .run-stat-label {
+    font-size: 11px;
+  }
+
   .run-stat strong {
-    font-size: 15px;
+    font-size: 19px;
   }
 }
 

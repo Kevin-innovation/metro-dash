@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.55";
+export const VERSION = "6.56";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,19 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.56",
+    date: "2026-11-08",
+    kind: "minor",
+    title: "손맛 더하기",
+    notes: [
+      "🔥 콤보가 점수 아래에 크게 보이고, 끊기기 전까지 남은 시간이 막대로 줄어듭니다. 단계가 오르면 번쩍이며 소리가 나요.",
+      "💔 콤보가 끊기면 「콤보 끊김」이 흔들리며 알려 줍니다.",
+      "🪙 코인을 연달아 먹으면 「+10 ×7」처럼 몇 개째인지 쌓여 보여요.",
+      "📈 점수 바로 아래에 초당 몇 점씩 오르는지 보여 줍니다. 배율이 붙으면 금색이 됩니다.",
+      "⏱️ 오른쪽 아래 시간 · 콤보 숫자를 더 크게, 콤보는 단계 색으로 바꿨습니다.",
+    ],
+  },
   {
     version: "6.55",
     date: "2026-11-08",

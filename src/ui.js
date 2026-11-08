@@ -35,7 +35,7 @@ import { CROW } from "./crow.js";
 import { CHANGELOG } from "./release.js";
 import { POWERUPS, POWERUP_IDS, POWERUP_METRIC } from "./powerups.js";
 import { rankAt, rankProgress, nextRankAt } from "./progression.js";
-import { comboTier } from "./scoring.js";
+import { COMBO_TIERS, comboTier } from "./scoring.js";
 import { ANTIDOTE_SECONDS } from "./shop.js";
 import { DIAMOND_GOAL } from "./slots.js";
 import { QUALITY_PROFILES, QUALITY_TIERS, keyLabel } from "./settings.js";
@@ -257,6 +257,9 @@ function hudNodes() {
     score: $("score"),
     coins: $("coin-count"),
     combo: $("combo"),
+    comboText: $("combo-text"),
+    comboFill: $("combo-fill"),
+    scoreRate: $("score-rate"),
     powerups: $("powerup-stack"),
     boardWrap,
     boardFill: boardWrap?.querySelector(".board-fill") ?? null,
@@ -282,6 +285,11 @@ function hudNodes() {
       score: null,
       coins: null,
       combo: null,
+      comboTier: null,
+      comboLow: null,
+      comboBroken: null,
+      scoreRate: null,
+      scoreRateHot: null,
       boards: null,
       pace: null,
       event: null,
@@ -378,6 +386,8 @@ function renderRunStats(el, state) {
   const combo = Math.max(0, Math.floor(state.combo ?? 0));
   if (combo !== last.statCombo) {
     el.statCombo.textContent = String(combo);
+    // Coloured by rung, the same colours as the line under the score.
+    el.statCombo.dataset.tier = String(COMBO_TIERS.indexOf(comboTier(combo)));
     last.statCombo = combo;
   }
 
@@ -390,6 +400,62 @@ function renderRunStats(el, state) {
     el.statMult.textContent = shown;
     el.runStats.classList.toggle("hot", mult > 1.005);
     last.statMult = shown;
+  }
+}
+
+/**
+ * The chain under the score: how long it is, what rung it is on, and how long
+ * is left before it breaks — or, for a second after it does, that it broke.
+ */
+function renderCombo(el, state) {
+  const last = el.last;
+  const tier = comboTier(state.combo);
+  const broken = state.comboBroken ?? 0;
+  const text = broken
+    ? `콤보 끊김 · ${broken}`
+    : state.combo >= 1
+      ? tier.label
+        ? `${state.combo} · ${tier.label} ×${tier.multiplier}`
+        : `${state.combo} COMBO`
+      : "";
+  if (text !== last.combo) {
+    // Shown and hidden by visibility, not display: the line keeps its space
+    // either way so nothing below it moves.
+    el.combo.classList.toggle("on", Boolean(text));
+    if (text && el.comboText) el.comboText.textContent = text;
+    last.combo = text;
+  }
+  if (Boolean(broken) !== last.comboBroken) {
+    el.combo.classList.toggle("broken", Boolean(broken));
+    last.comboBroken = Boolean(broken);
+  }
+  const index = COMBO_TIERS.indexOf(tier);
+  if (index !== last.comboTier) {
+    el.combo.dataset.tier = String(index);
+    last.comboTier = index;
+  }
+  const left = broken ? 0 : Math.min(1, Math.max(0, state.comboLeft ?? 0));
+  if (el.comboFill) el.comboFill.style.transform = `scaleX(${left.toFixed(3)})`;
+  const low = !broken && state.combo > 0 && left < 0.35;
+  if (low !== last.comboLow) {
+    el.combo.classList.toggle("low", low);
+    last.comboLow = low;
+  }
+}
+
+/** 「초당 +3,412」 under the score, gold while anything is multiplying it. */
+function renderScoreRate(el, state) {
+  if (!el.scoreRate) return;
+  const last = el.last;
+  const text = `초당 +${Math.max(0, Math.round((state.scoreRate ?? 0) / 10) * 10).toLocaleString()}`;
+  if (text !== last.scoreRate) {
+    el.scoreRate.textContent = text;
+    last.scoreRate = text;
+  }
+  const hot = (state.trickMultiplier ?? 1) > 1.005;
+  if (hot !== last.scoreRateHot) {
+    el.scoreRate.classList.toggle("hot", hot);
+    last.scoreRateHot = hot;
   }
 }
 
@@ -407,16 +473,8 @@ export function renderHud(state) {
     last.coins = state.coins;
   }
 
-  const tier = comboTier(state.combo);
-  const combo =
-    state.combo >= 2 ? (tier.label ? `${tier.label}  x${tier.multiplier}` : `COMBO x${state.combo}`) : "";
-  if (combo !== last.combo) {
-    // Shown and hidden by visibility, not display: the line keeps its space
-    // either way so nothing below it moves.
-    el.combo.classList.toggle("on", Boolean(combo));
-    if (combo) el.combo.textContent = combo;
-    last.combo = combo;
-  }
+  renderCombo(el, state);
+  renderScoreRate(el, state);
 
   renderPowerupHud(el.powerups, state.powerups, state.durations, state.crow, state.slot, state.christmas);
 
