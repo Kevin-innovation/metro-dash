@@ -3982,6 +3982,16 @@ kbd {
     --board-body-h: 720px;
   }
 
+  /* The other scrolling lists, likewise a set height rather than a share of
+     the window, so every screen shows the same number of rows. */
+  .shop-list {
+    max-height: 600px;
+  }
+
+  .notes-list {
+    max-height: 460px;
+  }
+
   #leaderboard-screen .dialog.board {
     padding-top: 20px;
   }

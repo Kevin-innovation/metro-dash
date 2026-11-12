@@ -61,12 +61,31 @@ const COMBO_MOVES = {
   ],
 };
 
-/** At or under this width the board's columns stack and it scrolls as a page. */
-const BOARD_STACKS_AT = 620;
-/** Room left around the board when it is shrunk to fit. */
-const BOARD_MARGIN = 24;
-/** Smaller than this and the names stop being readable; scroll instead. */
-const BOARD_MIN_SCALE = 0.55;
+/** The panels fitted to the window on a computer; see Screens.fitPanels. */
+const FITTED_PANELS = [
+  "leaderboard-screen",
+  "shop-screen",
+  "settings-screen",
+  "notes-screen",
+  "account-screen",
+  "school-screen",
+  "pause-screen",
+];
+/** At or under this width the panels stack and scroll as a page instead. */
+const PANELS_STACK_AT = 620;
+/** Room left around a panel when it is shrunk to fit. */
+const PANEL_MARGIN = 24;
+/** Smaller than this and text stops being readable; scroll instead. */
+const PANEL_MIN_SCALE = 0.55;
+/** What Escape closes, topmost first: the board sits over every other panel. */
+const ESCAPE_ORDER = [
+  ["leaderboard-screen", (s) => s.actions.closeLeaderboard?.()],
+  ["school-screen", (s) => s.closeSchool()],
+  ["account-screen", (s) => s.closeAccount()],
+  ["notes-screen", (s) => s.closeNotes()],
+  ["settings-screen", (s) => s.closeSettings()],
+  ["shop-screen", (s) => s.closeShop()],
+];
 
 /** A chain shorter than this ending is not worth announcing. */
 const COMBO_BREAK_WORTH_SAYING = 3;
@@ -205,6 +224,8 @@ export class Screens {
       if (button) button.onclick = () => a.openLeaderboard();
     }
     $("btn-board-x")?.addEventListener("click", () => a.closeLeaderboard());
+    window.addEventListener("keydown", (event) => this.closeTopPanel(event), true);
+    window.addEventListener("resize", () => this.fitPanels());
     $("btn-shop-x")?.addEventListener("click", () => this.closeShop());
     $("btn-settings-x")?.addEventListener("click", () => this.closeSettings());
 
@@ -394,6 +415,7 @@ export class Screens {
     if (remember) remember.checked = readRemember();
     this.showAccountError(null);
     $("account-screen").classList.remove("hidden");
+    this.fitPanels();
     $("field-handle").focus();
   }
 
@@ -431,28 +453,43 @@ export class Screens {
   openLeaderboard(range = "week") {
     this.setBoardTab(range);
     $("leaderboard-screen").classList.remove("hidden");
-    if (!this.boardFitting) {
-      this.boardFitting = true;
-      window.addEventListener("resize", () => this.fitBoard());
-    }
-    this.fitBoard();
+    this.fitPanels();
   }
 
   /**
-   * Shrink the whole board, evenly, when the window is shorter than it.
+   * Shrink each open panel, evenly, when the window is shorter than it.
    *
-   * The board is one fixed design side by side (see the note on its size in
-   * the stylesheet), so a small screen gets a smaller copy of the same thing
-   * rather than a cut-down one. Stacked on a phone it scrolls as a page instead.
+   * On a computer every panel is one fixed design — its lists are a set height
+   * rather than a share of the window (see the stylesheet) — so a small screen
+   * gets a smaller copy of the same panel instead of one that shows fewer rows
+   * and asks for scrolling. On a phone the panels scroll as a page instead.
    */
-  fitBoard() {
-    const screen = $("leaderboard-screen");
-    const dialog = screen?.querySelector(".dialog.board");
-    if (!dialog || screen.classList.contains("hidden")) return;
-    dialog.style.zoom = "";
-    if (window.innerWidth <= BOARD_STACKS_AT) return;
-    const scale = Math.min(1, (window.innerHeight - BOARD_MARGIN) / dialog.offsetHeight);
-    if (scale < 1) dialog.style.zoom = String(Math.max(BOARD_MIN_SCALE, scale));
+  fitPanels() {
+    for (const id of FITTED_PANELS) {
+      const screen = $(id);
+      const dialog = screen?.querySelector(".dialog");
+      if (!dialog || screen.classList.contains("hidden")) continue;
+      dialog.style.zoom = "";
+      if (window.innerWidth <= PANELS_STACK_AT) continue;
+      const scale = Math.min(1, (window.innerHeight - PANEL_MARGIN) / dialog.offsetHeight);
+      if (scale < 1) dialog.style.zoom = String(Math.max(PANEL_MIN_SCALE, scale));
+    }
+  }
+
+  /**
+   * The panel on top, closed by Escape.
+   *
+   * Listened for in the capture phase and stopped there, so the key that shut
+   * a panel does not also reach the run and pause or resume it. Left alone
+   * while a key is being bound: Escape cancels that, in Game.captureBoardKey.
+   */
+  closeTopPanel(event) {
+    if (event.code !== "Escape" || event.repeat || this.actions.capturingKey?.()) return;
+    const top = ESCAPE_ORDER.find(([id]) => $(id) && !$(id).classList.contains("hidden"));
+    if (!top) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    top[1](this);
   }
 
   /**
@@ -651,6 +688,7 @@ export class Screens {
     this.showSchoolConfirm(false);
     this.updateSchoolPreview();
     $("school-screen").classList.remove("hidden");
+    this.fitPanels();
     $("field-region").focus();
   }
 
@@ -875,6 +913,7 @@ export class Screens {
    */
   showPause(visible, left = 0) {
     $("pause-screen").classList.toggle("hidden", !visible);
+    this.fitPanels();
     // And the cursor comes back with the card.
     //
     // The rule was already written — 「Pause, death and every dialog put it
@@ -1087,6 +1126,7 @@ export class Screens {
     this.shopTab = "christmas";
     this.drawShop(save);
     $("shop-screen").classList.remove("hidden");
+    this.fitPanels();
   }
 
   closeShop() {
@@ -1104,6 +1144,7 @@ export class Screens {
   openNotes() {
     renderNotes($("notes-list"));
     $("notes-screen")?.classList.remove("hidden");
+    this.fitPanels();
   }
 
   closeNotes() {
@@ -1113,6 +1154,7 @@ export class Screens {
   openSettings(settings, tier) {
     renderSettings($("settings-list"), settings, tier);
     $("settings-screen").classList.remove("hidden");
+    this.fitPanels();
   }
 
   closeSettings() {

@@ -288,6 +288,7 @@ export class Game {
       startRun: () => this.startRun(),
       toTitle: () => this.toTitle(),
       pause: () => this.pause(),
+      capturingKey: () => Boolean(this.input.capture),
       resume: () => this.resume(),
       deployBoard: () => this.deployBoard(),
       openShop: () => this.openShop(),

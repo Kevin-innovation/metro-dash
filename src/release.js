@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.59";
+export const VERSION = "6.60";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,16 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.60",
+    date: "2026-11-12",
+    kind: "fix",
+    title: "창 크기 맞추기와 Esc",
+    notes: [
+      "🖥️ 상점 · 설정 · 패치노트 · 로그인 창도 리더보드처럼 어떤 화면에서든 같은 모양으로 맞춰 보입니다.",
+      "⌨️ Esc 키로 열려 있는 창을 닫을 수 있습니다. 일시정지 중에 설정을 닫아도 게임은 멈춘 그대로예요.",
+    ],
+  },
   {
     version: "6.59",
     date: "2026-11-12",
