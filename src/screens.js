@@ -61,6 +61,13 @@ const COMBO_MOVES = {
   ],
 };
 
+/** At or under this width the board's columns stack and it scrolls as a page. */
+const BOARD_STACKS_AT = 620;
+/** Room left around the board when it is shrunk to fit. */
+const BOARD_MARGIN = 24;
+/** Smaller than this and the names stop being readable; scroll instead. */
+const BOARD_MIN_SCALE = 0.55;
+
 /** A chain shorter than this ending is not worth announcing. */
 const COMBO_BREAK_WORTH_SAYING = 3;
 /** How far into a run the combo line says what raises it, while it is empty. */
@@ -424,6 +431,28 @@ export class Screens {
   openLeaderboard(range = "week") {
     this.setBoardTab(range);
     $("leaderboard-screen").classList.remove("hidden");
+    if (!this.boardFitting) {
+      this.boardFitting = true;
+      window.addEventListener("resize", () => this.fitBoard());
+    }
+    this.fitBoard();
+  }
+
+  /**
+   * Shrink the whole board, evenly, when the window is shorter than it.
+   *
+   * The board is one fixed design side by side (see the note on its size in
+   * the stylesheet), so a small screen gets a smaller copy of the same thing
+   * rather than a cut-down one. Stacked on a phone it scrolls as a page instead.
+   */
+  fitBoard() {
+    const screen = $("leaderboard-screen");
+    const dialog = screen?.querySelector(".dialog.board");
+    if (!dialog || screen.classList.contains("hidden")) return;
+    dialog.style.zoom = "";
+    if (window.innerWidth <= BOARD_STACKS_AT) return;
+    const scale = Math.min(1, (window.innerHeight - BOARD_MARGIN) / dialog.offsetHeight);
+    if (scale < 1) dialog.style.zoom = String(Math.max(BOARD_MIN_SCALE, scale));
   }
 
   /**

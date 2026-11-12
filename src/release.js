@@ -13,7 +13,7 @@
  */
 import { CHUSEOK_EVENT_FROM, CHUSEOK_EVENT_TO } from "./chuseok.js";
 
-export const VERSION = "6.58";
+export const VERSION = "6.59";
 
 /**
  * Which season the board is playing.
@@ -76,6 +76,13 @@ export function seasonAt(ms = Date.now()) {
  * takes problems away.
  */
 export const CHANGELOG = [
+  {
+    version: "6.59",
+    date: "2026-11-12",
+    kind: "fix",
+    title: "리더보드 한눈에",
+    notes: ["🏆 컴퓨터에서 리더보드가 화면 크기와 상관없이 1~10위와 내 순위까지 스크롤 없이 같은 모양으로 보입니다."],
+  },
   {
     version: "6.58",
     date: "2026-11-08",

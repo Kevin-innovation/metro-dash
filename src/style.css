@@ -3968,6 +3968,36 @@ kbd {
   cursor: pointer;
 }
 
+/**
+ * Side by side, the board is one fixed size: ten rows and the pinned 「내 순위」
+ * row of each column, never a scrollbar. It used to be a share of the window's
+ * height, so a tall monitor showed eight places and a short laptop four, and
+ * no screen ever showed all ten. Now a window too small for it shrinks the
+ * whole panel evenly instead (Screens.fitBoard), so every screen sees the same
+ * board at the same proportions.
+ */
+@media (min-width: 621px) {
+  /* Ten rows, the pinned row and the 「11–20위」 button under them. */
+  #leaderboard-screen {
+    --board-body-h: 720px;
+  }
+
+  #leaderboard-screen .dialog.board {
+    padding-top: 20px;
+  }
+
+  #leaderboard-screen h2 {
+    margin-bottom: 10px;
+    font-size: 34px;
+  }
+
+  /* The ✕ in the corner is always there, so the bottom button only made the
+     panel taller — and a taller panel is a smaller one once it is fitted. */
+  #btn-leaderboard-close {
+    display: none;
+  }
+}
+
 @media (max-width: 620px) {
   .board-split {
     grid-template-columns: 1fr;
